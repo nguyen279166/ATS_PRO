@@ -1,6 +1,8 @@
 import { LayoutDashboard, Briefcase, Users, Settings } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
 export default function Sidebar() {
+  const location = useLocation();
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, active: false },
     { name: "Jobs", icon: Briefcase, active: true },
@@ -21,19 +23,24 @@ export default function Sidebar() {
         <ul className='space-y-2'>
           {menuItems.map((item) => {
             const Icon = item.icon; // Lấy icon động từ mảng menuItems
+            const isActive =
+              (location.pathname === "/jobs" && item.name === "Jobs") ||
+              (location.pathname === "/" && item.name === "Dashboard");
+            // Định tuyến đường đi
+            const targetPath = item.name === "Jobs" ? "/jobs" : "/";
             return (
               <li key={item.name}>
-                <a
-                  href='#'
+                <Link
+                  to={targetPath}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer ${
-                    item.active
-                      ? "bg-blue-600 text-white shadow-md" // Nếu active (Jobs) thì xanh lè
-                      : "text-slate-400 hover:bg-slate-800 hover:text-white" // Không active thì xám
+                    isActive
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
                   <Icon size={20} />
                   <span className='font-medium'>{item.name}</span>
-                </a>
+                </Link>
               </li>
             );
           })}
