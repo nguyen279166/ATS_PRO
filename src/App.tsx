@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from "./layouts/Sidebar";
 import JobList from "./pages/JobList";
+import KanbanBoard from "./pages/KanbanBoard";
 
 // Một Layout Wrapper (Bề mặt chung) để chứa cái Sidebar cố định
 function LayoutCore({ children }: { children: React.ReactNode }) {
@@ -51,6 +52,7 @@ export default function App() {
             }
           />
           <Route path='/jobs' element={<JobList />} />
+          <Route path='/jobs/:jobId' element={<KanbanBoard />} />
         </Routes>
       </LayoutCore>
     </BrowserRouter>
