@@ -2,6 +2,10 @@ import { useParams } from "react-router-dom";
 import { mockJobs, mockCandidates } from "../api/mockData";
 import { useState } from "react";
 import type { Candidate, CandidateStatus } from "../types";
+import { Search } from "lucide-react"; // Lấy icon cái Kính lúp
+import { useDebounce } from "../hooks/useDebounce";
+import AddCandidateModal from "../components/AddCandidateModal";
+import { Plus } from "lucide-react";
 
 export default function KanbanBoard() {
   const { jobId } = useParams(); // useParams là "máy quét" lấy đuôi URL (ví dụ: JOB-01) xuống làm biến số
@@ -13,6 +17,19 @@ export default function KanbanBoard() {
     (candidate) => candidate.jobId === jobId,
   );
   const [candidates, setCandidates] = useState(initialCandidates);
+  // Lưu chữ đang gõ (Cái này thay đổi liên tục, làm React rặn render liên tục)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showModal, setShowModal] = useState(false);
+
+  // Dùng bảo kiếm: Chặn từ khoá lại, khi tay người gõ ngưng nghỉ đủ 500ms thì mới thả chạy
+  const debouncedSearchTerm = useDebounce(searchTerm, 200);
+  console.log("Giá trị debounce hiện tại:", debouncedSearchTerm);
+
+  // TẠO DỮ LIỆU PHÁI SINH (Rất quan trọng):
+  // Thay vì lấy toàn bộ ứng viên quăng hươu quăng vượn, ta đẩy qua cái màng lọc Tên trước
+  const visibleCandidates = candidates.filter((c) =>
+    c.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()),
+  );
 
   // Mảng thiết kế 4 cột
   const columns = [
@@ -38,6 +55,22 @@ export default function KanbanBoard() {
       remainingCandidates.push({ ...draggedCandidate, status: newStatus });
       return remainingCandidates;
     });
+  };
+  const handleAddCandidate = (data: {
+    name: string;
+    email: string;
+    status: CandidateStatus;
+  }) => {
+    const newCandidate: Candidate = {
+      id: `CAN-${Date.now()}`, // Tạo ID tạm bằng mốc thời gian (sau có Backend sẽ dùng UUID)
+      jobId: jobId!,
+      name: data.name,
+      email: data.email,
+      status: data.status,
+      appliedDate: new Date().toISOString().split("T")[0], // Lấy ngày hôm nay dạng 2026-04-14
+      avatar: `https://i.pravatar.cc/150?u=${Date.now()}`,
+    };
+    setCandidates((prev) => [...prev, newCandidate]);
   };
 
   const handleDropOnCard = (
@@ -70,19 +103,43 @@ export default function KanbanBoard() {
 
   return (
     <div className='h-full flex flex-col'>
-      <div className='mb-6'>
-        <h3 className='text-2xl font-bold text-slate-800'>
-          {currentJob.title}
-        </h3>
-        <p className='text-slate-500 mt-1'>Sơ đồ tuyển dụng ứng viên</p>
+      <div className='mb-6 flex justify-between items-end'>
+        <div>
+          <h3 className='text-2xl font-bold text-slate-800'>
+            {currentJob.title}
+          </h3>
+          <p className='text-slate-500 mt-1'>Sơ đồ tuyển dụng ứng viên</p>
+        </div>
+
+        {/* Cục Thanh Tìm Kiếm Ứng Viên */}
+        <div className='flex items-center gap-4'>
+          <div className='relative w-96'>
+            <label className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-400'>
+              <Search size={18} />
+            </label>
+            <input
+              type='text'
+              placeholder='Tìm theo tên ứng viên...'
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className='w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm'
+            />
+          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className='flex items-center gap-2 px-5 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm cursor-pointer'
+          >
+            <Plus size={18} /> Thêm
+          </button>
+        </div>
       </div>
 
       {/* Grid chia 4 cột Kanban đều nhau */}
-      <div className='grid grid-cols-4 gap-6 flex-1 min-h-[500px]'>
+      <div className='grid grid-cols-4 gap-6 flex-1 min-h-[600px]'>
         {/* Lặp 4 vòng để vẽ ra 4 cột Cứng */}
         {columns.map((col) => {
           // Lọc tiếp ứng viên thuộc trạng thái của 1 Cột nhất định (ví dụ Cột Hired có bao nhiêu người)
-          const columnCandidates = candidates.filter(
+          const columnCandidates = visibleCandidates.filter(
             (candidate) => candidate.status === col.status,
           );
 
@@ -139,6 +196,14 @@ export default function KanbanBoard() {
           );
         })}
       </div>
+      {/* Modal thêm ứng viên - Chỉ hiện khi showModal = true */}
+      {showModal && (
+        <AddCandidateModal
+          jobId={jobId!}
+          onClose={() => setShowModal(false)}
+          onAdd={handleAddCandidate}
+        />
+      )}
     </div>
   );
 }
