@@ -9,14 +9,14 @@ export interface Job {
   createdAt: string;
 }
 
-export type CandidataType = "Applied" | "Interviewing" | "Hired" | "Rejected";
+export type CandidateStatus = "Applied" | "Interviewing" | "Hired" | "Rejected";
 
 export interface Candidate {
   id: string;
   jobId: string;
   name: string;
   email: string;
-  status: CandidataType;
+  status: CandidateStatus;
   appliedDate: string;
   avatar?: string;
 }
