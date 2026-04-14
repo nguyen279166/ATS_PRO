@@ -40,13 +40,11 @@ export default function JobList() {
             </div>
           </div>
 
-          <button className='w-full py-2.5 bg-blue-50 text-blue-600 font-semibold rounded-xl hover:bg-blue-600 hover:text-white transition-colors'>
-            <Link to={`/jobs/${job.id}`} className='block mt-4'>
-              <button className='w-full py-2.5 bg-blue-50 text-blue-600 font-semibold rounded-xl hover:bg-blue-600 hover:text-white transition-colors'>
-                Mở Kanban Board
-              </button>
-            </Link>
-          </button>
+          <Link to={`/jobs/${job.id}`} className='block mt-4'>
+            <button className='w-full py-2.5 bg-blue-50 text-blue-600 font-semibold rounded-xl hover:bg-blue-600 hover:text-white transition-colors'>
+              Mở Kanban Board
+            </button>
+          </Link>
         </div>
       ))}
     </div>
