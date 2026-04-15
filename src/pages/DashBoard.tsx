@@ -1,22 +1,34 @@
 import { mockJobs, mockCandidates } from "../api/mockData";
-import { Briefcase, Users, UserCheck, UserX, TrendingUp } from "lucide-react";
+import { Briefcase, Users, UserCheck, TrendingUp } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 export default function Dashboard() {
-  // TÍNH TOÁN SỐ LIỆU THỐNG KÊ TỪ DỮ LIỆU GIẢ
-  // Đây là "Derived State" (Dữ liệu phái sinh) - không cần useState, chỉ cần tính toán thuần túy
   const totalJobs = mockJobs.length;
   const totalCandidates = mockCandidates.length;
   const hiredCount = mockCandidates.filter((c) => c.status === "Hired").length;
-  const rejectedCount = mockCandidates.filter(
-    (c) => c.status === "Rejected",
-  ).length;
   const interviewingCount = mockCandidates.filter(
     (c) => c.status === "Interviewing",
+  ).length;
+  const appliedCount = mockCandidates.filter(
+    (c) => c.status === "Applied",
+  ).length;
+  const rejectedCount = mockCandidates.filter(
+    (c) => c.status === "Rejected",
   ).length;
   const hireRate =
     totalCandidates > 0 ? Math.round((hiredCount / totalCandidates) * 100) : 0;
 
-  // Mảng cấu hình các Thẻ thống kê (DRY: Không lặp code 4 lần)
   const statsCards = [
     {
       title: "Tổng tin tuyển dụng",
@@ -46,11 +58,28 @@ export default function Dashboard() {
       title: "Tỷ lệ tuyển",
       value: `${hireRate}%`,
       icon: TrendingUp,
-      color: "bg-violet-500",
-      bgLight: "bg-violet-50",
-      textColor: "text-violet-600",
+      color: "bg-rose-500",
+      bgLight: "bg-rose-50",
+      textColor: "text-rose-600",
     },
   ];
+
+  // DỮ LIỆU CHO BIỂU ĐỒ CỘT: Số ứng viên theo từng Job
+  const barChartData = mockJobs.map((job) => ({
+    name:
+      job.title.length > 15 ? job.title.substring(0, 15) + "..." : job.title,
+    candidates: mockCandidates.filter((candidate) => candidate.jobId === job.id)
+      .length,
+  }));
+
+  // DỮ LIỆU CHO BIỂU ĐỒ TRÒN: Phân bổ trạng thái ứng viên
+  const pieChartData = [
+    { name: "Applied", value: appliedCount },
+    { name: "Interviewing", value: interviewingCount },
+    { name: "Hired", value: hiredCount },
+    { name: "Rejected", value: rejectedCount },
+  ];
+  const PIE_COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"];
 
   return (
     <div className='overflow-hidden'>
@@ -77,12 +106,67 @@ export default function Dashboard() {
         })}
       </div>
 
-      {/* HÀNG 2: BẢNG DANH SÁCH ỨNG VIÊN GẦN ĐÂY */}
-      <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6 h-[500px]'>
+      {/* HÀNG 2: HAI BIỂU ĐỒ NGANG NHAU */}
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
+        {/* Biểu đồ Cột: Số ứng viên theo Job */}
+        <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6'>
+          <h3 className='text-lg font-bold text-slate-800 mb-6'>
+            Ứng viên theo vị trí
+          </h3>
+          <ResponsiveContainer width='100%' height={280}>
+            <BarChart data={barChartData}>
+              <XAxis dataKey='name' tick={{ fontSize: 12 }} />
+              <YAxis allowDecimals={false} />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                }}
+              />
+              <Bar dataKey='candidates' fill='#3b82f6' radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Biểu đồ Tròn: Phân bổ trạng thái */}
+        <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6'>
+          <h3 className='text-lg font-bold text-slate-800 mb-6'>
+            Phân bổ trạng thái
+          </h3>
+          <ResponsiveContainer width='100%' height={280}>
+            <PieChart>
+              <Pie
+                data={pieChartData}
+                cx='50%'
+                cy='50%'
+                innerRadius={60}
+                outerRadius={100}
+                paddingAngle={4}
+                dataKey='value'
+                label={({ name, percent }) =>
+                  `${name} ${(percent * 100).toFixed(0)}%`
+                }
+              >
+                {pieChartData.map((_, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={PIE_COLORS[index % PIE_COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* HÀNG 3: BẢNG DANH SÁCH ỨNG VIÊN GẦN ĐÂY */}
+      <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6'>
         <h3 className='text-lg font-bold text-slate-800 mb-4'>
           Ứng viên gần đây
         </h3>
-        <div className='overflow-y-auto h-[450px]'>
+        <div className='overflow-x-auto'>
           <table className='w-full text-left'>
             <thead>
               <tr className='text-sm text-slate-500 border-b border-slate-100'>
