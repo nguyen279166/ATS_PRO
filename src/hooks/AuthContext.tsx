@@ -1,6 +1,5 @@
 import React, { createContext, useState } from "react";
 
-// ĐÃ SỬA: Thêm chữ export ở đầu dòng này
 export const AuthContext = createContext<any>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {

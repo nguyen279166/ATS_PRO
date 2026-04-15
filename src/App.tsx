@@ -15,6 +15,7 @@ import LoginForm from "./pages/LoginForm";
 import RegisterForm from "./pages/RegisterForm";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import LandingPage from "./pages/LandingPage";
 
 // Layout có Sidebar (chỉ dành cho người đã đăng nhập)
 function LayoutCore({ children }: { children: React.ReactNode }) {
@@ -81,11 +82,16 @@ export default function App() {
         <Route
           path='/'
           element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
+            isLoggedIn ? (
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            ) : (
+              <LandingPage />
+            )
           }
         />
+
         <Route
           path='/jobs'
           element={
@@ -102,6 +108,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route path='/careers' element={<LandingPage />} />
       </Routes>
 
       <ToastContainer position='bottom-right' />
