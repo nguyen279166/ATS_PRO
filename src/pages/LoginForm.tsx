@@ -52,38 +52,47 @@ const LoginForm = () => {
   };
 
   return (
-    // ... (Giữ nguyên toàn bộ phần HTML bên dưới của bạn)
-    <div className={`min-h-[calc(100vh)] flex items-center justify-center p-4`}>
+    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4'>
       <form
-        className={`w-full max-w-sm p-8 rounded-xl space-y-5`}
+        className='w-full max-w-sm p-8 rounded-2xl space-y-5 bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl'
         onSubmit={handleSubmit(onSubmit)}
       >
-        <h2 className={`text-2xl font-bold text-center`}>Đăng nhập</h2>
+        {/* Logo */}
+        <div className='text-center mb-4'>
+          <h1 className='text-2xl font-bold text-blue-400 tracking-wider'>
+            ATS<span className='text-white'>PRO</span>
+          </h1>
+        </div>
+        <h2 className='text-2xl font-bold text-center text-white'>Đăng nhập</h2>
 
         {/* Email Input */}
         <div>
-          <label className={`block text-sm font-medium mb-1 `}>Email</label>
+          <label className='block text-sm font-medium mb-1 text-slate-300'>
+            Email
+          </label>
           <input
-            className={`block border focus:ring-2 focus:ring-blue-500 outline-none transition-all rounded-lg w-full h-10 px-3`}
+            className='block border border-white/20 bg-white/10 text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all rounded-xl w-full h-11 px-4'
             type='text'
             placeholder='john@mail.com'
             {...register("email")}
           />
-          <p className='text-red-500 text-sm mt-1 min-h-[20px]'>
+          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
             {errors.email?.message}
           </p>
         </div>
 
         {/* Password Input */}
         <div>
-          <label className={`block text-sm font-medium mb-1`}>Mật khẩu</label>
+          <label className='block text-sm font-medium mb-1 text-slate-300'>
+            Mật khẩu
+          </label>
           <input
-            className={`block border focus:ring-2 focus:ring-blue-500 outline-none transition-all rounded-lg w-full h-10 px-3`}
+            className='block border border-white/20 bg-white/10 text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all rounded-xl w-full h-11 px-4'
             type='password'
             placeholder='changeme'
             {...register("password")}
           />
-          <p className='text-red-500 text-sm mt-1 min-h-[20px]'>
+          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
             {errors.password?.message}
           </p>
         </div>
@@ -91,10 +100,21 @@ const LoginForm = () => {
         <button
           type='submit'
           disabled={isSubmitting}
-          className={`w-full py-2.5 rounded-lg text-white font-semibold transition-all duration-200 ${isSubmitting ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-md"}`}
+          className={`w-full py-3 rounded-xl text-white font-semibold transition-all duration-200 ${isSubmitting ? "bg-blue-400/50 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500 shadow-lg hover:shadow-blue-500/25"}`}
         >
           {isSubmitting ? "Đang kiểm tra..." : "Đăng nhập"}
         </button>
+
+        {/* Link sang trang Đăng ký */}
+        <p className='text-center text-sm text-slate-400'>
+          Chưa có tài khoản?{" "}
+          <a
+            href='/register'
+            className='text-blue-400 hover:text-blue-300 font-semibold transition-colors'
+          >
+            Đăng ký ngay
+          </a>
+        </p>
       </form>
     </div>
   );
