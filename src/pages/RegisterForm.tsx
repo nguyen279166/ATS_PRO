@@ -74,71 +74,76 @@ const RegisterForm = () => {
 
   return (
     // 1. Thẻ bọc ngoài cùng: Nền xám, căn giữa toàn màn hình
-    <div className='min-h-screen bg-gray-100 flex items-center justify-center p-4'>
-      {/* 2. Khối Form: Nền trắng, bo góc (rounded-xl), đổ bóng (shadow-lg), rộng tối đa (max-w-md) */}
+    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4'>
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className='bg-white w-full max-w-md p-8 rounded-xl shadow-lg space-y-5'
+        className='bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl w-full max-w-md p-8 rounded-2xl space-y-4'
       >
-        {/* Tiêu đề form */}
-        <h2 className='text-2xl font-bold text-center text-gray-800 mb-6'>
+        <div className='text-center mb-2'>
+          <h1 className='text-2xl font-bold text-blue-400 tracking-wider'>
+            ATS<span className='text-white'>PRO</span>
+          </h1>
+        </div>
+        <h2 className='text-2xl font-bold text-center text-white mb-4'>
           Tạo Tài Khoản
         </h2>
-
         {/* 3. Nhóm Họ và tên */}
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
+          <label className='block text-sm font-medium text-slate-300 mb-1'>
             Họ và tên
           </label>
           <input
             placeholder='Ví dụ: Nguyễn Văn A'
             type='text'
             // CSS Input: Viền xám, bo góc, padding, hiệu ứng viền xanh khi nhấp vào
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border-white/20 bg-white/10 text-white placeholder:text-slate-400
+'
             {...register("fullName")}
           />
           {/* Lỗi đỏ dùng Tailwind thay cho style inline, thêm min-h để không nhảy form */}
-          <p className='text-red-500 text-sm mt-1 min-h-[20px]'>
+          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
             {errors.fullName?.message}
           </p>
         </div>
         {/* Nhóm Password */}
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
+          <label className='block text-sm font-medium text-slate-300 mb-1'>
             Mật khẩu
           </label>
           <input
             placeholder='Mật khẩu'
             type='password'
             // CSS Input: Viền xám, bo góc, padding, hiệu ứng viền xanh khi nhấp vào
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border-white/20 bg-white/10 text-white placeholder:text-slate-400
+'
             {...register("password")}
           />
           {/* Lỗi đỏ dùng Tailwind thay cho style inline, thêm min-h để không nhảy form */}
-          <p className='text-red-500 text-sm mt-1 min-h-[20px]'>
+          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
             {errors.password?.message}
           </p>
         </div>
 
         {/* Nhóm Email */}
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
+          <label className='block text-sm font-medium text-slate-300 mb-1'>
             Địa chỉ Email
           </label>
           <input
             placeholder='email@example.com'
             type='email'
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all'
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border-white/20 bg-white/10 text-white placeholder:text-slate-400
+'
             {...register("email")}
           />
-          <p className='text-red-500 text-sm mt-1 min-h-[20px]'>
+          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
             {errors.email?.message}
           </p>
         </div>
 
         {/* Nhóm Giới tính */}
         <div>
-          <label className='block text-sm font-medium text-gray-700 mb-1'>
+          <label className='block text-sm font-medium text-slate-300 mb-1'>
             Giới tính
           </label>
           <select
@@ -163,12 +168,12 @@ const RegisterForm = () => {
             />
             <label
               htmlFor='terms'
-              className='text-sm text-gray-600 cursor-pointer select-none'
+              className='text-sm text-slate-300 cursor-pointer select-none'
             >
               Tôi đồng ý với điều khoản dịch vụ
             </label>
           </div>
-          <p className='text-red-500 text-sm mt-1 min-h-[20px]'>
+          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
             {errors.agreeTerms?.message}
           </p>
         </div>
@@ -183,6 +188,15 @@ const RegisterForm = () => {
         >
           {isSubmitting ? "Đang xử lý..." : "Đăng ký ngay"}
         </button>
+        <p className='text-center text-sm text-slate-400'>
+          Đã có tài khoản?{" "}
+          <a
+            href='/login'
+            className='text-blue-400 hover:text-blue-300 font-semibold transition-colors'
+          >
+            Đăng nhập
+          </a>
+        </p>
       </form>
 
       <ToastContainer position='bottom-right' />
