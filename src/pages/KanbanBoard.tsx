@@ -6,6 +6,8 @@ import { Search } from "lucide-react"; // Lấy icon cái Kính lúp
 import { useDebounce } from "../hooks/useDebounce";
 import AddCandidateModal from "../components/AddCandidateModal";
 import { Plus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 export default function KanbanBoard() {
   const { jobId } = useParams(); // useParams là "máy quét" lấy đuôi URL (ví dụ: JOB-01) xuống làm biến số
@@ -105,6 +107,12 @@ export default function KanbanBoard() {
     <div className='h-full flex flex-col'>
       <div className='mb-6 flex justify-between items-end'>
         <div>
+          <Link
+            to='/jobs'
+            className='flex items-center gap-1 text-sm text-slate-400 hover:text-blue-600 transition-colors mb-2'
+          >
+            <ArrowLeft size={16} /> Quay lại danh sách
+          </Link>
           <h3 className='text-2xl font-bold text-slate-800'>
             {currentJob.title}
           </h3>
