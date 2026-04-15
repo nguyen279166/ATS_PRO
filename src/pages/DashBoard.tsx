@@ -53,7 +53,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div>
+    <div className='overflow-hidden'>
       {/* HÀNG 1: CÁC THẺ THỐNG KÊ */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
         {statsCards.map((card) => {
@@ -78,62 +78,64 @@ export default function Dashboard() {
       </div>
 
       {/* HÀNG 2: BẢNG DANH SÁCH ỨNG VIÊN GẦN ĐÂY */}
-      <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6'>
+      <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6 h-[500px]'>
         <h3 className='text-lg font-bold text-slate-800 mb-4'>
           Ứng viên gần đây
         </h3>
-        <table className='w-full text-left'>
-          <thead>
-            <tr className='text-sm text-slate-500 border-b border-slate-100'>
-              <th className='pb-3 font-semibold'>Tên</th>
-              <th className='pb-3 font-semibold'>Email</th>
-              <th className='pb-3 font-semibold'>Trạng thái</th>
-              <th className='pb-3 font-semibold'>Ngày ứng tuyển</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockCandidates.map((candidate) => (
-              <tr
-                key={candidate.id}
-                className='border-b border-slate-50 hover:bg-slate-50 transition-colors'
-              >
-                <td className='py-3'>
-                  <div className='flex items-center gap-3'>
-                    <img
-                      src={candidate.avatar}
-                      alt=''
-                      className='w-8 h-8 rounded-full'
-                    />
-                    <span className='font-medium text-slate-800'>
-                      {candidate.name}
-                    </span>
-                  </div>
-                </td>
-                <td className='py-3 text-slate-500 text-sm'>
-                  {candidate.email}
-                </td>
-                <td className='py-3'>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      candidate.status === "Hired"
-                        ? "bg-green-100 text-green-700"
-                        : candidate.status === "Interviewing"
-                          ? "bg-blue-100 text-blue-700"
-                          : candidate.status === "Rejected"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {candidate.status}
-                  </span>
-                </td>
-                <td className='py-3 text-slate-500 text-sm'>
-                  {candidate.appliedDate}
-                </td>
+        <div className='overflow-y-auto h-[450px]'>
+          <table className='w-full text-left'>
+            <thead>
+              <tr className='text-sm text-slate-500 border-b border-slate-100'>
+                <th className='pb-3 font-semibold'>Tên</th>
+                <th className='pb-3 font-semibold'>Email</th>
+                <th className='pb-3 font-semibold'>Trạng thái</th>
+                <th className='pb-3 font-semibold'>Ngày ứng tuyển</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {mockCandidates.map((candidate) => (
+                <tr
+                  key={candidate.id}
+                  className='border-b border-slate-50 hover:bg-slate-50 transition-colors'
+                >
+                  <td className='py-3'>
+                    <div className='flex items-center gap-3'>
+                      <img
+                        src={candidate.avatar}
+                        alt=''
+                        className='w-8 h-8 rounded-full'
+                      />
+                      <span className='font-medium text-slate-800'>
+                        {candidate.name}
+                      </span>
+                    </div>
+                  </td>
+                  <td className='py-3 text-slate-500 text-sm'>
+                    {candidate.email}
+                  </td>
+                  <td className='py-3'>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        candidate.status === "Hired"
+                          ? "bg-green-100 text-green-700"
+                          : candidate.status === "Interviewing"
+                            ? "bg-blue-100 text-blue-700"
+                            : candidate.status === "Rejected"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {candidate.status}
+                    </span>
+                  </td>
+                  <td className='py-3 text-slate-500 text-sm'>
+                    {candidate.appliedDate}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

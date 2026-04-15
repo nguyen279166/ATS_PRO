@@ -1,14 +1,25 @@
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import { useContext } from "react";
+import { AuthContext } from "./hooks/AuthContext";
 import Sidebar from "./layouts/Sidebar";
 import JobList from "./pages/JobList";
 import KanbanBoard from "./pages/KanbanBoard";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/DashBoard";
+import LoginForm from "./pages/LoginForm";
+import RegisterForm from "./pages/RegisterForm";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-// Một Layout Wrapper (Bề mặt chung) để chứa cái Sidebar cố định
+// Layout có Sidebar (chỉ dành cho người đã đăng nhập)
 function LayoutCore({ children }: { children: React.ReactNode }) {
-  const location = useLocation(); // Hook này giúp đọc xem URL trên trình duyệt đang ở đâu
+  const location = useLocation();
 
-  // Tự động rà soát đường dẫn để đặt lại tên Header cho đúng
   const pageTitle =
     location.pathname === "/jobs"
       ? "Job Listings"
@@ -28,24 +39,72 @@ function LayoutCore({ children }: { children: React.ReactNode }) {
             Quản lý và theo dõi các luồng công việc tuyển dụng của bạn.
           </p>
         </header>
-        {/* Cửa sổ thần kỳ: Component con sẽ tự thay đổi ở cái nắp cống {children} này */}
         {children}
       </main>
     </div>
   );
 }
 
+// Component "Bảo vệ cửa": Chặn người lạ, chỉ cho người có token đi qua
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isLoggedIn } = useContext(AuthContext);
+
+  // Nếu chưa đăng nhập → Đá ngược về trang Login
+  if (!isLoggedIn) {
+    return <Navigate to='/login' replace />;
+  }
+
+  // Nếu đã đăng nhập → Cho qua cửa bình thường
+  return <LayoutCore>{children}</LayoutCore>;
+}
+
 export default function App() {
+  const { isLoggedIn } = useContext(AuthContext);
+
   return (
-    // Biến trang Web thành hệ thống điều hướng (Router)
     <BrowserRouter>
-      <LayoutCore>
-        <Routes>
-          <Route path='/' element={<Dashboard />} />
-          <Route path='/jobs' element={<JobList />} />
-          <Route path='/jobs/:jobId' element={<KanbanBoard />} />
-        </Routes>
-      </LayoutCore>
+      <Routes>
+        {/* TRANG CÔNG KHAI: Ai cũng vào được */}
+        <Route
+          path='/login'
+          element={
+            // Nếu đã login rồi mà vào /login thì đá về trang chủ luôn
+            isLoggedIn ? <Navigate to='/' replace /> : <LoginForm />
+          }
+        />
+        <Route
+          path='/register'
+          element={isLoggedIn ? <Navigate to='/' replace /> : <RegisterForm />}
+        />
+
+        {/* TRANG BẢO VỆ: Phải có token mới vào được */}
+        <Route
+          path='/'
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/jobs'
+          element={
+            <ProtectedRoute>
+              <JobList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/jobs/:jobId'
+          element={
+            <ProtectedRoute>
+              <KanbanBoard />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+
+      <ToastContainer position='bottom-right' />
     </BrowserRouter>
   );
 }

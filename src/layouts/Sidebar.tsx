@@ -1,7 +1,16 @@
-import { LayoutDashboard, Briefcase, Users, Settings } from "lucide-react";
+import {
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { AuthContext } from "../hooks/AuthContext";
+import { useContext } from "react";
 
 export default function Sidebar() {
+  const { logout } = useContext(AuthContext);
   const location = useLocation();
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, active: false },
@@ -48,15 +57,27 @@ export default function Sidebar() {
       </nav>
 
       {/* Phần Đáy (User Info) */}
+      {/* Phần Đáy (User Info) */}
       <div className='mt-auto pt-6 px-4 border-t border-slate-800'>
-        <div className='flex items-center gap-3'>
-          <div className='w-10 h-10 rounded-full bg-slate-700 overflow-hidden'>
-            <img src='https://i.pravatar.cc/150?u=admin' alt='User Avatar' />
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-3'>
+            <div className='w-10 h-10 rounded-full bg-slate-700 overflow-hidden'>
+              <img src='https://i.pravatar.cc/150?u=admin' alt='User Avatar' />
+            </div>
+            <div>
+              <p className='text-sm font-semibold'>Tuấn Nguyễn</p>
+              <p className='text-xs text-slate-400'>HR Manager</p>
+            </div>
           </div>
-          <div>
-            <p className='text-sm font-semibold'>Tuấn Nguyễn</p>
-            <p className='text-xs text-slate-400'>HR Manager</p>
-          </div>
+          <button
+            onClick={() => {
+              logout();
+            }}
+            className='text-slate-400 hover:text-red-400 transition-colors cursor-pointer'
+            title='Đăng xuất'
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </aside>

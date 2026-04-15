@@ -1,6 +1,5 @@
 import type { Candidate, Job } from "../types";
 
-// Dữ liệu giả cho Tin tuyển dụng
 export const mockJobs: Job[] = [
   {
     id: "JOB-01",
@@ -18,9 +17,24 @@ export const mockJobs: Job[] = [
     status: "Open",
     createdAt: "2026-04-12",
   },
+  {
+    id: "JOB-03",
+    title: "Backend Engineer (Node.js)",
+    department: "Engineering",
+    location: "Hà Nội",
+    status: "Open",
+    createdAt: "2026-04-08",
+  },
+  {
+    id: "JOB-04",
+    title: "Product Manager",
+    department: "Product",
+    location: "Remote",
+    status: "Closed",
+    createdAt: "2026-03-15",
+  },
 ];
 
-// Dữ liệu giả cho Ứng viên (Gắn liền với Job bằng jobId)
 export const mockCandidates: Candidate[] = [
   {
     id: "CAN-01",
@@ -48,5 +62,50 @@ export const mockCandidates: Candidate[] = [
     status: "Hired",
     appliedDate: "2026-04-05",
     avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
+  },
+  {
+    id: "CAN-04",
+    jobId: "JOB-01",
+    name: "Phạm Minh D",
+    email: "phamminhd@gmail.com",
+    status: "Rejected",
+    appliedDate: "2026-04-09",
+    avatar: "https://i.pravatar.cc/150?u=phamd123",
+  },
+  {
+    id: "CAN-05",
+    jobId: "JOB-03",
+    name: "Hoàng Thị E",
+    email: "hoange@gmail.com",
+    status: "Applied",
+    appliedDate: "2026-04-14",
+    avatar: "https://i.pravatar.cc/150?u=hoange456",
+  },
+  {
+    id: "CAN-06",
+    jobId: "JOB-02",
+    name: "Đỗ Quang F",
+    email: "doquangf@gmail.com",
+    status: "Interviewing",
+    appliedDate: "2026-04-07",
+    avatar: "https://i.pravatar.cc/150?u=dof789",
+  },
+  {
+    id: "CAN-07",
+    jobId: "JOB-03",
+    name: "Vũ Thanh G",
+    email: "vuthanhg@gmail.com",
+    status: "Hired",
+    appliedDate: "2026-04-01",
+    avatar: "https://i.pravatar.cc/150?u=vug101",
+  },
+  {
+    id: "CAN-08",
+    jobId: "JOB-01",
+    name: "Bùi Ngọc H",
+    email: "buingoch@gmail.com",
+    status: "Interviewing",
+    appliedDate: "2026-04-12",
+    avatar: "https://i.pravatar.cc/150?u=buih202",
   },
 ];
