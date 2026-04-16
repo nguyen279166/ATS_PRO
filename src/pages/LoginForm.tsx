@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { useContext } from "react";
-import { AuthContext } from "../hooks/AuthContext";
+import { AuthContext } from "../hooks/AuthProvider";
 
 const MOCK_LOGIN_API = "https://api.escuelajs.co/api/v1/auth/login";
 

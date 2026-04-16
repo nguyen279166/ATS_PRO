@@ -6,7 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useContext } from "react";
-import { AuthContext } from "./hooks/AuthContext";
+import { AuthContext } from "./hooks/AuthProvider";
 import Sidebar from "./layouts/Sidebar";
 import JobList from "./pages/JobList";
 import KanbanBoard from "./pages/KanbanBoard";
@@ -109,6 +109,30 @@ export default function App() {
           }
         />
         <Route path='/careers' element={<LandingPage />} />
+        <Route
+          path='/jobs'
+          element={
+            <ProtectedRoute>
+              <JobList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/candidates'
+          element={
+            <ProtectedRoute>
+              <h1>Candidates</h1>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/settings'
+          element={
+            <ProtectedRoute>
+              <h1>Settings</h1>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
 
       <ToastContainer position='bottom-right' />
