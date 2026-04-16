@@ -2,6 +2,12 @@ import React, { createContext, useState } from "react";
 
 export const AuthContext = createContext<any>(null);
 
+type AuthContextType = {
+  isLoggedIn: boolean;
+  login: (token: string) => void;
+  logout: () => void;
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(
     !!localStorage.getItem("token_lay_duoc"),
