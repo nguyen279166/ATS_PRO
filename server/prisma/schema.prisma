@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================
+// 🏢 BẢNG USER - Lưu thông tin HR / Admin
+// =============================================
+model User {
+  id        String   @id @default(uuid())    // Mã định danh duy nhất, tự động sinh
+  email     String   @unique                 // Email không được trùng
+  password  String                           // Mật khẩu (sẽ được mã hoá)
+  fullName  String
+  role      String   @default("hr")          // Vai trò: "hr" hoặc "admin"
+  createdAt DateTime @default(now())         // Ngày tạo: Tự động lấy thời điểm hiện tại
+
+  jobs      Job[]    // 👈 MỐI QUAN HỆ: 1 User quản lý NHIỀU Job
+}
+
+// =============================================
+// 💼 BẢNG JOB - Tin tuyển dụng
+// =============================================
+model Job {
+  id         String   @id @default(uuid())
+  title      String                          // "Frontend Developer"
+  department String                          // "Engineering"
+  location   String                          // "Remote"
+  status     String   @default("Open")       // "Open" hoặc "Closed"
+  createdAt  DateTime @default(now())
+
+  // 👈 MỐI QUAN HỆ: Job này thuộc về User nào (HR nào tạo)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  candidates Candidate[]  // 👈 1 Job có NHIỀU Candidate
+}
+
+// =============================================
+// 👤 BẢNG CANDIDATE - Ứng viên
+// =============================================
+model Candidate {
+  id          String   @id @default(uuid())
+  name        String
+  email       String
+  status      String   @default("Applied")   // "Applied" | "Interviewing" | "Hired" | "Rejected"
+  appliedDate DateTime @default(now())
+  avatar      String?                        // Dấu ? = CÓ THỂ TRỐNG (optional)
+
+  // 👈 MỐI QUAN HỆ: Candidate này ứng tuyển vào Job nào
+  jobId       String
+  job         Job      @relation(fields: [jobId], references: [id])
+}
