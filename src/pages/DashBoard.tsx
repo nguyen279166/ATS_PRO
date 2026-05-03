@@ -1,4 +1,4 @@
-import { mockJobs, mockCandidates } from "../api/mockData";
+import { useData } from "../hooks/DataProvider";
 import { Briefcase, Users, UserCheck, TrendingUp } from "lucide-react";
 import {
   BarChart,
@@ -14,16 +14,24 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
-  const totalJobs = mockJobs.length;
-  const totalCandidates = mockCandidates.length;
-  const hiredCount = mockCandidates.filter((c) => c.status === "Hired").length;
-  const interviewingCount = mockCandidates.filter(
+  const { jobs, candidates, loading } = useData();
+
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-[60vh]'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
+      </div>
+    );
+  }
+
+  const totalJobs = jobs.length;
+  const totalCandidates = candidates.length;
+  const hiredCount = candidates.filter((c) => c.status === "Hired").length;
+  const interviewingCount = candidates.filter(
     (c) => c.status === "Interviewing",
   ).length;
-  const appliedCount = mockCandidates.filter(
-    (c) => c.status === "Applied",
-  ).length;
-  const rejectedCount = mockCandidates.filter(
+  const appliedCount = candidates.filter((c) => c.status === "Applied").length;
+  const rejectedCount = candidates.filter(
     (c) => c.status === "Rejected",
   ).length;
   const hireRate =
@@ -65,10 +73,10 @@ export default function Dashboard() {
   ];
 
   // DỮ LIỆU CHO BIỂU ĐỒ CỘT: Số ứng viên theo từng Job
-  const barChartData = mockJobs.map((job) => ({
+  const barChartData = jobs.map((job) => ({
     name:
       job.title.length > 15 ? job.title.substring(0, 15) + "..." : job.title,
-    candidates: mockCandidates.filter((candidate) => candidate.jobId === job.id)
+    candidates: candidates.filter((candidate) => candidate.jobId === job.id)
       .length,
   }));
 
@@ -177,7 +185,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {mockCandidates.map((candidate) => (
+              {candidates.slice(0, 5).map((candidate) => (
                 <tr
                   key={candidate.id}
                   className='border-b border-slate-50 hover:bg-slate-50 transition-colors'
@@ -185,7 +193,10 @@ export default function Dashboard() {
                   <td className='py-3'>
                     <div className='flex items-center gap-3'>
                       <img
-                        src={candidate.avatar}
+                        src={
+                          candidate.avatar ||
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(candidate.name)}&background=random`
+                        }
                         alt=''
                         className='w-8 h-8 rounded-full'
                       />
@@ -213,7 +224,9 @@ export default function Dashboard() {
                     </span>
                   </td>
                   <td className='py-3 text-slate-500 text-sm'>
-                    {candidate.appliedDate}
+                    {new Date(candidate.appliedDate).toLocaleDateString(
+                      "vi-VN",
+                    )}
                   </td>
                 </tr>
               ))}

@@ -21,12 +21,16 @@ router.get("/", async (req, res) => {
 // POST /api/jobs → Tạo Job mới
 router.post("/", async (req, res) => {
   try {
-    const { title, department, location, userId } = req.body;
+    const { title, department, location } = req.body;
+    // Lấy userId từ token (đã được authMiddleware gắn vào req.user)
+    const userId = (req as any).user.userId;
+    
     const job = await prisma.job.create({
       data: { title, department, location, userId },
     });
     res.status(201).json(job);
   } catch (error) {
+    console.error("Lỗi khi tạo Job:", error);
     res.status(500).json({ error: "Lỗi server khi tạo Job" });
   }
 });

@@ -57,11 +57,12 @@ const RegisterForm = () => {
 
   const onSubmit = async (data: RegisterFormType) => {
     try {
-      const res = await axios.post("https://dummyjson.com/users/add", {
-        firstName: data.fullName,
-        email: data.email,
-        gender: data.gender,
-        password: data.password,
+      const { fullName, email, gender, password } = data;
+      const res = await axios.post("http://localhost:3001/api/auth/register", {
+        fullName,
+        email,
+        gender,
+        password,
       });
       console.log("Thông tin đăng nhập:", res.data);
       toast.success("Đăng ký thành công!");

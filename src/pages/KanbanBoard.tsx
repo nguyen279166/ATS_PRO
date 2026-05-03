@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
-import { mockJobs, mockCandidates } from "../api/mockData";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useData } from "../hooks/DataProvider";
+import axios from "axios";
 import type { Candidate, CandidateStatus } from "../types";
 import { Search } from "lucide-react"; // Lấy icon cái Kính lúp
 import { useDebounce } from "../hooks/useDebounce";
@@ -10,15 +11,18 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 export default function KanbanBoard() {
-  const { jobId } = useParams(); // useParams là "máy quét" lấy đuôi URL (ví dụ: JOB-01) xuống làm biến số
+  const { jobId } = useParams();
+  const { jobs, candidates: globalCandidates, loading, refreshData } = useData();
 
-  // 1. Tìm thông tin Job từ kho dữ liệu giả
-  const currentJob = mockJobs.find((job) => job.id === jobId);
+  const currentJob = jobs.find((j: any) => j.id === jobId);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
 
-  const initialCandidates = mockCandidates.filter(
-    (candidate) => candidate.jobId === jobId,
-  );
-  const [candidates, setCandidates] = useState(initialCandidates);
+  useEffect(() => {
+    if (globalCandidates) {
+      setCandidates(globalCandidates.filter((c: any) => c.jobId === jobId));
+    }
+  }, [globalCandidates, jobId]);
+
   // Lưu chữ đang gõ (Cái này thay đổi liên tục, làm React rặn render liên tục)
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -40,7 +44,7 @@ export default function KanbanBoard() {
     { title: "Hired", status: "Hired" as const },
     { title: "Rejected", status: "Rejected" as const },
   ];
-  const handleDrop = (e: React.DragEvent, newStatus: CandidateStatus) => {
+  const handleDrop = async (e: React.DragEvent, newStatus: CandidateStatus) => {
     // Móc ID của ứng viên trong túi hành lý (được gói lúc DragStart)
     const candidateId = e.dataTransfer.getData("candidateId");
 
@@ -57,25 +61,51 @@ export default function KanbanBoard() {
       remainingCandidates.push({ ...draggedCandidate, status: newStatus });
       return remainingCandidates;
     });
+
+    // BÁO CÁO LÊN BACKEND:
+    try {
+      const token = localStorage.getItem("token_lay_duoc");
+      await axios.put(
+        `http://localhost:3001/api/candidates/${candidateId}`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      refreshData(false); // Đồng bộ lại Global State ngầm, KHÔNG hiện spinner
+    } catch (error) {
+      console.error("Lỗi khi lưu trạng thái kéo thả:", error);
+    }
   };
-  const handleAddCandidate = (data: {
+  const handleAddCandidate = async (data: {
     name: string;
     email: string;
     status: CandidateStatus;
   }) => {
-    const newCandidate: Candidate = {
-      id: `CAN-${Date.now()}`, // Tạo ID tạm bằng mốc thời gian (sau có Backend sẽ dùng UUID)
-      jobId: jobId!,
-      name: data.name,
-      email: data.email,
-      status: data.status,
-      appliedDate: new Date().toISOString().split("T")[0], // Lấy ngày hôm nay dạng 2026-04-14
-      avatar: `https://i.pravatar.cc/150?u=${Date.now()}`,
-    };
-    setCandidates((prev) => [...prev, newCandidate]);
+    try {
+      const token = localStorage.getItem("token_lay_duoc");
+      const res = await axios.post(
+        "http://localhost:3001/api/candidates",
+        {
+          name: data.name,
+          email: data.email,
+          jobId: jobId,
+          status: data.status,
+        },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      // Gắn thêm trạng thái vì Backend Prisma hiện tạo mặc định là "Applied"
+      // Lấy avatar dummy vì backend chưa có ảnh
+      const newCandidate = {
+        ...res.data,
+        avatar: `https://i.pravatar.cc/150?u=${Date.now()}`,
+      };
+      setCandidates((prev) => [...prev, newCandidate]);
+      refreshData(); // Đồng bộ Global state
+    } catch (error) {
+      console.error("Lỗi tạo candidate:", error);
+    }
   };
 
-  const handleDropOnCard = (
+  const handleDropOnCard = async (
     e: React.DragEvent,
     targetId: string,
     newStatus: CandidateStatus,
@@ -99,8 +129,26 @@ export default function KanbanBoard() {
       newArray.splice(targetIndex, 0, draggedItem);
       return newArray;
     });
+
+    // BÁO CÁO LÊN BACKEND:
+    try {
+      const token = localStorage.getItem("token_lay_duoc");
+      await axios.put(
+        `http://localhost:3001/api/candidates/${draggedId}`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      refreshData(false); // Đồng bộ ngầm, KHÔNG hiện spinner
+    } catch (error) {
+      console.error("Lỗi khi lưu trạng thái kéo thả (đè thẻ):", error);
+    }
   };
 
+  if (loading) return (
+    <div className='flex items-center justify-center h-[60vh]'>
+      <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
+    </div>
+  );
   if (!currentJob) return <div>Không tìm thấy công việc!</div>; // Lỡ user gõ bậy bạ lên URL
 
   return (

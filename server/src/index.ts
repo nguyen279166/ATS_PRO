@@ -1,12 +1,12 @@
+import dotenv from "dotenv";
+dotenv.config(); // Load .env TRƯỚC KHI import routes
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import jobRoutes from "./routes/jobRoutes";
 import candidateRoutes from "./routes/candidateRoutes";
 import authRoutes from "./routes/authRoutes";
 import authMiddleware from "./routes/authMiddleware";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

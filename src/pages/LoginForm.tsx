@@ -6,7 +6,7 @@ import axios from "axios";
 import { useContext } from "react";
 import { AuthContext } from "../hooks/AuthProvider";
 
-const MOCK_LOGIN_API = "https://api.escuelajs.co/api/v1/auth/login";
+const LOGIN_API = "http://localhost:3001/api/auth/login";
 
 const loginSchema = z.object({
   email: z
@@ -34,12 +34,13 @@ const LoginForm = () => {
   });
 
   const onSubmit = async (data: LoginFormType) => {
+    const { email, password } = data;
     try {
-      const res = await axios.post(MOCK_LOGIN_API, {
-        email: data.email,
-        password: data.password,
+      const res = await axios.post(LOGIN_API, {
+        email,
+        password,
       });
-      const token = res.data.access_token;
+      const token = res.data.token;
       if (!token) {
         throw new Error("API không trả về token");
       }
