@@ -2,7 +2,7 @@ import React, { createContext, useState } from "react";
 
 export const AuthContext = createContext<any>(null);
 
-type AuthContextType = {
+export type AuthContextType = {
   isLoggedIn: boolean;
   login: (token: string) => void;
   logout: () => void;

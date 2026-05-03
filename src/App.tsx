@@ -8,6 +8,7 @@ import {
 import { useContext } from "react";
 import { AuthContext } from "./hooks/AuthProvider";
 import Sidebar from "./layouts/Sidebar";
+import CandidateList from "./pages/CandidateList";
 import JobList from "./pages/JobList";
 import KanbanBoard from "./pages/KanbanBoard";
 import Dashboard from "./pages/DashBoard";
@@ -59,83 +60,79 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <LayoutCore>{children}</LayoutCore>;
 }
 
+import { DataProvider } from "./hooks/DataProvider";
+
 export default function App() {
   const { isLoggedIn } = useContext(AuthContext);
 
   return (
     <BrowserRouter>
-      <Routes>
-        {/* TRANG CÔNG KHAI: Ai cũng vào được */}
-        <Route
-          path='/login'
-          element={
-            // Nếu đã login rồi mà vào /login thì đá về trang chủ luôn
-            isLoggedIn ? <Navigate to='/' replace /> : <LoginForm />
-          }
-        />
-        <Route
-          path='/register'
-          element={isLoggedIn ? <Navigate to='/' replace /> : <RegisterForm />}
-        />
+      <DataProvider>
+        <Routes>
+          {/* TRANG CÔNG KHAI: Ai cũng vào được */}
+          <Route
+            path='/login'
+            element={
+              // Nếu đã login rồi mà vào /login thì đá về trang chủ luôn
+              isLoggedIn ? <Navigate to='/' replace /> : <LoginForm />
+            }
+          />
+          <Route
+            path='/register'
+            element={isLoggedIn ? <Navigate to='/' replace /> : <RegisterForm />}
+          />
 
-        {/* TRANG BẢO VỆ: Phải có token mới vào được */}
-        <Route
-          path='/'
-          element={
-            isLoggedIn ? (
+          {/* TRANG BẢO VỆ: Phải có token mới vào được */}
+          <Route
+            path='/'
+            element={
+              isLoggedIn ? (
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              ) : (
+                <LandingPage />
+              )
+            }
+          />
+
+          <Route
+            path='/jobs'
+            element={
               <ProtectedRoute>
-                <Dashboard />
+                <JobList />
               </ProtectedRoute>
-            ) : (
-              <LandingPage />
-            )
-          }
-        />
+            }
+          />
+          <Route
+            path='/jobs/:jobId'
+            element={
+              <ProtectedRoute>
+                <KanbanBoard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path='/careers' element={<LandingPage />} />
+          <Route
+            path='/candidates'
+            element={
+              <ProtectedRoute>
+                <CandidateList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path='/settings'
+            element={
+              <ProtectedRoute>
+                <h1>Settings</h1>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
 
-        <Route
-          path='/jobs'
-          element={
-            <ProtectedRoute>
-              <JobList />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/jobs/:jobId'
-          element={
-            <ProtectedRoute>
-              <KanbanBoard />
-            </ProtectedRoute>
-          }
-        />
-        <Route path='/careers' element={<LandingPage />} />
-        <Route
-          path='/jobs'
-          element={
-            <ProtectedRoute>
-              <JobList />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/candidates'
-          element={
-            <ProtectedRoute>
-              <h1>Candidates</h1>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/settings'
-          element={
-            <ProtectedRoute>
-              <h1>Settings</h1>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-
-      <ToastContainer position='bottom-right' />
+        <ToastContainer position='bottom-right' />
+      </DataProvider>
     </BrowserRouter>
   );
 }
