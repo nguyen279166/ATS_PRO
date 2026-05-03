@@ -92,21 +92,21 @@ export default function Dashboard() {
   return (
     <div className='overflow-hidden'>
       {/* HÀNG 1: CÁC THẺ THỐNG KÊ */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 '>
         {statsCards.map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.title}
-              className={`${card.bgLight} p-6 rounded-2xl border border-slate-100 hover:shadow-md transition-all`}
+              className={`${card.bgLight} p-6 rounded-2xl border border-slate-100 hover:shadow-md transition-all dark:bg-slate-800 dark:border-slate-700 text-black dark:text-white`}
             >
               <div className='flex items-center justify-between mb-4'>
                 <div className={`${card.color} p-3 rounded-xl text-white`}>
                   <Icon size={22} />
                 </div>
               </div>
-              <p className='text-sm text-slate-500 font-medium'>{card.title}</p>
-              <p className={`text-3xl font-bold mt-1 ${card.textColor}`}>
+              <p className='text-sm text-slate-500 dark:text-slate-400 font-medium'>{card.title}</p>
+              <p className={`text-3xl font-bold mt-1 ${card.textColor} dark:text-white`}>
                 {card.value}
               </p>
             </div>
@@ -115,10 +115,10 @@ export default function Dashboard() {
       </div>
 
       {/* HÀNG 2: HAI BIỂU ĐỒ NGANG NHAU */}
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 '>
         {/* Biểu đồ Cột: Số ứng viên theo Job */}
-        <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6'>
-          <h3 className='text-lg font-bold text-slate-800 mb-6'>
+        <div className='bg-white rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 dark:bg-slate-800 text-black dark:text-white'>
+          <h3 className='text-lg font-bold text-slate-800 dark:text-white mb-6'>
             Ứng viên theo vị trí
           </h3>
           <ResponsiveContainer width='100%' height={280}>
@@ -137,8 +137,8 @@ export default function Dashboard() {
         </div>
 
         {/* Biểu đồ Tròn: Phân bổ trạng thái */}
-        <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6'>
-          <h3 className='text-lg font-bold text-slate-800 mb-6'>
+        <div className='bg-white rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 dark:bg-slate-800 text-black dark:text-white'>
+          <h3 className='text-lg font-bold text-slate-800 dark:text-white mb-6'>
             Phân bổ trạng thái
           </h3>
           <ResponsiveContainer width='100%' height={280}>
@@ -170,14 +170,14 @@ export default function Dashboard() {
       </div>
 
       {/* HÀNG 3: BẢNG DANH SÁCH ỨNG VIÊN GẦN ĐÂY */}
-      <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6'>
-        <h3 className='text-lg font-bold text-slate-800 mb-4'>
+      <div className='bg-white rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 dark:bg-slate-800 text-black dark:text-white'>
+        <h3 className='text-lg font-bold text-slate-800 dark:text-white mb-4'>
           Ứng viên gần đây
         </h3>
         <div className='overflow-x-auto'>
           <table className='w-full text-left'>
             <thead>
-              <tr className='text-sm text-slate-500 border-b border-slate-100'>
+              <tr className='text-sm text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700'>
                 <th className='pb-3 font-semibold'>Tên</th>
                 <th className='pb-3 font-semibold'>Email</th>
                 <th className='pb-3 font-semibold'>Trạng thái</th>
@@ -188,7 +188,7 @@ export default function Dashboard() {
               {candidates.slice(0, 5).map((candidate) => (
                 <tr
                   key={candidate.id}
-                  className='border-b border-slate-50 hover:bg-slate-50 transition-colors'
+                  className='border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors'
                 >
                   <td className='py-3'>
                     <div className='flex items-center gap-3'>
@@ -200,12 +200,12 @@ export default function Dashboard() {
                         alt=''
                         className='w-8 h-8 rounded-full'
                       />
-                      <span className='font-medium text-slate-800'>
+                      <span className='font-medium text-slate-800 dark:text-white'>
                         {candidate.name}
                       </span>
                     </div>
                   </td>
-                  <td className='py-3 text-slate-500 text-sm'>
+                  <td className='py-3 text-slate-500 dark:text-slate-400 text-sm'>
                     {candidate.email}
                   </td>
                   <td className='py-3'>
@@ -223,7 +223,7 @@ export default function Dashboard() {
                       {candidate.status}
                     </span>
                   </td>
-                  <td className='py-3 text-slate-500 text-sm'>
+                  <td className='py-3 text-slate-500 dark:text-slate-400 text-sm'>
                     {new Date(candidate.appliedDate).toLocaleDateString(
                       "vi-VN",
                     )}

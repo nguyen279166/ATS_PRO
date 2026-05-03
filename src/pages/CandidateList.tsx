@@ -15,30 +15,32 @@ export default function CandidateList() {
   }
 
   const filteredCandidates = candidates.filter((candidate) =>
-    candidate.name.toLowerCase().includes(searchTerm.toLowerCase())
+    candidate.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
     <div>
       <div className='flex justify-between items-center mb-6'>
-        <h2 className='text-2xl font-bold text-slate-800'>Danh sách Tất cả Ứng viên</h2>
-        
+        <h2 className='text-2xl font-bold text-slate-800 dark:text-white'>
+          Danh sách Tất cả Ứng viên
+        </h2>
+
         {/* Thanh tìm kiếm */}
         <div className='relative'>
           <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-            <Search size={18} className='text-slate-400' />
+            <Search size={18} className='text-slate-400 ' />
           </div>
           <input
             type='text'
             placeholder='Tìm ứng viên theo tên...'
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className='pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 transition-all'
+            className='pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 transition-all dark:text-white'
           />
         </div>
       </div>
 
-      <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6'>
+      <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-6 dark:bg-slate-800 text-black dark:text-white'>
         <div className='overflow-x-auto'>
           <table className='w-full text-left'>
             <thead>
@@ -55,7 +57,7 @@ export default function CandidateList() {
                 filteredCandidates.map((candidate) => (
                   <tr
                     key={candidate.id}
-                    className='border-b border-slate-50 hover:bg-slate-50 transition-colors'
+                    className='border-b border-slate-50 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors'
                   >
                     <td className='py-4'>
                       <div className='flex items-center gap-3'>
@@ -63,13 +65,13 @@ export default function CandidateList() {
                           src={
                             candidate.avatar ||
                             `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              candidate.name
+                              candidate.name,
                             )}&background=random`
                           }
                           alt=''
                           className='w-10 h-10 rounded-full'
                         />
-                        <span className='font-bold text-slate-800'>
+                        <span className='font-bold text-black dark:text-white'>
                           {candidate.name}
                         </span>
                       </div>
@@ -98,7 +100,9 @@ export default function CandidateList() {
                       </span>
                     </td>
                     <td className='py-4 text-slate-500 text-sm font-medium'>
-                      {new Date(candidate.appliedDate).toLocaleDateString("vi-VN")}
+                      {new Date(candidate.appliedDate).toLocaleDateString(
+                        "vi-VN",
+                      )}
                     </td>
                   </tr>
                 ))
