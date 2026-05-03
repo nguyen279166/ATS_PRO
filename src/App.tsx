@@ -30,14 +30,14 @@ function LayoutCore({ children }: { children: React.ReactNode }) {
         : "Application Tracking System";
 
   return (
-    <div className='flex min-h-screen bg-slate-50'>
+    <div className='flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200'>
       <Sidebar />
-      <main className='flex-1 p-8'>
+      <main className='flex-1 p-8 flex flex-col'>
         <header className='mb-8'>
-          <h2 className='text-3xl font-bold text-slate-800 tracking-tight'>
+          <h2 className='text-3xl font-bold text-slate-800 dark:text-white tracking-tight'>
             {pageTitle}
           </h2>
-          <p className='text-slate-500 mt-1'>
+          <p className='text-slate-500 dark:text-slate-400 mt-1'>
             Quản lý và theo dõi các luồng công việc tuyển dụng của bạn.
           </p>
         </header>
@@ -61,6 +61,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 import { DataProvider } from "./hooks/DataProvider";
+import Settings from "./pages/Settings";
 
 export default function App() {
   const { isLoggedIn } = useContext(AuthContext);
@@ -125,7 +126,7 @@ export default function App() {
             path='/settings'
             element={
               <ProtectedRoute>
-                <h1>Settings</h1>
+                <Settings />
               </ProtectedRoute>
             }
           />

@@ -12,7 +12,12 @@ import { ArrowLeft } from "lucide-react";
 
 export default function KanbanBoard() {
   const { jobId } = useParams();
-  const { jobs, candidates: globalCandidates, loading, refreshData } = useData();
+  const {
+    jobs,
+    candidates: globalCandidates,
+    loading,
+    refreshData,
+  } = useData();
 
   const currentJob = jobs.find((j: any) => j.id === jobId);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -144,11 +149,12 @@ export default function KanbanBoard() {
     }
   };
 
-  if (loading) return (
-    <div className='flex items-center justify-center h-[60vh]'>
-      <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
-    </div>
-  );
+  if (loading)
+    return (
+      <div className='flex items-center justify-center h-[60vh]'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
+      </div>
+    );
   if (!currentJob) return <div>Không tìm thấy công việc!</div>; // Lỡ user gõ bậy bạ lên URL
 
   return (
@@ -161,7 +167,7 @@ export default function KanbanBoard() {
           >
             <ArrowLeft size={16} /> Quay lại danh sách
           </Link>
-          <h3 className='text-2xl font-bold text-slate-800'>
+          <h3 className='text-2xl font-bold text-slate-800 dark:text-white'>
             {currentJob.title}
           </h3>
           <p className='text-slate-500 mt-1'>Sơ đồ tuyển dụng ứng viên</p>
@@ -169,7 +175,7 @@ export default function KanbanBoard() {
 
         {/* Cục Thanh Tìm Kiếm Ứng Viên */}
         <div className='flex items-center gap-4'>
-          <div className='relative w-96'>
+          <div className='relative w-96 dark:text-white text-black'>
             <label className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-400'>
               <Search size={18} />
             </label>
@@ -202,13 +208,15 @@ export default function KanbanBoard() {
           return (
             <div
               key={col.title}
-              className='bg-slate-100 rounded-2xl p-4 flex flex-col gap-4 border border-slate-200'
+              className='bg-slate-100 rounded-2xl p-4 flex flex-col gap-4 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-black dark:text-white'
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, col.status)}
             >
               {/* Header của một Cột */}
               <div className='flex justify-between items-center px-1'>
-                <h4 className='font-bold text-slate-700'>{col.title}</h4>
+                <h4 className='font-bold text-slate-700 dark:text-white text-black'>
+                  {col.title}
+                </h4>
                 <span className='bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md text-xs font-bold'>
                   {columnCandidates.length}
                 </span>
@@ -220,7 +228,7 @@ export default function KanbanBoard() {
                 {columnCandidates.map((candidate) => (
                   <div
                     key={candidate.id}
-                    className='bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-grab hover:shadow-md hover:border-blue-300 hover:-translate-y-1 transition-all'
+                    className='bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-grab hover:shadow-md hover:border-blue-300 hover:-translate-y-1 transition-all dark:bg-slate-700 dark:border-slate-800'
                     draggable={true} // Cờ cho phép bế đi
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) =>
@@ -237,7 +245,7 @@ export default function KanbanBoard() {
                         className='w-8 h-8 rounded-full bg-slate-100'
                       />
                       <div>
-                        <h5 className='font-bold text-sm text-slate-800'>
+                        <h5 className='font-bold text-sm text-slate-800 dark:text-white'>
                           {candidate.name}
                         </h5>
                         <p className='text-xs text-slate-500 font-medium'>

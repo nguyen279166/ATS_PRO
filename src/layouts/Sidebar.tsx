@@ -7,10 +7,13 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function Sidebar() {
   const { logout } = useAuth();
   const location = useLocation();
+  const [profile, setProfile] = useState<any>(null);
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
@@ -18,6 +21,21 @@ export default function Sidebar() {
     { name: "Candidates", icon: Users, path: "/candidates" },
     { name: "Settings", icon: Settings, path: "/settings" },
   ];
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token_lay_duoc");
+        const res = await axios.get("http://localhost:3001/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setProfile(res.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy thông tin user:", error);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   return (
     <aside className='w-64 bg-gradient-to-b from-slate-900 to-slate-950 text-white flex flex-col min-h-screen sticky top-0'>
@@ -79,11 +97,19 @@ export default function Sidebar() {
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-3'>
             <div className='w-10 h-10 rounded-full overflow-hidden ring-2 ring-blue-500/30'>
-              <img src='https://i.pravatar.cc/150?u=admin' alt='User Avatar' />
+              <img
+                src={profile?.avatar || "https://i.pravatar.cc/150?u=admin"}
+                alt='User Avatar'
+                className='w-10 h-10 rounded-full object-cover shadow-inner border-1 border-slate-50'
+              />
             </div>
             <div>
-              <p className='text-sm font-semibold'>Tuấn Nguyễn</p>
-              <p className='text-xs text-slate-400'>HR Manager</p>
+              <p className='text-sm font-semibold'>
+                {profile?.fullName?.split(" ").pop()}
+              </p>
+              <p className='text-xs text-slate-400 uppercase'>
+                {profile?.role}
+              </p>
             </div>
           </div>
           <button

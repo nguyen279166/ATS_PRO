@@ -15,6 +15,7 @@ model User {
   email     String   @unique                 // Email không được trùng
   password  String                           // Mật khẩu (sẽ được mã hoá)
   fullName  String
+  avatar    String?                          // 👈 Thêm trường ảnh đại diện (có thể null)
   role      String   @default("hr")          // Vai trò: "hr" hoặc "admin"
   createdAt DateTime @default(now())         // Ngày tạo: Tự động lấy thời điểm hiện tại
 

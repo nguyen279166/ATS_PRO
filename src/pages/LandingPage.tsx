@@ -1,10 +1,54 @@
-import { mockJobs } from "../api/mockData";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
 import { MapPin, Building, ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function LandingPage() {
-  // Chỉ hiển thị những Job đang mở
-  const openJobs = mockJobs.filter((job) => job.status === "Open");
+  const [openJobs, setOpenJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Apply Modal state
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [applicantName, setApplicantName] = useState("");
+  const [applicantEmail, setApplicantEmail] = useState("");
+  const [isApplying, setIsApplying] = useState(false);
+
+  useEffect(() => {
+    const fetchPublicJobs = async () => {
+      try {
+        const res = await axios.get("http://localhost:3001/api/public/jobs");
+        setOpenJobs(res.data);
+      } catch (error) {
+        console.error("Lỗi khi tải công việc:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPublicJobs();
+  }, []);
+
+  const handleApply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedJob) return;
+    
+    setIsApplying(true);
+    try {
+      await axios.post("http://localhost:3001/api/public/apply", {
+        jobId: selectedJob.id,
+        name: applicantName,
+        email: applicantEmail
+      });
+      toast.success("Ứng tuyển thành công! Nhà tuyển dụng sẽ sớm liên hệ với bạn.");
+      setSelectedJob(null);
+      setApplicantName("");
+      setApplicantEmail("");
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Lỗi khi ứng tuyển");
+    } finally {
+      setIsApplying(false);
+    }
+  };
 
   return (
     <div className='min-h-screen bg-gradient-to-b from-slate-50 to-white'>
@@ -76,31 +120,43 @@ export default function LandingPage() {
         </p>
 
         <div className='space-y-4'>
-          {openJobs.map((job) => (
-            <div
-              key={job.id}
-              className='bg-white p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-lg transition-all group'
-            >
-              <div className='flex items-center justify-between'>
-                <div>
-                  <h4 className='text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors'>
-                    {job.title}
-                  </h4>
-                  <div className='flex items-center gap-4 mt-2 text-sm text-slate-500'>
-                    <span className='flex items-center gap-1'>
-                      <Building size={14} /> {job.department}
-                    </span>
-                    <span className='flex items-center gap-1'>
-                      <MapPin size={14} /> {job.location}
-                    </span>
+          {loading ? (
+            <div className='text-center py-10 text-slate-500'>Đang tải danh sách công việc...</div>
+          ) : openJobs.length === 0 ? (
+            <div className='text-center py-10 text-slate-500'>Hiện tại chưa có vị trí nào đang mở. Vui lòng quay lại sau!</div>
+          ) : (
+            openJobs.map((job) => (
+              <div
+                key={job.id}
+                className='bg-white p-6 rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-lg transition-all group'
+              >
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <h4 className='text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors'>
+                      {job.title}
+                    </h4>
+                    <div className='flex items-center gap-4 mt-2 text-sm text-slate-500'>
+                      <span className='flex items-center gap-1'>
+                        <Building size={14} /> {job.department}
+                      </span>
+                      <span className='flex items-center gap-1'>
+                        <MapPin size={14} /> {job.location}
+                      </span>
+                      <span className='flex items-center gap-1 ml-4 px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-xs font-semibold'>
+                        Bởi {job.user?.fullName}
+                      </span>
+                    </div>
                   </div>
+                  <button 
+                    onClick={() => setSelectedJob(job)}
+                    className='bg-blue-50 text-blue-600 font-semibold px-6 py-2.5 rounded-xl hover:bg-blue-600 hover:text-white transition-all text-sm flex items-center gap-2'
+                  >
+                    Ứng tuyển ngay <ArrowRight size={16} />
+                  </button>
                 </div>
-                <button className='bg-blue-50 text-blue-600 font-semibold px-6 py-2.5 rounded-xl hover:bg-blue-600 hover:text-white transition-all text-sm flex items-center gap-2'>
-                  Ứng tuyển ngay <ArrowRight size={16} />
-                </button>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </section>
 
@@ -112,6 +168,61 @@ export default function LandingPage() {
           React + TypeScript + Tailwind CSS.
         </p>
       </footer>
+      {/* APPLY MODAL */}
+      {selectedJob && (
+        <div className='fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50'>
+          <div className='bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden'>
+            <div className='p-6 border-b border-slate-100'>
+              <h3 className='text-xl font-bold text-slate-800'>Ứng tuyển vị trí</h3>
+              <p className='text-blue-600 font-semibold mt-1'>{selectedJob.title}</p>
+            </div>
+            
+            <form onSubmit={handleApply} className='p-6 space-y-4'>
+              <div>
+                <label className='block text-sm font-bold text-slate-700 mb-1'>Họ và Tên</label>
+                <input
+                  type='text'
+                  required
+                  value={applicantName}
+                  onChange={(e) => setApplicantName(e.target.value)}
+                  className='w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='Nguyễn Văn A'
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-bold text-slate-700 mb-1'>Email liên hệ</label>
+                <input
+                  type='email'
+                  required
+                  value={applicantEmail}
+                  onChange={(e) => setApplicantEmail(e.target.value)}
+                  className='w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  placeholder='nguyenvana@gmail.com'
+                />
+              </div>
+              
+              <div className='pt-4 flex gap-3'>
+                <button
+                  type='button'
+                  onClick={() => setSelectedJob(null)}
+                  className='flex-1 py-3 text-slate-600 font-bold hover:bg-slate-50 rounded-xl transition-colors'
+                >
+                  Hủy
+                </button>
+                <button
+                  type='submit'
+                  disabled={isApplying}
+                  className={`flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-sm hover:bg-blue-700 transition-colors ${
+                    isApplying ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
+                >
+                  {isApplying ? "Đang gửi..." : "Gửi CV"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
