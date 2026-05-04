@@ -43,12 +43,12 @@ export default function AddCandidateModal({
     >
       {/* Hộp thoại chính - stopPropagation để click bên trong không bị đóng */}
       <div
-        className='bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl'
+        className='bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl dark:bg-slate-800'
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className='flex justify-between items-center mb-6'>
-          <h3 className='text-xl font-bold text-slate-800'>
+          <h3 className='text-xl font-bold text-slate-800 dark:text-white'>
             Thêm ứng viên mới
           </h3>
           <button
@@ -62,7 +62,7 @@ export default function AddCandidateModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className='space-y-5'>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1'>
+            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
               Họ và tên
             </label>
             <input
@@ -74,7 +74,7 @@ export default function AddCandidateModal({
             />
           </div>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1'>
+            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
               Email
             </label>
             <input
@@ -86,13 +86,13 @@ export default function AddCandidateModal({
             />
           </div>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1'>
+            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
               Trạng thái ban đầu
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as CandidateStatus)}
-              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white'
+              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white dark:bg-slate-700 dark:text-white'
             >
               <option value='Applied'>Applied</option>
               <option value='Interviewing'>Interviewing</option>

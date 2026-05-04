@@ -146,6 +146,11 @@ export default function LandingPage() {
                         Bởi {job.user?.fullName}
                       </span>
                     </div>
+                    {job.description && (
+                      <p className='mt-4 text-slate-600 text-sm line-clamp-2 whitespace-pre-wrap'>
+                        {job.description}
+                      </p>
+                    )}
                   </div>
                   <button 
                     onClick={() => setSelectedJob(job)}
@@ -171,13 +176,23 @@ export default function LandingPage() {
       {/* APPLY MODAL */}
       {selectedJob && (
         <div className='fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50'>
-          <div className='bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden'>
-            <div className='p-6 border-b border-slate-100'>
+          <div className='bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col'>
+            <div className='p-6 border-b border-slate-100 flex-shrink-0'>
               <h3 className='text-xl font-bold text-slate-800'>Ứng tuyển vị trí</h3>
               <p className='text-blue-600 font-semibold mt-1'>{selectedJob.title}</p>
             </div>
             
-            <form onSubmit={handleApply} className='p-6 space-y-4'>
+            <div className='flex-1 overflow-y-auto p-6 space-y-6'>
+              {selectedJob.description && (
+                <div>
+                  <h4 className='text-sm font-bold text-slate-800 mb-2 uppercase tracking-wider'>Mô tả công việc (JD)</h4>
+                  <div className='bg-slate-50 rounded-xl p-4 text-sm text-slate-600 whitespace-pre-wrap leading-relaxed border border-slate-100'>
+                    {selectedJob.description}
+                  </div>
+                </div>
+              )}
+
+              <form onSubmit={handleApply} className='space-y-4'>
               <div>
                 <label className='block text-sm font-bold text-slate-700 mb-1'>Họ và Tên</label>
                 <input
@@ -219,7 +234,8 @@ export default function LandingPage() {
                   {isApplying ? "Đang gửi..." : "Gửi CV"}
                 </button>
               </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}

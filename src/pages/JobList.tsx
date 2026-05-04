@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useData } from "../hooks/DataProvider";
-import { Calendar, MapPin, Building, Plus } from "lucide-react";
+import { Calendar, MapPin, Building, Plus, Edit2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AddJobModal from "../components/AddJobModal";
 import { ToastContainer, toast } from "react-toastify";
@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 export default function JobList() {
   const { jobs, loading, refreshData } = useData();
   const [showModal, setShowModal] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
 
   if (loading) {
     return (
@@ -18,25 +19,46 @@ export default function JobList() {
       </div>
     );
   }
-  const handleAddJob = async (data: {
+
+  const handleSaveJob = async (data: {
     title: string;
     department: string;
     location: string;
+    description: string;
   }) => {
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      const res = await axios.post("http://localhost:3001/api/jobs", data, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (selectedJob) {
+        await axios.put(`http://localhost:3001/api/jobs/${selectedJob.id}`, data, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        toast.success("Cập nhật tin tuyển dụng thành công!");
+      } else {
+        await axios.post("http://localhost:3001/api/jobs", data, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        toast.success("Đăng tin tuyển dụng thành công!");
+      }
       await refreshData();
-      toast.success("Đăng tin tuyển dụng thành công!");
     } catch (error: any) {
-      console.error("Lỗi khi tạo job:", error);
+      console.error("Lỗi khi lưu job:", error);
       toast.error(
         error.response?.data?.error ||
-          "Lỗi khi tạo Job. Mở console để xem chi tiết!",
+          "Lỗi khi lưu Job. Mở console để xem chi tiết!",
       );
     }
+  };
+
+  const openAddModal = () => {
+    setSelectedJob(null);
+    setShowModal(true);
+  };
+
+  const openEditModal = (e: React.MouseEvent, job: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedJob(job);
+    setShowModal(true);
   };
 
   return (
@@ -47,7 +69,7 @@ export default function JobList() {
           Danh sách tin tuyển dụng
         </h2>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={openAddModal}
           className='flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm cursor-pointer'
         >
           <Plus size={18} /> Tạo tin mới
@@ -61,9 +83,18 @@ export default function JobList() {
             className='bg-white p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer group dark:bg-slate-800 text-black dark:text-white'
           >
             <div className='flex justify-between items-start mb-4'>
-              <h3 className='font-bold text-lg text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors'>
-                {job.title}
-              </h3>
+              <div className='flex items-center gap-3'>
+                <h3 className='font-bold text-lg text-slate-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors'>
+                  {job.title}
+                </h3>
+                <button
+                  onClick={(e) => openEditModal(e, job)}
+                  className='text-slate-400 hover:text-blue-600 transition-colors p-1 bg-slate-100 hover:bg-blue-50 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-md opacity-0 group-hover:opacity-100'
+                  title='Sửa Job'
+                >
+                  <Edit2 size={14} />
+                </button>
+              </div>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-medium ${
                   job.status === "Open"
@@ -100,7 +131,11 @@ export default function JobList() {
       </div>
 
       {showModal && (
-        <AddJobModal onClose={() => setShowModal(false)} onAdd={handleAddJob} />
+        <AddJobModal 
+          onClose={() => setShowModal(false)} 
+          onSave={handleSaveJob} 
+          initialData={selectedJob}
+        />
       )}
     </div>
   );
