@@ -5,7 +5,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import prisma from "../prisma";
-import authMiddleware from "./authMiddleware";
+import authMiddleware, { AuthRequest } from "./authMiddleware";
+import { Response } from "express";
 
 const router = Router();
 
@@ -38,7 +39,7 @@ const upload = multer({
 // ========================
 router.post("/register", async (req, res) => {
   try {
-    const { fullName, email, password, gender } = req.body;
+    const { fullName, email, password } = req.body;
 
     // 1. Kiểm tra email đã tồn tại chưa
     const existingUser = await prisma.user.findUnique({
@@ -66,7 +67,7 @@ router.post("/register", async (req, res) => {
       message: "Đăng ký thành công",
       user: { id: user.id, email: user.email, fullName: user.fullName },
     });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Lỗi server khi đăng ký" });
   }
 });
@@ -119,16 +120,16 @@ router.post("/login", async (req, res) => {
 // ========================
 // GET /api/auth/me → Lấy thông tin user hiện tại
 // ========================
-router.get("/me", authMiddleware, async (req: any, res: any) => {
+router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, fullName: true, email: true, role: true, avatar: true, createdAt: true },
     });
     if (!user) return res.status(404).json({ error: "Không tìm thấy người dùng" });
     res.json(user);
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "Lỗi server khi lấy thông tin cá nhân" });
   }
 });
@@ -136,9 +137,9 @@ router.get("/me", authMiddleware, async (req: any, res: any) => {
 // ========================
 // PUT /api/auth/password → Đổi mật khẩu
 // ========================
-router.put("/password", authMiddleware, async (req: any, res: any) => {
+router.put("/password", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     const { currentPassword, newPassword } = req.body;
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -167,9 +168,9 @@ router.put("/password", authMiddleware, async (req: any, res: any) => {
 // ========================
 // POST /api/auth/upload → Upload ảnh đại diện
 // ========================
-router.post("/upload", authMiddleware, upload.single("avatar"), async (req: any, res: any) => {
+router.post("/upload", authMiddleware, upload.single("avatar"), async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     if (!req.file) {
       return res.status(400).json({ error: "Không có file nào được tải lên" });
     }

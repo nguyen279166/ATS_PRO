@@ -13,7 +13,7 @@ import axios from "axios";
 export default function Sidebar() {
   const { logout } = useAuth();
   const location = useLocation();
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{ fullName: string; role: string; avatar?: string } | null>(null);
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },

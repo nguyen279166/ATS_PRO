@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 // Mở rộng kiểu Request để thêm thuộc tính "user"
 // (Mặc định Express không biết request có "user" hay không)
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
   user?: {
     userId: string;
     email: string;
@@ -38,7 +38,7 @@ const authMiddleware = (
 
     // 5. CHO QUA → Chuyển sang Route xử lý tiếp
     next();
-  } catch (error) {
+  } catch {
     return res
       .status(401)
       .json({ error: "Token không hợp lệ hoặc đã hết hạn" });

@@ -16,6 +16,7 @@ router.get("/jobs", async (req, res) => {
         title: true,
         department: true,
         location: true,
+        description: true,
         createdAt: true,
         user: { select: { fullName: true } },
       },

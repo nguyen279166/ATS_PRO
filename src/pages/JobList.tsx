@@ -1,16 +1,17 @@
 import { useState } from "react";
 import axios from "axios";
 import { useData } from "../hooks/DataProvider";
-import { Calendar, MapPin, Building, Plus, Edit2 } from "lucide-react";
+import { Calendar, MapPin, Building, Plus, Edit2, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AddJobModal from "../components/AddJobModal";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import type { Job } from "../types";
 
 export default function JobList() {
   const { jobs, loading, refreshData } = useData();
   const [showModal, setShowModal] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   if (loading) {
     return (
@@ -40,12 +41,16 @@ export default function JobList() {
         toast.success("Đăng tin tuyển dụng thành công!");
       }
       await refreshData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Lỗi khi lưu job:", error);
-      toast.error(
-        error.response?.data?.error ||
-          "Lỗi khi lưu Job. Mở console để xem chi tiết!",
-      );
+      if (axios.isAxiosError(error)) {
+        toast.error(
+          error.response?.data?.error ||
+            "Lỗi khi lưu Job. Mở console để xem chi tiết!",
+        );
+      } else {
+        toast.error("Lỗi khi lưu Job. Mở console để xem chi tiết!");
+      }
     }
   };
 
@@ -54,7 +59,27 @@ export default function JobList() {
     setShowModal(true);
   };
 
-  const openEditModal = (e: React.MouseEvent, job: any) => {
+  const handleDeleteJob = async (e: React.MouseEvent, jobId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm("Bạn có chắc chắn muốn xóa tin tuyển dụng này? Tất cả ứng viên thuộc tin này cũng sẽ bị xóa!")) return;
+    try {
+      const token = localStorage.getItem("token_lay_duoc");
+      await axios.delete(`http://localhost:3001/api/jobs/${jobId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success("Xóa Job thành công!");
+      await refreshData();
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.error || "Lỗi khi xóa Job");
+      } else {
+        toast.error("Lỗi khi xóa Job");
+      }
+    }
+  };
+
+  const openEditModal = (e: React.MouseEvent, job: Job) => {
     e.preventDefault();
     e.stopPropagation();
     setSelectedJob(job);
@@ -89,10 +114,17 @@ export default function JobList() {
                 </h3>
                 <button
                   onClick={(e) => openEditModal(e, job)}
-                  className='text-slate-400 hover:text-blue-600 transition-colors p-1 bg-slate-100 hover:bg-blue-50 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-md opacity-0 group-hover:opacity-100'
-                  title='Sửa Job'
+                  className='p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
+                  title='Chỉnh sửa'
                 >
                   <Edit2 size={14} />
+                </button>
+                <button
+                  onClick={(e) => handleDeleteJob(e, job.id)}
+                  className='p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+                  title='Xóa'
+                >
+                  <Trash2 size={14} />
                 </button>
               </div>
               <span

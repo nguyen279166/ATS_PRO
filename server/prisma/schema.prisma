@@ -54,5 +54,5 @@ model Candidate {
 
   // 👈 MỐI QUAN HỆ: Candidate này ứng tuyển vào Job nào
   jobId       String
-  job         Job      @relation(fields: [jobId], references: [id])
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
