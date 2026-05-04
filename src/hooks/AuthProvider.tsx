@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState } from "react";
 
-export const AuthContext = createContext<any>(null);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
 export type AuthContextType = {
   isLoggedIn: boolean;

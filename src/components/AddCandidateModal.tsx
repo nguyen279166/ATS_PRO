@@ -14,7 +14,7 @@ interface AddCandidateModalProps {
 }
 
 export default function AddCandidateModal({
-  jobId,
+  //  jobId,
   onClose,
   onAdd,
 }: AddCandidateModalProps) {

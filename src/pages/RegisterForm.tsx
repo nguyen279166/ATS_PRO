@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 // Tinh chỉnh lại z.string().email() cho chuẩn v4 để không báo lỗi
 const registerSchema = z.object({
@@ -55,6 +56,8 @@ const RegisterForm = () => {
     },
   });
 
+  const navigate = useNavigate();
+
   const onSubmit = async (data: RegisterFormType) => {
     try {
       const { fullName, email, gender, password } = data;
@@ -67,6 +70,8 @@ const RegisterForm = () => {
       console.log("Thông tin đăng nhập:", res.data);
       toast.success("Đăng ký thành công!");
       reset();
+      // Chờ 1.5s để user thấy thông báo rồi mới chuyển trang
+      setTimeout(() => navigate("/login"), 1500);
     } catch (error) {
       console.error("Lỗi từ Server:", error);
       toast.error("Đăng ký thất bại, vui lòng thử lại!");
@@ -148,7 +153,7 @@ const RegisterForm = () => {
             Giới tính
           </label>
           <select
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white'
+            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white'
             {...register("gender")}
           >
             <option value='nam'>Nam</option>
@@ -199,7 +204,6 @@ const RegisterForm = () => {
           </a>
         </p>
       </form>
-
       <ToastContainer position='bottom-right' />
     </div>
   );

@@ -9,6 +9,7 @@ import authRoutes from "./routes/authRoutes";
 import authMiddleware from "./routes/authMiddleware";
 import publicRoutes from "./routes/publicRoutes";
 import path from "path";
+import { initMailer } from "./utils/mailer";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,6 +29,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/jobs", authMiddleware, jobRoutes);
 app.use("/api/candidates", authMiddleware, candidateRoutes);
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
+  await initMailer(); // Khởi tạo dịch vụ gửi email
 });

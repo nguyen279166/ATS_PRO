@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useData } from "../hooks/DataProvider";
 import axios from "axios";
-import type { Candidate, CandidateStatus } from "../types";
+import type { Candidate, CandidateStatus, Job } from "../types";
 import { Search } from "lucide-react"; // Lấy icon cái Kính lúp
 import { useDebounce } from "../hooks/useDebounce";
 import AddCandidateModal from "../components/AddCandidateModal";
@@ -19,12 +19,13 @@ export default function KanbanBoard() {
     refreshData,
   } = useData();
 
-  const currentJob = jobs.find((j: any) => j.id === jobId);
+  const currentJob = jobs.find((j: Job) => j.id === jobId);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
 
   useEffect(() => {
     if (globalCandidates) {
-      setCandidates(globalCandidates.filter((c: any) => c.jobId === jobId));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCandidates(globalCandidates.filter((c: Candidate) => c.jobId === jobId));
     }
   }, [globalCandidates, jobId]);
 
@@ -97,11 +98,14 @@ export default function KanbanBoard() {
         },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      // Gắn thêm trạng thái vì Backend Prisma hiện tạo mặc định là "Applied"
-      // Lấy avatar dummy vì backend chưa có ảnh
-      const newCandidate = {
-        ...res.data,
-        avatar: `https://i.pravatar.cc/150?u=${Date.now()}`,
+      const newCandidate: Candidate = {
+        id: res.data.id,
+        name: data.name,
+        email: data.email,
+        jobId: jobId || "",
+        status: data.status,
+        appliedDate: new Date().toLocaleDateString(),
+        avatar: `https://i.pravatar.cc/150?u=${res.data.id}`,
       };
       setCandidates((prev) => [...prev, newCandidate]);
       refreshData(); // Đồng bộ Global state

@@ -5,8 +5,11 @@ export interface Job {
   title: string;
   department: string;
   location: string;
+  description?: string | null;
   status: JobStatus;
   createdAt: string;
+  user?: { fullName: string };
+  _count?: { candidates: number };
 }
 
 export type CandidateStatus = "Applied" | "Interviewing" | "Hired" | "Rejected";
@@ -19,4 +22,5 @@ export interface Candidate {
   status: CandidateStatus;
   appliedDate: string;
   avatar?: string;
+  job?: Job;
 }

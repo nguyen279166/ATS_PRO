@@ -7,7 +7,7 @@ import { toast } from "react-toastify";
 
 export default function Settings() {
   const { logout } = useContext(AuthContext);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<{ fullName: string; email: string; role: string; avatar?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Form Đổi mật khẩu
@@ -68,8 +68,12 @@ export default function Settings() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Lỗi khi đổi mật khẩu");
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.error || "Lỗi khi đổi mật khẩu");
+      } else {
+        toast.error("Lỗi khi đổi mật khẩu");
+      }
     } finally {
       setIsChangingPwd(false);
     }
@@ -100,8 +104,12 @@ export default function Settings() {
       // Cập nhật lại state profile với link ảnh mới
       setProfile({ ...profile, avatar: res.data.avatarUrl });
       toast.success("Cập nhật ảnh đại diện thành công!");
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Lỗi khi tải ảnh lên");
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.error || "Lỗi khi tải ảnh lên");
+      } else {
+        toast.error("Lỗi khi tải ảnh lên");
+      }
     } finally {
       setIsUploading(false);
     }

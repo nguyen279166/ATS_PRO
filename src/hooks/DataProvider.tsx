@@ -1,27 +1,28 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthProvider";
+import type { Job, Candidate } from "../types";
 
-export type DataContextType = {
-  jobs: any[];
-  candidates: any[];
+export const DataContext = createContext<{
+  jobs: Job[];
+  candidates: Candidate[];
   loading: boolean;
-  refreshData: (showSpinner?: boolean) => Promise<void>;
-};
-
-export const DataContext = createContext<DataContextType | null>(null);
+  refreshData: (showLoader?: boolean) => Promise<void>;
+} | null>(null);
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [candidates, setCandidates] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Lấy thông tin đăng nhập từ AuthContext
-  const { isLoggedIn } = useContext(AuthContext);
+  // Lấy thông tin đăng nhập từ AuthContext - cần null-safe vì default value của context là null
+  const auth = useContext(AuthContext);
+  const isLoggedIn = auth?.isLoggedIn ?? false;
 
-  const refreshData = async (showSpinner = true) => {
+  const refreshData = async (showLoader = true) => {
     if (!isLoggedIn) return; // Không tải data nếu chưa đăng nhập
-    if (showSpinner) setLoading(true);
+    if (showLoader) setLoading(true);
     try {
       const token = localStorage.getItem("token_lay_duoc");
       const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -36,13 +37,30 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu toàn cục:", error);
     } finally {
-      if (showSpinner) setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
-    refreshData();
-  }, [isLoggedIn]); // Chạy 1 lần duy nhất khi vừa đăng nhập xong
+    if (isLoggedIn) {
+      refreshData();
+    } else {
+      // Clear data when logged out
+      setJobs([]);
+      setCandidates([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
+
+  // Tự động fetch lại khi người dùng quay lại tab (sau khi server restart)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (isLoggedIn) refreshData(false); // Refresh nhẹ không hiện spinner
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn]);
 
   return (
     <DataContext.Provider value={{ jobs, candidates, loading, refreshData }}>
@@ -54,7 +72,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 export const useData = () => {
   const context = useContext(DataContext);
   if (!context) {
-    throw new Error("useData phải được bọc trong DataProvider");
+    throw new Error("useData must be used within DataProvider");
   }
   return context;
 };
