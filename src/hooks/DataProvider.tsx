@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
-import { AuthContext } from "./AuthProvider";
+import { useAuth } from "./useAuth";
 import type { Job, Candidate } from "../types";
 
 export const DataContext = createContext<{
@@ -16,9 +16,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Lấy thông tin đăng nhập từ AuthContext - cần null-safe vì default value của context là null
-  const auth = useContext(AuthContext);
-  const isLoggedIn = auth?.isLoggedIn ?? false;
+  const { isLoggedIn } = useAuth();
 
   const refreshData = async (showLoader = true) => {
     if (!isLoggedIn) return; // Không tải data nếu chưa đăng nhập

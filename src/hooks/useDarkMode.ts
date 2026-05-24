@@ -4,7 +4,7 @@ export function useDarkMode() {
   const [isDark, setIsDark] = useState(() => {
     // Lấy trạng thái lưu trong localStorage
     const saved = localStorage.getItem("darkMode");
-    return saved === "true" || false;
+    return saved === "true";
   });
 
   useEffect(() => {

@@ -98,7 +98,7 @@ router.post("/login", async (req, res) => {
       { userId: user.id, email: user.email, role: user.role }, // Thông tin gói trong token
       process.env.JWT_SECRET as string, // Con dấu bí mật
       { expiresIn: "7d" }, // Hết hạn sau 7 ngày
-    );
+    );  
 
     // 4. Trả token về cho Frontend
     res.json({
