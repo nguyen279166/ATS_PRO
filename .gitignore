@@ -12,7 +12,8 @@ dist
 dist-ssr
 *.local
 
-# Server secrets & generated files
+# Secrets & generated files
+.env
 server/.env
 server/generated
 
