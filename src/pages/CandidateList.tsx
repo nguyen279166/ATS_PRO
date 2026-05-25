@@ -24,9 +24,15 @@ export default function CandidateList() {
   const handleExportCSV = () => {
     // UTF-8 BOM helps Excel render unicode characters properly
     const BOM = "\uFEFF";
-    
+
     const csvData = [
-      ["Họ và Tên", "Email", "Vị trí ứng tuyển", "Trạng thái", "Ngày ứng tuyển"],
+      [
+        "Họ và Tên",
+        "Email",
+        "Vị trí ứng tuyển",
+        "Trạng thái",
+        "Ngày ứng tuyển",
+      ],
       ...filteredCandidates.map((c) => [
         `"${c.name}"`, // Quote strings to handle commas
         `"${c.email}"`,
@@ -39,7 +45,7 @@ export default function CandidateList() {
     const csvContent = BOM + csvData.map((row) => row.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement("a");
     link.href = url;
     link.setAttribute("download", "danh_sach_ung_vien.csv");
@@ -52,7 +58,8 @@ export default function CandidateList() {
     if (!window.confirm("Bạn có chắc chắn muốn xóa ứng viên này?")) return;
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      await axios.delete(`http://localhost:3001/api/candidates/${candidateId}`, {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      await axios.delete(`${baseUrl}/api/candidates/${candidateId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("Xóa ứng viên thành công!");

@@ -25,7 +25,9 @@ export default function KanbanBoard() {
   useEffect(() => {
     if (globalCandidates) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCandidates(globalCandidates.filter((c: Candidate) => c.jobId === jobId));
+      setCandidates(
+        globalCandidates.filter((c: Candidate) => c.jobId === jobId),
+      );
     }
   }, [globalCandidates, jobId]);
 
@@ -142,8 +144,9 @@ export default function KanbanBoard() {
     // BÁO CÁO LÊN BACKEND:
     try {
       const token = localStorage.getItem("token_lay_duoc");
+      const baseUrl = import.meta.env.VITE_BASE_URL;
       await axios.put(
-        `http://localhost:3001/api/candidates/${draggedId}`,
+        `${baseUrl}/api/candidates/${draggedId}`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );

@@ -34,8 +34,9 @@ export default function LandingPage() {
     if (!selectedJob) return;
 
     setIsApplying(true);
+    const baseUrl = import.meta.env.VITE_BASE_URL;
     try {
-      await axios.post("http://localhost:3001/api/public/apply", {
+      await axios.post(`${baseUrl}/api/public/apply`, {
         jobId: selectedJob.id,
         name: applicantName,
         email: applicantEmail,

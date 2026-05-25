@@ -61,7 +61,8 @@ const RegisterForm = () => {
   const onSubmit = async (data: RegisterFormType) => {
     try {
       const { fullName, email, gender, password } = data;
-      const res = await axios.post("http://localhost:3001/api/auth/register", {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const res = await axios.post(`${baseUrl}/api/auth/register`, {
         fullName,
         email,
         gender,

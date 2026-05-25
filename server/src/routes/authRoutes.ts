@@ -98,7 +98,7 @@ router.post("/login", async (req, res) => {
       { userId: user.id, email: user.email, role: user.role }, // Thông tin gói trong token
       process.env.JWT_SECRET as string, // Con dấu bí mật
       { expiresIn: "7d" }, // Hết hạn sau 7 ngày
-    );  
+    );
 
     // 4. Trả token về cho Frontend
     res.json({
@@ -125,9 +125,17 @@ router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
     const userId = req.user?.userId;
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, fullName: true, email: true, role: true, avatar: true, createdAt: true },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        role: true,
+        avatar: true,
+        createdAt: true,
+      },
     });
-    if (!user) return res.status(404).json({ error: "Không tìm thấy người dùng" });
+    if (!user)
+      return res.status(404).json({ error: "Không tìm thấy người dùng" });
     res.json(user);
   } catch {
     res.status(500).json({ error: "Lỗi server khi lấy thông tin cá nhân" });
@@ -137,59 +145,75 @@ router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
 // ========================
 // PUT /api/auth/password → Đổi mật khẩu
 // ========================
-router.put("/password", authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    const { currentPassword, newPassword } = req.body;
+router.put(
+  "/password",
+  authMiddleware,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      const { currentPassword, newPassword } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: "Không tìm thấy người dùng" });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user)
+        return res.status(404).json({ error: "Không tìm thấy người dùng" });
 
-    // Kiểm tra mật khẩu cũ
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ error: "Mật khẩu cũ không chính xác" });
+      // Kiểm tra mật khẩu cũ
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password,
+      );
+      if (!isPasswordValid) {
+        return res.status(400).json({ error: "Mật khẩu cũ không chính xác" });
+      }
+
+      // Mã hóa mật khẩu mới
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      await prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedNewPassword },
+      });
+
+      res.json({ message: "Đổi mật khẩu thành công" });
+    } catch (error) {
+      console.error("Lỗi khi đổi mật khẩu:", error);
+      res.status(500).json({ error: "Lỗi server khi đổi mật khẩu" });
     }
-
-    // Mã hóa mật khẩu mới
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedNewPassword },
-    });
-
-    res.json({ message: "Đổi mật khẩu thành công" });
-  } catch (error) {
-    console.error("Lỗi khi đổi mật khẩu:", error);
-    res.status(500).json({ error: "Lỗi server khi đổi mật khẩu" });
-  }
-});
+  },
+);
 
 // ========================
 // POST /api/auth/upload → Upload ảnh đại diện
 // ========================
-router.post("/upload", authMiddleware, upload.single("avatar"), async (req: AuthRequest, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    if (!req.file) {
-      return res.status(400).json({ error: "Không có file nào được tải lên" });
+router.post(
+  "/upload",
+  authMiddleware,
+  upload.single("avatar"),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user?.userId;
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ error: "Không có file nào được tải lên" });
+      }
+
+      // Tạo URL để truy cập file từ Frontend
+      // File được lưu trong thư mục uploads/ với tên mới
+      const baseUrl = process.env.BASE_URL;
+      const avatarUrl = `${baseUrl}/uploads/${req.file.filename}`;
+
+      // Lưu vào Database
+      await prisma.user.update({
+        where: { id: userId },
+        data: { avatar: avatarUrl },
+      });
+
+      res.json({ message: "Cập nhật ảnh đại diện thành công", avatarUrl });
+    } catch (error) {
+      console.error("Lỗi khi upload ảnh:", error);
+      res.status(500).json({ error: "Lỗi server khi upload ảnh" });
     }
-
-    // Tạo URL để truy cập file từ Frontend
-    // File được lưu trong thư mục uploads/ với tên mới
-    const avatarUrl = `http://localhost:3001/uploads/${req.file.filename}`;
-
-    // Lưu vào Database
-    await prisma.user.update({
-      where: { id: userId },
-      data: { avatar: avatarUrl },
-    });
-
-    res.json({ message: "Cập nhật ảnh đại diện thành công", avatarUrl });
-  } catch (error) {
-    console.error("Lỗi khi upload ảnh:", error);
-    res.status(500).json({ error: "Lỗi server khi upload ảnh" });
-  }
-});
+  },
+);
 
 export default router;

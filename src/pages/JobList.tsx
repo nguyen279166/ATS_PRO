@@ -30,9 +30,13 @@ export default function JobList() {
     try {
       const token = localStorage.getItem("token_lay_duoc");
       if (selectedJob) {
-        await axios.put(`http://localhost:3001/api/jobs/${selectedJob.id}`, data, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await axios.put(
+          `http://localhost:3001/api/jobs/${selectedJob.id}`,
+          data,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
         toast.success("Cập nhật tin tuyển dụng thành công!");
       } else {
         await axios.post("http://localhost:3001/api/jobs", data, {
@@ -62,10 +66,16 @@ export default function JobList() {
   const handleDeleteJob = async (e: React.MouseEvent, jobId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm("Bạn có chắc chắn muốn xóa tin tuyển dụng này? Tất cả ứng viên thuộc tin này cũng sẽ bị xóa!")) return;
+    if (
+      !window.confirm(
+        "Bạn có chắc chắn muốn xóa tin tuyển dụng này? Tất cả ứng viên thuộc tin này cũng sẽ bị xóa!",
+      )
+    )
+      return;
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      await axios.delete(`http://localhost:3001/api/jobs/${jobId}`, {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      await axios.delete(`${baseUrl}/api/jobs/${jobId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("Xóa Job thành công!");
@@ -163,9 +173,9 @@ export default function JobList() {
       </div>
 
       {showModal && (
-        <AddJobModal 
-          onClose={() => setShowModal(false)} 
-          onSave={handleSaveJob} 
+        <AddJobModal
+          onClose={() => setShowModal(false)}
+          onSave={handleSaveJob}
           initialData={selectedJob}
         />
       )}

@@ -7,7 +7,13 @@ import { toast } from "react-toastify";
 
 export default function Settings() {
   const { logout } = useContext(AuthContext);
-  const [profile, setProfile] = useState<{ fullName: string; email: string; role: string; avatar?: string } | null>(null);
+  const [profile, setProfile] = useState<{
+    fullName: string;
+    email: string;
+    role: string;
+    avatar?: string;
+    createdAt: Date;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Form Đổi mật khẩu
@@ -19,10 +25,12 @@ export default function Settings() {
 
   // Settings Toggles
   const { isDark, toggleDarkMode } = useDarkMode();
-  const [emailNotif, setEmailNotif] = useState(() => localStorage.getItem("emailNotif") !== "false");
+  const [emailNotif, setEmailNotif] = useState(
+    () => localStorage.getItem("emailNotif") !== "false",
+  );
 
   const toggleEmailNotif = () => {
-    setEmailNotif(prev => {
+    setEmailNotif((prev) => {
       localStorage.setItem("emailNotif", (!prev).toString());
       return !prev;
     });
@@ -59,10 +67,11 @@ export default function Settings() {
     setIsChangingPwd(true);
     try {
       const token = localStorage.getItem("token_lay_duoc");
+      const baseUrl = import.meta.env.VITE_BASE_URL;
       await axios.put(
-        "http://localhost:3001/api/auth/password",
+        `${baseUrl}/api/auth/password`,
         { currentPassword, newPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       toast.success("Đổi mật khẩu thành công!");
       setCurrentPassword("");
@@ -95,7 +104,8 @@ export default function Settings() {
     setIsUploading(true);
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      const res = await axios.post("http://localhost:3001/api/auth/upload", formData, {
+      const baseUrl = import.meta.env.VITE_BASE_URL;
+      const res = await axios.post(`${baseUrl}/api/auth/upload`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -126,69 +136,94 @@ export default function Settings() {
   return (
     <div className='max-w-4xl'>
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
-        
         {/* CỘT TRÁI: THÔNG TIN CÁ NHÂN & ĐĂNG XUẤT */}
         <div className='lg:col-span-1 space-y-6'>
           {/* Card Profile */}
           <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 text-center transition-colors'>
             <div className='relative w-24 h-24 mx-auto mb-4 group'>
               {profile?.avatar ? (
-                <img 
-                  src={profile.avatar} 
-                  alt="Avatar" 
-                  className='w-24 h-24 rounded-full object-cover shadow-inner border-4 border-slate-50' 
+                <img
+                  src={profile.avatar}
+                  alt='Avatar'
+                  className='w-24 h-24 rounded-full object-cover shadow-inner border-4 border-slate-50'
                 />
               ) : (
                 <div className='w-24 h-24 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold shadow-inner'>
                   {profile?.fullName?.charAt(0).toUpperCase() || <User />}
                 </div>
               )}
-              
+
               {/* Nút Đổi Avatar (hiện khi hover) */}
               <label className='absolute inset-0 bg-black/40 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity backdrop-blur-sm'>
-                {isUploading ? <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent"></div> : <Camera size={24} />}
-                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={isUploading} />
+                {isUploading ? (
+                  <div className='animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent'></div>
+                ) : (
+                  <Camera size={24} />
+                )}
+                <input
+                  type='file'
+                  accept='image/*'
+                  className='hidden'
+                  onChange={handleAvatarUpload}
+                  disabled={isUploading}
+                />
               </label>
             </div>
-            
-            <h3 className='text-xl font-bold text-slate-800 dark:text-white'>{profile?.fullName}</h3>
-            <p className='text-slate-500 dark:text-slate-400 mb-4'>{profile?.email}</p>
+
+            <h3 className='text-xl font-bold text-slate-800 dark:text-white'>
+              {profile?.fullName}
+            </h3>
+            <p className='text-slate-500 dark:text-slate-400 mb-4'>
+              {profile?.email}
+            </p>
             <span className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider'>
               <Shield size={14} /> {profile?.role || "USER"}
             </span>
-            
+
             <div className='mt-6 pt-6 border-t border-slate-100 dark:border-slate-700'>
-              <p className='text-xs text-slate-400 dark:text-slate-500'>Tham gia hệ thống từ</p>
+              <p className='text-xs text-slate-400 dark:text-slate-500'>
+                Tham gia hệ thống từ
+              </p>
               <p className='text-sm font-medium text-slate-600 dark:text-slate-300'>
-                {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('vi-VN') : "N/A"}
+                {profile?.createdAt
+                  ? new Date(profile.createdAt).toLocaleDateString("vi-VN")
+                  : "N/A"}
               </p>
             </div>
           </div>
 
           {/* Cài đặt chung (Chỉ hiển thị UI cho đẹp) */}
           <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 transition-colors'>
-            <h4 className='font-bold text-slate-800 dark:text-white mb-4'>Tùy chỉnh hệ thống</h4>
+            <h4 className='font-bold text-slate-800 dark:text-white mb-4'>
+              Tùy chỉnh hệ thống
+            </h4>
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-3 text-slate-600 dark:text-slate-300'>
-                  <Bell size={18} /> <span className='text-sm font-medium'>Thông báo Email</span>
+                  <Bell size={18} />{" "}
+                  <span className='text-sm font-medium'>Thông báo Email</span>
                 </div>
-                <div 
+                <div
                   onClick={toggleEmailNotif}
-                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${emailNotif ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-600'}`}
+                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${emailNotif ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-600"}`}
                 >
-                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${emailNotif ? 'left-6' : 'left-1'}`}></div>
+                  <div
+                    className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${emailNotif ? "left-6" : "left-1"}`}
+                  ></div>
                 </div>
               </div>
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-3 text-slate-600 dark:text-slate-300'>
-                  <Moon size={18} /> <span className='text-sm font-medium'>Giao diện Tối</span>
+                  <Moon size={18} />{" "}
+                  <span className='text-sm font-medium'>Giao diện Tối</span>
                 </div>
-                <div 
+                <div
                   onClick={toggleDarkMode}
-                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${isDark ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-600'}`}
+                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${isDark ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-600"}`}
                 >
-                  <div className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${isDark ? 'left-6' : 'left-1'}`}></div>
+                  <div
+                    className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${isDark ? "left-6" : "left-1"}`}
+                  ></div>
                 </div>
               </div>
             </div>
@@ -211,8 +246,12 @@ export default function Settings() {
                 <Lock size={24} />
               </div>
               <div>
-                <h3 className='text-xl font-bold text-slate-800 dark:text-white'>Đổi mật khẩu</h3>
-                <p className='text-slate-500 dark:text-slate-400 text-sm mt-1'>Cập nhật mật khẩu để bảo vệ tài khoản của bạn</p>
+                <h3 className='text-xl font-bold text-slate-800 dark:text-white'>
+                  Đổi mật khẩu
+                </h3>
+                <p className='text-slate-500 dark:text-slate-400 text-sm mt-1'>
+                  Cập nhật mật khẩu để bảo vệ tài khoản của bạn
+                </p>
               </div>
             </div>
 
@@ -230,7 +269,7 @@ export default function Settings() {
                   placeholder='••••••••'
                 />
               </div>
-              
+
               <div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
                 <div>
                   <label className='block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2'>
@@ -274,7 +313,6 @@ export default function Settings() {
             </form>
           </div>
         </div>
-
       </div>
     </div>
   );
