@@ -20,6 +20,7 @@ model User {
   createdAt DateTime @default(now())         // Ngày tạo: Tự động lấy thời điểm hiện tại
 
   jobs      Job[]    // 👈 MỐI QUAN HỆ: 1 User quản lý NHIỀU Job
+  notes     Note[]   // 👈 MỐI QUAN HỆ: 1 User viết NHIỀU Note
 }
 
 // =============================================
@@ -55,4 +56,24 @@ model Candidate {
   // 👈 MỐI QUAN HỆ: Candidate này ứng tuyển vào Job nào
   jobId       String
   job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  notes       Note[]   // 👈 MỐI QUAN HỆ: 1 Candidate có NHIỀU Note
+}
+
+// =============================================
+// 📝 BẢNG NOTE - Ghi chú của HR về ứng viên
+// =============================================
+model Note {
+  id          String    @id @default(uuid())
+  content     String    @db.Text               // Nội dung ghi chú (dài)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt             // Tự động cập nhật khi sửa
+
+  // 👈 Ghi chú này thuộc về Candidate nào
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  // 👈 Ghi chú này do HR nào viết
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
 }

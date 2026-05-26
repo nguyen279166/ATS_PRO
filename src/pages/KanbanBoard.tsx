@@ -3,9 +3,10 @@ import { useState, useEffect } from "react";
 import { useData } from "../hooks/DataProvider";
 import axios from "axios";
 import type { Candidate, CandidateStatus, Job } from "../types";
-import { Search } from "lucide-react"; // Lấy icon cái Kính lúp
+import { Search, X } from "lucide-react";
 import { useDebounce } from "../hooks/useDebounce";
 import AddCandidateModal from "../components/AddCandidateModal";
+import CandidateNotes from "../components/CandidateNotes";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -34,6 +35,7 @@ export default function KanbanBoard() {
   // Lưu chữ đang gõ (Cái này thay đổi liên tục, làm React rặn render liên tục)
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
 
   // Dùng bảo kiếm: Chặn từ khoá lại, khi tay người gõ ngưng nghỉ đủ 500ms thì mới thả chạy
   const debouncedSearchTerm = useDebounce(searchTerm, 200);
@@ -73,8 +75,9 @@ export default function KanbanBoard() {
     // BÁO CÁO LÊN BACKEND:
     try {
       const token = localStorage.getItem("token_lay_duoc");
+      const baseUrl = import.meta.env.VITE_BASE_URL;
       await axios.put(
-        `http://localhost:3001/api/candidates/${candidateId}`,
+        `${baseUrl}/api/candidates/${candidateId}`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -236,6 +239,7 @@ export default function KanbanBoard() {
                   <div
                     key={candidate.id}
                     className='bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-grab hover:shadow-md hover:border-blue-300 hover:-translate-y-1 transition-all dark:bg-slate-700 dark:border-slate-800'
+                    onClick={() => setSelectedCandidate(candidate)}
                     draggable={true} // Cờ cho phép bế đi
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) =>
@@ -274,6 +278,47 @@ export default function KanbanBoard() {
           onClose={() => setShowModal(false)}
           onAdd={handleAddCandidate}
         />
+      )}
+
+      {/* Slide Panel - Ghi chú ứng viên */}
+      {selectedCandidate && (
+        <div className='fixed inset-0 z-50 flex justify-end'>
+          {/* Backdrop mờ */}
+          <div
+            className='flex-1 bg-black/30 backdrop-blur-sm'
+            onClick={() => setSelectedCandidate(null)}
+          />
+          {/* Panel bên phải */}
+          <div className='w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col overflow-y-auto'>
+            {/* Header panel */}
+            <div className='flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700'>
+              <div className='flex items-center gap-3'>
+                <img
+                  src={selectedCandidate.avatar}
+                  alt='avatar'
+                  className='w-10 h-10 rounded-full object-cover'
+                />
+                <div>
+                  <h3 className='font-bold text-slate-800 dark:text-white'>{selectedCandidate.name}</h3>
+                  <p className='text-xs text-slate-500'>{selectedCandidate.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedCandidate(null)}
+                className='p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors'
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {/* Notes */}
+            <div className='p-5 flex-1'>
+              <CandidateNotes
+                candidateId={selectedCandidate.id}
+                candidateName={selectedCandidate.name}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

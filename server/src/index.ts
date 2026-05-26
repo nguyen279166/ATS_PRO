@@ -8,6 +8,7 @@ import candidateRoutes from "./routes/candidateRoutes";
 import authRoutes from "./routes/authRoutes";
 import authMiddleware from "./routes/authMiddleware";
 import publicRoutes from "./routes/publicRoutes";
+import noteRoutes from "./routes/noteRoutes";
 import path from "path";
 import { initMailer } from "./utils/mailer";
 
@@ -28,6 +29,7 @@ app.use("/api/public", publicRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/jobs", authMiddleware, jobRoutes);
 app.use("/api/candidates", authMiddleware, candidateRoutes);
+app.use("/api/notes", authMiddleware, noteRoutes);
 
 app.listen(PORT, async () => {
   console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
