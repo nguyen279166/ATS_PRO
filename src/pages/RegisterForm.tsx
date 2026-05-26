@@ -75,7 +75,11 @@ const RegisterForm = () => {
       setTimeout(() => navigate("/login"), 1500);
     } catch (error) {
       console.error("Lỗi từ Server:", error);
-      toast.error("Đăng ký thất bại, vui lòng thử lại!");
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.error || "Đăng ký thất bại, vui lòng thử lại!");
+      } else {
+        toast.error("Không thể kết nối server, vui lòng thử lại!");
+      }
     }
   };
 
