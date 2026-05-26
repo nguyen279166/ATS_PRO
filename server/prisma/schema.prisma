@@ -19,8 +19,9 @@ model User {
   role      String   @default("hr")          // Vai trò: "hr" hoặc "admin"
   createdAt DateTime @default(now())         // Ngày tạo: Tự động lấy thời điểm hiện tại
 
-  jobs      Job[]    // 👈 MỐI QUAN HỆ: 1 User quản lý NHIỀU Job
-  notes     Note[]   // 👈 MỐI QUAN HỆ: 1 User viết NHIỀU Note
+  jobs      Job[]        // 👈 1 User quản lý NHIỀU Job
+  notes     Note[]       // 👈 1 User viết NHIỀU Note
+  interviews Interview[] // 👈 1 User tạo NHIỀU lịch phỏng vấn
 }
 
 // =============================================
@@ -57,7 +58,8 @@ model Candidate {
   jobId       String
   job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  notes       Note[]   // 👈 MỐI QUAN HỆ: 1 Candidate có NHIỀU Note
+  notes       Note[]       // 👈 1 Candidate có NHIỀU Note
+  interviews  Interview[]  // 👈 1 Candidate có NHIỀU buổi phỏng vấn
 }
 
 // =============================================
@@ -76,4 +78,24 @@ model Note {
   // 👈 Ghi chú này do HR nào viết
   userId      String
   user        User      @relation(fields: [userId], references: [id])
+}
+
+// =============================================
+// 📅 BẢNG INTERVIEW - Lịch phỏng vấn
+// =============================================
+model Interview {
+  id          String   @id @default(uuid())
+  scheduledAt DateTime                          // Ngày giờ phỏng vấn
+  location    String?                           // Địa điểm hoặc link Meet/Zoom
+  notes       String?  @db.Text                // Ghi chú thêm về buổi PV
+  status      String   @default("Scheduled")   // "Scheduled" | "Done" | "Cancelled"
+  createdAt   DateTime @default(now())
+
+  // 👈 Buổi phỏng vấn này dành cho Candidate nào
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  // 👈 Do HR nào tạo
+  createdBy   String
+  creator     User      @relation(fields: [createdBy], references: [id])
 }

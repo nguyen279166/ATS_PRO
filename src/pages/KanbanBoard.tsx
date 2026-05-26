@@ -7,6 +7,7 @@ import { Search, X } from "lucide-react";
 import { useDebounce } from "../hooks/useDebounce";
 import AddCandidateModal from "../components/AddCandidateModal";
 import CandidateNotes from "../components/CandidateNotes";
+import CandidateInterviews from "../components/CandidateInterviews";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -36,6 +37,7 @@ export default function KanbanBoard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [activeTab, setActiveTab] = useState<"notes" | "interviews">("notes");
 
   // Dùng bảo kiếm: Chặn từ khoá lại, khi tay người gõ ngưng nghỉ đủ 500ms thì mới thả chạy
   const debouncedSearchTerm = useDebounce(searchTerm, 200);
@@ -290,9 +292,9 @@ export default function KanbanBoard() {
             onClick={() => setSelectedCandidate(null)}
           />
           {/* Panel bên phải */}
-          <div className='w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col overflow-y-auto'>
+          <div className='w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col'>
             {/* Header panel */}
-            <div className='flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700'>
+            <div className='flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 shrink-0'>
               <div className='flex items-center gap-3'>
                 <img
                   src={selectedCandidate.avatar}
@@ -311,12 +313,34 @@ export default function KanbanBoard() {
                 <X size={20} />
               </button>
             </div>
-            {/* Notes */}
-            <div className='p-5 flex-1'>
-              <CandidateNotes
-                candidateId={selectedCandidate.id}
-                candidateName={selectedCandidate.name}
-              />
+
+            {/* Tab Navigation */}
+            <div className='flex border-b border-slate-100 dark:border-slate-700 shrink-0'>
+              {(["notes", "interviews"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                    activeTab === tab
+                      ? "text-blue-600 border-b-2 border-blue-600"
+                      : "text-slate-400 hover:text-slate-600"
+                  }`}
+                >
+                  {tab === "notes" ? "📝 Ghi chú" : "📅 Lịch PV"}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className='p-5 flex-1 overflow-y-auto'>
+              {activeTab === "notes" ? (
+                <CandidateNotes
+                  candidateId={selectedCandidate.id}
+                  candidateName={selectedCandidate.name}
+                />
+              ) : (
+                <CandidateInterviews candidateId={selectedCandidate.id} />
+              )}
             </div>
           </div>
         </div>
