@@ -23,15 +23,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (showLoader) setLoading(true);
     try {
       const token = localStorage.getItem("token_lay_duoc");
+      const baseUrl = import.meta.env.VITE_BASE_URL;
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       const [jobsRes, candidatesRes] = await Promise.all([
-        axios.get("http://localhost:3001/api/jobs", config),
-        axios.get("http://localhost:3001/api/candidates", config),
+        axios.get(`${baseUrl}/api/jobs`, config),
+        axios.get(`${baseUrl}/api/candidates?page=1&limit=1000`, config),
       ]);
 
       setJobs(jobsRes.data);
-      setCandidates(candidatesRes.data);
+      // API candidates giờ trả { data: [...], pagination: {...} }
+      setCandidates(candidatesRes.data.data);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu toàn cục:", error);
     } finally {

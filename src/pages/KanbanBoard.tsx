@@ -81,7 +81,8 @@ export default function KanbanBoard() {
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      refreshData(false); // Đồng bộ lại Global State ngầm, KHÔNG hiện spinner
+      // Không gọi refreshData ở đây để tránh flicker
+      // (local state đã đúng, DB đã được cập nhật)
     } catch (error) {
       console.error("Lỗi khi lưu trạng thái kéo thả:", error);
     }
@@ -153,7 +154,7 @@ export default function KanbanBoard() {
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      refreshData(false); // Đồng bộ ngầm, KHÔNG hiện spinner
+      // Không gọi refreshData ở đây để tránh flicker
     } catch (error) {
       console.error("Lỗi khi lưu trạng thái kéo thả (đè thẻ):", error);
     }
