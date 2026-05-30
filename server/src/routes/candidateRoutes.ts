@@ -4,16 +4,33 @@ import { sendEmail } from "../utils/mailer";
 import type { AuthRequest } from "./authMiddleware";
 
 const router = Router();
-router.get("/", async (_req: AuthRequest, res) => {
+router.get("/", async (req: AuthRequest, res) => {
   try {
-    // Tất cả người dùng đã đăng nhập đều thấy toàn bộ ứng viên
-    const candidates = await prisma.candidate.findMany({
-      include: {
-        job: true,
+    // Pagination: ?page=1&limit=10 (mặc định trang 1, 10 ứng viên/trang)
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(1000, parseInt(req.query.limit as string) || 10);
+    const skip = (page - 1) * limit;
+
+    // Chạy 2 query song song: lấy data + đếm tổng
+    const [candidates, total] = await Promise.all([
+      prisma.candidate.findMany({
+        include: { job: true },
+        orderBy: { appliedDate: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.candidate.count(),
+    ]);
+
+    res.json({
+      data: candidates,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: { appliedDate: "desc" },
     });
-    res.json(candidates);
   } catch {
     res.status(500).json({ error: "Lỗi server khi lấy danh sách ứng viên" });
   }

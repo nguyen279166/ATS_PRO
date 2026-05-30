@@ -9,6 +9,7 @@ export const DataContext = createContext<{
   candidates: Candidate[];
   loading: boolean;
   refreshData: (showLoader?: boolean) => Promise<void>;
+  updateCandidate: (id: string, updates: Partial<Candidate>) => void;
 } | null>(null);
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
@@ -23,20 +24,29 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (showLoader) setLoading(true);
     try {
       const token = localStorage.getItem("token_lay_duoc");
+      const baseUrl = import.meta.env.VITE_BASE_URL;
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       const [jobsRes, candidatesRes] = await Promise.all([
-        axios.get("http://localhost:3001/api/jobs", config),
-        axios.get("http://localhost:3001/api/candidates", config),
+        axios.get(`${baseUrl}/api/jobs`, config),
+        axios.get(`${baseUrl}/api/candidates?page=1&limit=1000`, config),
       ]);
 
       setJobs(jobsRes.data);
-      setCandidates(candidatesRes.data);
+      // API candidates giờ trả { data: [...], pagination: {...} }
+      setCandidates(candidatesRes.data.data);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu toàn cục:", error);
     } finally {
       if (showLoader) setLoading(false);
     }
+  };
+
+  // Cập nhật 1 candidate trong global state mà không re-fetch
+  const updateCandidate = (id: string, updates: Partial<Candidate>) => {
+    setCandidates((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+    );
   };
 
   useEffect(() => {
@@ -61,7 +71,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   }, [isLoggedIn]);
 
   return (
-    <DataContext.Provider value={{ jobs, candidates, loading, refreshData }}>
+    <DataContext.Provider value={{ jobs, candidates, loading, refreshData, updateCandidate }}>
       {children}
     </DataContext.Provider>
   );

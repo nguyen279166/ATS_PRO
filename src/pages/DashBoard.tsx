@@ -121,9 +121,15 @@ export default function Dashboard() {
           <h3 className='text-lg font-bold text-slate-800 dark:text-white mb-6'>
             Ứng viên theo vị trí
           </h3>
-          <ResponsiveContainer width='100%' height={280}>
-            <BarChart data={barChartData}>
-              <XAxis dataKey='name' tick={{ fontSize: 12 }} />
+          <ResponsiveContainer width='100%' height={300}>
+            <BarChart data={barChartData} margin={{ bottom: 40 }}>
+              <XAxis
+                dataKey='name'
+                tick={{ fontSize: 11 }}
+                interval={0}
+                angle={-30}
+                textAnchor='end'
+              />
               <YAxis allowDecimals={false} />
               <Tooltip
                 contentStyle={{
