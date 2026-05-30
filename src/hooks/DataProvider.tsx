@@ -9,6 +9,7 @@ export const DataContext = createContext<{
   candidates: Candidate[];
   loading: boolean;
   refreshData: (showLoader?: boolean) => Promise<void>;
+  updateCandidate: (id: string, updates: Partial<Candidate>) => void;
 } | null>(null);
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
@@ -41,6 +42,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Cập nhật 1 candidate trong global state mà không re-fetch
+  const updateCandidate = (id: string, updates: Partial<Candidate>) => {
+    setCandidates((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
+    );
+  };
+
   useEffect(() => {
     if (isLoggedIn) {
       refreshData();
@@ -63,7 +71,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   }, [isLoggedIn]);
 
   return (
-    <DataContext.Provider value={{ jobs, candidates, loading, refreshData }}>
+    <DataContext.Provider value={{ jobs, candidates, loading, refreshData, updateCandidate }}>
       {children}
     </DataContext.Provider>
   );

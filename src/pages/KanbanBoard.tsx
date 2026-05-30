@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useData } from "../hooks/DataProvider";
 import axios from "axios";
 import type { Candidate, CandidateStatus, Job } from "../types";
@@ -19,14 +19,24 @@ export default function KanbanBoard() {
     candidates: globalCandidates,
     loading,
     refreshData,
+    updateCandidate,
   } = useData();
 
   const currentJob = jobs.find((j: Job) => j.id === jobId);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
 
+  // isDirty = true khi local state đã bị thay đổi bởi drag
+  // → ngăn useEffect bên dưới overwrite local state
+  const isDirty = useRef(false);
+
+  // Khi navigate sang job khác → reset isDirty để sync lại từ globalCandidates
   useEffect(() => {
-    if (globalCandidates) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    isDirty.current = false;
+  }, [jobId]);
+
+  // Sync từ global CHỈ khi chưa có thay đổi local (mount lần đầu hoặc đổi job)
+  useEffect(() => {
+    if (globalCandidates && !isDirty.current) {
       setCandidates(
         globalCandidates.filter((c: Candidate) => c.jobId === jobId),
       );
@@ -36,7 +46,9 @@ export default function KanbanBoard() {
   // Lưu chữ đang gõ (Cái này thay đổi liên tục, làm React rặn render liên tục)
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
+    null,
+  );
   const [activeTab, setActiveTab] = useState<"notes" | "interviews">("notes");
 
   // Dùng bảo kiếm: Chặn từ khoá lại, khi tay người gõ ngưng nghỉ đủ 500ms thì mới thả chạy
@@ -60,7 +72,8 @@ export default function KanbanBoard() {
     // Móc ID của ứng viên trong túi hành lý (được gói lúc DragStart)
     const candidateId = e.dataTransfer.getData("candidateId");
 
-    // Yêu cầu React cập nhật mảng: Thằng nào có ID đúng khớp thì đổi trạng thái sang tên cột mới
+    // Optimistic update: cập nhật UI ngay lập tức
+    isDirty.current = true;
     setCandidates((prev: Candidate[]) => {
       const draggedCandidate = prev.find(
         (candidate) => candidate.id === candidateId,
@@ -83,8 +96,8 @@ export default function KanbanBoard() {
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      // Không gọi refreshData ở đây để tránh flicker
-      // (local state đã đúng, DB đã được cập nhật)
+      // Cập nhật global state để khi quay lại trang vẫn đúng
+      updateCandidate(candidateId, { status: newStatus });
     } catch (error) {
       console.error("Lỗi khi lưu trạng thái kéo thả:", error);
     }
@@ -96,8 +109,9 @@ export default function KanbanBoard() {
   }) => {
     try {
       const token = localStorage.getItem("token_lay_duoc");
+      const baseUrl = import.meta.env.VITE_BASE_URL;
       const res = await axios.post(
-        "http://localhost:3001/api/candidates",
+        `${baseUrl}/api/candidates`,
         {
           name: data.name,
           email: data.email,
@@ -127,10 +141,11 @@ export default function KanbanBoard() {
     targetId: string,
     newStatus: CandidateStatus,
   ) => {
-    e.stopPropagation(); // 🟡 LỆNH BÀI LÁ CHẮN: Cấm không cho sự kiện Rớt lọt xuyên qua Card chui xuống Cột.
+    e.stopPropagation();
 
     const draggedId = e.dataTransfer.getData("candidateId");
-    if (draggedId === targetId) return; // Nhấc lên rồi thả rớt trúng đầu chính mình thì thôi
+    if (draggedId === targetId) return;
+    isDirty.current = true;
     setCandidates((prev) => {
       // 1. Tìm vị trí Index hiện tại của 2 người
       const draggedIndex = prev.findIndex((c) => c.id === draggedId);
@@ -156,7 +171,8 @@ export default function KanbanBoard() {
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      // Không gọi refreshData ở đây để tránh flicker
+      // Cập nhật global state để khi quay lại trang vẫn đúng
+      updateCandidate(draggedId, { status: newStatus });
     } catch (error) {
       console.error("Lỗi khi lưu trạng thái kéo thả (đè thẻ):", error);
     }
@@ -302,8 +318,12 @@ export default function KanbanBoard() {
                   className='w-10 h-10 rounded-full object-cover'
                 />
                 <div>
-                  <h3 className='font-bold text-slate-800 dark:text-white'>{selectedCandidate.name}</h3>
-                  <p className='text-xs text-slate-500'>{selectedCandidate.email}</p>
+                  <h3 className='font-bold text-slate-800 dark:text-white'>
+                    {selectedCandidate.name}
+                  </h3>
+                  <p className='text-xs text-slate-500'>
+                    {selectedCandidate.email}
+                  </p>
                 </div>
               </div>
               <button
