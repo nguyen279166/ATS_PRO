@@ -6,20 +6,36 @@ import type { AuthRequest } from "./authMiddleware";
 const router = Router();
 router.get("/", async (req: AuthRequest, res) => {
   try {
-    // Pagination: ?page=1&limit=10 (mặc định trang 1, 10 ứng viên/trang)
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(1000, parseInt(req.query.limit as string) || 10);
     const skip = (page - 1) * limit;
 
-    // Chạy 2 query song song: lấy data + đếm tổng
+    // Advanced filters
+    const status = req.query.status as string | undefined;   // "Applied" | "Interviewing" | ...
+    const jobId  = req.query.jobId  as string | undefined;   // UUID của job
+    const dateFrom = req.query.dateFrom as string | undefined; // "2024-01-01"
+    const dateTo   = req.query.dateTo   as string | undefined; // "2024-12-31"
+
+    // Build Prisma where clause động
+    const where: Record<string, unknown> = {};
+    if (status)   where.status = status;
+    if (jobId)    where.jobId  = jobId;
+    if (dateFrom || dateTo) {
+      where.appliedDate = {
+        ...(dateFrom && { gte: new Date(dateFrom) }),
+        ...(dateTo   && { lte: new Date(new Date(dateTo).setHours(23, 59, 59, 999)) }),
+      };
+    }
+
     const [candidates, total] = await Promise.all([
       prisma.candidate.findMany({
+        where,
         include: { job: true },
         orderBy: { appliedDate: "desc" },
         skip,
         take: limit,
       }),
-      prisma.candidate.count(),
+      prisma.candidate.count({ where }), // count cũng filter để totalPages đúng
     ]);
 
     res.json({
