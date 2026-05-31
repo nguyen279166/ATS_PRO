@@ -34,6 +34,7 @@ export default function CandidateList() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]); // Bulk select
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
@@ -94,6 +95,42 @@ export default function CandidateList() {
   const filteredCandidates = candidates.filter((c) =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Bulk select helpers
+  const allVisibleIds = filteredCandidates.map((c) => c.id);
+  const isAllSelected = allVisibleIds.length > 0 && allVisibleIds.every((id) => selectedIds.includes(id));
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !allVisibleIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => [...new Set([...prev, ...allVisibleIds])]);
+    }
+  };
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkStatusUpdate = async (status: string) => {
+    try {
+      await axios.patch(`${baseUrl}/api/candidates/bulk`, { ids: selectedIds, action: "updateStatus", status }, { headers });
+      toast.success(`Đã cập nhật ${selectedIds.length} ứng viên sang ${status}`);
+      setSelectedIds([]);
+      fetchCandidates(currentPage);
+    } catch { toast.error("Lỗi khi cập nhật hàng loạt"); }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`Xóa ${selectedIds.length} ứng viên đã chọn?`)) return;
+    try {
+      await axios.patch(`${baseUrl}/api/candidates/bulk`, { ids: selectedIds, action: "delete" }, { headers });
+      toast.success(`Đã xóa ${selectedIds.length} ứng viên`);
+      setSelectedIds([]);
+      fetchCandidates(currentPage);
+    } catch { toast.error("Lỗi khi xóa hàng loạt"); }
+  };
+
 
   // Xuất CSV
   const handleExportCSV = () => {
@@ -294,6 +331,39 @@ export default function CandidateList() {
         </div>
       )}
 
+      {/* Bulk Action Bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-xl">
+          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+            Đã chọn {selectedIds.length} ứng viên
+          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-slate-500">Chuyển sang:</span>
+            {STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleBulkStatusUpdate(s)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${STATUS_COLORS[s]}`}
+              >
+                {s}
+              </button>
+            ))}
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors"
+            >
+              <Trash2 size={13} /> Xóa tất cả
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 dark:bg-slate-800 text-black dark:text-white">
         {loading ? (
@@ -305,7 +375,23 @@ export default function CandidateList() {
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="text-sm text-slate-500 border-b border-slate-100">
+                  <tr className="text-sm text-slate-500 border-b border-slate-100 dark:border-slate-700">
+                    <th className="pb-3 pl-2 w-12">
+                      <button
+                        onClick={toggleSelectAll}
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                          isAllSelected
+                            ? "bg-blue-600 border-blue-600"
+                            : "border-slate-300 dark:border-slate-600 hover:border-blue-400"
+                        }`}
+                      >
+                        {isAllSelected && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    </th>
                     <th className="pb-3 font-semibold">Ứng viên</th>
                     <th className="pb-3 font-semibold">Email</th>
                     <th className="pb-3 font-semibold">Vị trí ứng tuyển</th>
@@ -319,8 +405,28 @@ export default function CandidateList() {
                     filteredCandidates.map((candidate) => (
                       <tr
                         key={candidate.id}
-                        className="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                        onClick={() => toggleSelect(candidate.id)}
+                        className={`border-b border-slate-50 dark:border-slate-700 transition-colors cursor-pointer ${
+                          selectedIds.includes(candidate.id)
+                            ? "bg-blue-50 dark:bg-blue-900/20"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                        }`}
                       >
+                        <td className="py-4 pl-2">
+                          <div
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                              selectedIds.includes(candidate.id)
+                                ? "bg-blue-600 border-blue-600"
+                                : "border-slate-300 dark:border-slate-600"
+                            }`}
+                          >
+                            {selectedIds.includes(candidate.id) && (
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-4">
                           <div className="flex items-center gap-3">
                             <img
