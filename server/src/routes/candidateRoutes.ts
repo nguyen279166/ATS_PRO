@@ -116,5 +116,38 @@ router.delete("/:id", async (req: AuthRequest, res) => {
     res.status(500).json({ error: "Lỗi server khi xóa ứng viên" });
   }
 });
+// PATCH /api/candidates/bulk → Bulk update status hoặc bulk delete
+router.patch("/bulk", async (req: AuthRequest, res) => {
+  try {
+    const { ids, action, status } = req.body as {
+      ids: string[];
+      action: "updateStatus" | "delete";
+      status?: string;
+    };
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "Cần truyền danh sách ids" });
+    }
+
+    if (action === "updateStatus") {
+      if (!status) return res.status(400).json({ error: "Cần truyền status" });
+      await prisma.candidate.updateMany({
+        where: { id: { in: ids } },
+        data: { status: status as "Applied" | "Interviewing" | "Hired" | "Rejected" },
+      });
+      return res.json({ message: `Đã cập nhật ${ids.length} ứng viên` });
+    }
+
+    if (action === "delete") {
+      await prisma.candidate.deleteMany({ where: { id: { in: ids } } });
+      return res.json({ message: `Đã xóa ${ids.length} ứng viên` });
+    }
+
+    res.status(400).json({ error: "action không hợp lệ" });
+  } catch (error) {
+    console.error("Lỗi bulk action:", error);
+    res.status(500).json({ error: "Lỗi server khi thực hiện bulk action" });
+  }
+});
 
 export default router;
