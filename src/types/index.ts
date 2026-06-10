@@ -22,5 +22,6 @@ export interface Candidate {
   status: CandidateStatus;
   appliedDate: string;
   avatar?: string;
+  cvUrl?: string | null;
   job?: Job;
 }
