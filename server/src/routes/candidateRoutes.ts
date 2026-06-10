@@ -6,6 +6,47 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
+// ── Email template dùng chung ─────────────────────────────────
+const buildEmailTemplate = (
+  status: string,
+  name: string,
+  jobTitle: string,
+  dept: string
+): { subject: string; html: string } | null => {
+  const footer = `<br/><p style="color:#64748b;font-size:13px">Trân trọng,<br/><strong>Bộ phận Tuyển dụng – ATSPRO</strong></p>`;
+
+  const templates: Record<string, { subject: string; html: string }> = {
+    Interviewing: {
+      subject: `📅 Thư mời phỏng vấn – ${jobTitle}`,
+      html: `<h2 style="color:#1e40af">📅 Thư mời phỏng vấn</h2>
+             <p>Chào <strong>${name}</strong>,</p>
+             <p>Chúng tôi đã xem xét hồ sơ của bạn cho vị trí <strong>${jobTitle}</strong> tại phòng <strong>${dept}</strong> và rất vui mừng được mời bạn tham gia vòng phỏng vấn.</p>
+             <p>Bộ phận nhân sự sẽ sớm liên hệ để sắp xếp lịch phỏng vấn cụ thể. Vui lòng chuẩn bị sẵn hồ sơ và các giấy tờ cần thiết.</p>
+             ${footer}`,
+    },
+    Hired: {
+      subject: `🎉 Chúc mừng! Bạn đã trúng tuyển vị trí ${jobTitle}`,
+      html: `<h2 style="color:#065f46">🎉 Chúc mừng trúng tuyển!</h2>
+             <p>Chào <strong>${name}</strong>,</p>
+             <p>Chúng tôi rất vui mừng thông báo bạn đã chính thức <strong>trúng tuyển</strong> vị trí <strong>${jobTitle}</strong> tại phòng <strong>${dept}</strong>.</p>
+             <p>Bộ phận nhân sự sẽ liên hệ với bạn trong thời gian sớm nhất để trao đổi về offer và lịch nhận việc.</p>
+             ${footer}`,
+    },
+    Rejected: {
+      subject: `Thư cảm ơn – Vị trí ${jobTitle}`,
+      html: `<h2 style="color:#374151">Thư cảm ơn</h2>
+             <p>Chào <strong>${name}</strong>,</p>
+             <p>Cảm ơn bạn đã dành thời gian ứng tuyển vị trí <strong>${jobTitle}</strong> tại phòng <strong>${dept}</strong>.</p>
+             <p>Sau quá trình xem xét kỹ lưỡng, chúng tôi đã tìm được ứng viên phù hợp hơn với nhu cầu hiện tại. Chúng tôi sẽ lưu hồ sơ của bạn và liên hệ khi có cơ hội phù hợp.</p>
+             <p>Chúc bạn nhiều thành công!</p>
+             ${footer}`,
+    },
+  };
+
+  return templates[status] ?? null;
+};
+
+
 // Multer config: lưu file vào /uploads/cv, giữ tên gốc + timestamp
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -104,24 +145,15 @@ router.put("/:id", async (req, res) => {
       include: { job: true }, // Lấy kèm thông tin công việc để gửi email
     });
 
-    // Chỉ gửi email nếu chuyển sang Hired hoặc Rejected và trạng thái thực sự thay đổi
-    if (oldCandidate?.status !== status && (status === "Hired" || status === "Rejected")) {
-      const subject = status === "Hired" 
-        ? `🎉 Chúc mừng! Bạn đã trúng tuyển vị trí ${updatedCandidate.job.title}`
-        : `Thư cảm ơn từ công ty về vị trí ${updatedCandidate.job.title}`;
-        
-      const html = status === "Hired"
-        ? `<h3>Chào ${updatedCandidate.name},</h3>
-           <p>Chúng tôi rất vui mừng thông báo bạn đã trúng tuyển vị trí <strong>${updatedCandidate.job.title}</strong> tại phòng ${updatedCandidate.job.department}.</p>
-           <p>Bộ phận nhân sự sẽ sớm liên hệ với bạn để trao đổi về offer và lịch nhận việc.</p>
-           <br/><p>Trân trọng,<br/>Đội ngũ Tuyển dụng</p>`
-        : `<h3>Chào ${updatedCandidate.name},</h3>
-           <p>Cảm ơn bạn đã quan tâm và ứng tuyển vị trí <strong>${updatedCandidate.job.title}</strong>.</p>
-           <p>Mặc dù hồ sơ của bạn rất ấn tượng, nhưng hiện tại chúng tôi đã tìm được ứng viên phù hợp hơn với nhu cầu hiện tại. Chúng tôi sẽ lưu hồ sơ của bạn cho các đợt tuyển dụng sau.</p>
-           <br/><p>Chúc bạn nhiều thành công trên con đường sự nghiệp,<br/>Đội ngũ Tuyển dụng</p>`;
-           
-      // Không await để request API không bị chậm
-      sendEmail(updatedCandidate.email, subject, html);
+    // Gửi email khi status thay đổi
+    if (oldCandidate?.status !== status) {
+      const tpl = buildEmailTemplate(
+        status,
+        updatedCandidate.name,
+        updatedCandidate.job.title,
+        updatedCandidate.job.department
+      );
+      if (tpl) sendEmail(updatedCandidate.email, tpl.subject, tpl.html);
     }
 
     res.json(updatedCandidate);
@@ -161,6 +193,19 @@ router.patch("/bulk", async (req: AuthRequest, res) => {
         where: { id: { in: ids } },
         data: { status: status as "Applied" | "Interviewing" | "Hired" | "Rejected" },
       });
+
+      // Gửi email cho từng ứng viên (fire-and-forget)
+      if (status === "Interviewing" || status === "Hired" || status === "Rejected") {
+        const affectedCandidates = await prisma.candidate.findMany({
+          where: { id: { in: ids } },
+          include: { job: true },
+        });
+        for (const c of affectedCandidates) {
+          const tpl = buildEmailTemplate(status, c.name, c.job.title, c.job.department);
+          if (tpl) sendEmail(c.email, tpl.subject, tpl.html);
+        }
+      }
+
       return res.json({ message: `Đã cập nhật ${ids.length} ứng viên` });
     }
 
