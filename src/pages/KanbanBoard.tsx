@@ -8,6 +8,7 @@ import { useDebounce } from "../hooks/useDebounce";
 import AddCandidateModal from "../components/AddCandidateModal";
 import CandidateNotes from "../components/CandidateNotes";
 import CandidateInterviews from "../components/CandidateInterviews";
+import CandidateCV from "../components/CandidateCV";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
@@ -49,7 +50,7 @@ export default function KanbanBoard() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
     null,
   );
-  const [activeTab, setActiveTab] = useState<"notes" | "interviews">("notes");
+  const [activeTab, setActiveTab] = useState<"notes" | "interviews" | "cv">("notes");
 
   // Dùng bảo kiếm: Chặn từ khoá lại, khi tay người gõ ngưng nghỉ đủ 500ms thì mới thả chạy
   const debouncedSearchTerm = useDebounce(searchTerm, 200);
@@ -336,7 +337,7 @@ export default function KanbanBoard() {
 
             {/* Tab Navigation */}
             <div className='flex border-b border-slate-100 dark:border-slate-700 shrink-0'>
-              {(["notes", "interviews"] as const).map((tab) => (
+                          {(["notes", "interviews", "cv"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -346,20 +347,26 @@ export default function KanbanBoard() {
                       : "text-slate-400 hover:text-slate-600"
                   }`}
                 >
-                  {tab === "notes" ? "📝 Ghi chú" : "📅 Lịch PV"}
+                  {tab === "notes" ? "📝 Ghi chú" : tab === "interviews" ? "📅 Lịch PV" : "📄 CV"}
                 </button>
               ))}
             </div>
 
             {/* Tab Content */}
-            <div className='p-5 flex-1 overflow-y-auto'>
+                        <div className='p-5 flex-1 overflow-y-auto'>
               {activeTab === "notes" ? (
                 <CandidateNotes
                   candidateId={selectedCandidate.id}
                   candidateName={selectedCandidate.name}
                 />
-              ) : (
+              ) : activeTab === "interviews" ? (
                 <CandidateInterviews candidateId={selectedCandidate.id} />
+              ) : (
+                <CandidateCV
+                  candidateId={selectedCandidate.id}
+                  candidateName={selectedCandidate.name}
+                  initialCvUrl={selectedCandidate.cvUrl}
+                />
               )}
             </div>
           </div>

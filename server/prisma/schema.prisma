@@ -53,6 +53,7 @@ model Candidate {
   status      String   @default("Applied")   // "Applied" | "Interviewing" | "Hired" | "Rejected"
   appliedDate DateTime @default(now())
   avatar      String?                        // Dấu ? = CÓ THỂ TRỐNG (optional)
+  cvUrl       String?                        // Đường dẫn file CV (PDF/DOCX)
 
   // 👈 MỐI QUAN HỆ: Candidate này ứng tuyển vào Job nào
   jobId       String

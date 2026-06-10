@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { MapPin, Building, ArrowRight, Sparkles } from "lucide-react";
+import { MapPin, Building, ArrowRight, Sparkles, Upload, FileText, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Job } from "../types";
 
@@ -13,7 +13,9 @@ export default function LandingPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [applicantName, setApplicantName] = useState("");
   const [applicantEmail, setApplicantEmail] = useState("");
+  const [cvFile, setCvFile] = useState<File | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchPublicJobs = async () => {
@@ -36,17 +38,20 @@ export default function LandingPage() {
     setIsApplying(true);
     const baseUrl = import.meta.env.VITE_BASE_URL;
     try {
-      await axios.post(`${baseUrl}/api/public/apply`, {
-        jobId: selectedJob.id,
-        name: applicantName,
-        email: applicantEmail,
+      const formData = new FormData();
+      formData.append("jobId", selectedJob.id);
+      formData.append("name", applicantName);
+      formData.append("email", applicantEmail);
+      if (cvFile) formData.append("cv", cvFile);
+
+      await axios.post(`${baseUrl}/api/public/apply`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-      toast.success(
-        "Ứng tuyển thành công! Nhà tuyển dụng sẽ sớm liên hệ với bạn.",
-      );
+      toast.success("Ứng tuyển thành công! Nhà tuyển dụng sẽ sớm liên hệ với bạn.");
       setSelectedJob(null);
       setApplicantName("");
       setApplicantEmail("");
+      setCvFile(null);
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         toast.error(error.response?.data?.error || "Lỗi khi ứng tuyển");
@@ -56,6 +61,21 @@ export default function LandingPage() {
     } finally {
       setIsApplying(false);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (!["pdf", "doc", "docx", "jpg", "jpeg", "png"].includes(ext || "")) {
+      toast.error("Chỉ chấp nhận PDF, DOC, DOCX, JPG, PNG");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File quá lớn, tối đa 10MB");
+      return;
+    }
+    setCvFile(file);
   };
 
   return (
@@ -242,7 +262,33 @@ export default function LandingPage() {
                   />
                 </div>
 
-                <div className='pt-4 flex gap-3'>
+                  {/* CV Upload */}
+                  <div>
+                    <label className='block text-sm font-bold text-slate-700 mb-1'>
+                      CV / Hồ sơ <span className='font-normal text-slate-400'>(không bắt buộc)</span>
+                    </label>
+                    {cvFile ? (
+                      <div className='flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl'>
+                        <FileText size={18} className='text-blue-600 flex-shrink-0' />
+                        <span className='text-sm font-medium text-slate-700 flex-1 truncate'>{cvFile.name}</span>
+                        <button type='button' onClick={() => { setCvFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                          className='text-slate-400 hover:text-red-500 transition-colors'>
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button type='button' onClick={() => fileInputRef.current?.click()}
+                        className='w-full flex items-center gap-3 p-3 border-2 border-dashed border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group'>
+                        <Upload size={18} className='text-slate-400 group-hover:text-blue-500' />
+                        <span className='text-sm text-slate-500 group-hover:text-blue-600'>Tải lên CV của bạn</span>
+                        <span className='text-xs text-slate-400 ml-auto'>PDF, DOC, JPG · 10MB</span>
+                      </button>
+                    )}
+                    <input ref={fileInputRef} type='file' accept='.pdf,.doc,.docx,.jpg,.jpeg,.png'
+                      className='hidden' onChange={handleFileChange} />
+                  </div>
+
+                  <div className='pt-4 flex gap-3'>
                   <button
                     type='button'
                     onClick={() => setSelectedJob(null)}

@@ -2,6 +2,32 @@ import { Router } from "express";
 import prisma from "../prisma";
 import { sendEmail } from "../utils/mailer";
 import type { AuthRequest } from "./authMiddleware";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Multer config: lưu file vào /uploads/cv, giữ tên gốc + timestamp
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    const dir = path.join(__dirname, "../../uploads/cv");
+    fs.mkdirSync(dir, { recursive: true }); // tạo thư mục nếu chưa có
+    cb(null, dir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `cv_${Date.now()}${ext}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // tối đa 10MB
+  fileFilter: (_req, file, cb) => {
+    const allowed = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowed.includes(ext)) cb(null, true);
+    else cb(new Error("Chỉ chấp nhận file PDF, DOC, DOCX, JPG, PNG"));
+  },
+});
 
 const router = Router();
 router.get("/", async (req: AuthRequest, res) => {
@@ -147,6 +173,52 @@ router.patch("/bulk", async (req: AuthRequest, res) => {
   } catch (error) {
     console.error("Lỗi bulk action:", error);
     res.status(500).json({ error: "Lỗi server khi thực hiện bulk action" });
+  }
+});
+// POST /api/candidates/:id/cv → Upload CV
+router.post("/:id/cv", upload.single("cv"), async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    if (!req.file) return res.status(400).json({ error: "Không có file được upload" });
+
+    const candidate = await prisma.candidate.findUnique({ where: { id } });
+    if (!candidate) return res.status(404).json({ error: "Không tìm thấy ứng viên" });
+
+    // Xóa file CV cũ nếu có
+    if (candidate.cvUrl) {
+      const oldPath = path.join(__dirname, "../../", candidate.cvUrl.replace(/^\//, ""));
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    const cvUrl = `/uploads/cv/${req.file.filename}`;
+    const updated = await prisma.candidate.update({
+      where: { id },
+      data: { cvUrl },
+    });
+    res.json(updated);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Lỗi server";
+    res.status(500).json({ error: msg });
+  }
+});
+
+// DELETE /api/candidates/:id/cv → Xóa CV
+router.delete("/:id/cv", async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const candidate = await prisma.candidate.findUnique({ where: { id } });
+    if (!candidate || !candidate.cvUrl) return res.status(404).json({ error: "Không có CV" });
+
+    const filePath = path.join(__dirname, "../../", candidate.cvUrl.replace(/^\//, ""));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+    const updated = await prisma.candidate.update({
+      where: { id },
+      data: { cvUrl: null },
+    });
+    res.json(updated);
+  } catch {
+    res.status(500).json({ error: "Lỗi khi xóa CV" });
   }
 });
 
