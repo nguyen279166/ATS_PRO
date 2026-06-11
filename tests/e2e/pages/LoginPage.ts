@@ -8,7 +8,7 @@ export class LoginPage {
   }
 
   async login(email: string, pass: string) {
-    await this.page.locator('input[type="text"]').fill(email);
+    await this.page.locator('input[type="email"]').fill(email);
     await this.page.locator('input[type="password"]').fill(pass);
     await this.page.locator('button[type="submit"]').click();
   }

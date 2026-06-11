@@ -1,10 +1,12 @@
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "react-toastify";
 import axios from "axios";
-import { useAuth } from "../hooks/useAuth";
+import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
+import { toast } from "react-toastify";
+import { z } from "zod";
 import { API_BASE_URL } from "../config/env";
+import { useAuth } from "../hooks/useAuth";
 
 const LOGIN_API = `${API_BASE_URL}/api/auth/login`;
 
@@ -34,17 +36,14 @@ const LoginForm = () => {
   });
 
   const onSubmit = async (data: LoginFormType) => {
-    const { email, password } = data;
     try {
-      const res = await axios.post(LOGIN_API, {
-        email,
-        password,
-      });
+      const res = await axios.post(LOGIN_API, data);
       const token = res.data.token;
       const role = res.data.user?.role || "hr";
       if (!token) {
         throw new Error("API không trả về token");
       }
+
       login(token, role);
       toast.success("Đăng nhập thành công");
     } catch (error) {
@@ -54,71 +53,106 @@ const LoginForm = () => {
   };
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4'>
-      <form
-        className='w-full max-w-sm p-8 rounded-2xl space-y-5 bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl'
-        onSubmit={handleSubmit(onSubmit)}
-      >
-        {/* Logo */}
-        <div className='text-center mb-4'>
-          <h1 className='text-2xl font-bold text-blue-400 tracking-wider'>
-            ATS<span className='text-white'>PRO</span>
-          </h1>
-        </div>
-        <h2 className='text-2xl font-bold text-center text-white'>Đăng nhập</h2>
-
-        {/* Email Input */}
-        <div>
-          <label className='block text-sm font-medium mb-1 text-slate-300'>
-            Email
-          </label>
-          <input
-            className='block border border-white/20 bg-white/10 text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all rounded-xl w-full h-11 px-4'
-            type='text'
-            placeholder='john@mail.com'
-            {...register("email")}
-          />
-          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
-            {errors.email?.message}
-          </p>
-        </div>
-
-        {/* Password Input */}
-        <div>
-          <label className='block text-sm font-medium mb-1 text-slate-300'>
-            Mật khẩu
-          </label>
-          <input
-            className='block border border-white/20 bg-white/10 text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 outline-none transition-all rounded-xl w-full h-11 px-4'
-            type='password'
-            placeholder='changeme'
-            {...register("password")}
-          />
-          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
-            {errors.password?.message}
-          </p>
-        </div>
-
-        <button
-          type='submit'
-          disabled={isSubmitting}
-          className={`w-full py-3 rounded-xl text-white font-semibold transition-all duration-200 ${isSubmitting ? "bg-blue-400/50 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500 shadow-lg hover:shadow-blue-500/25"}`}
+    <main className='sahara-auth-shell min-h-screen px-4 py-6'>
+      <nav className='mx-auto flex w-full max-w-5xl items-center justify-between'>
+        <Link to='/' className='flex items-center gap-3'>
+          <span className='flex h-10 w-10 items-center justify-center rounded-lg bg-[#3a302a] text-lg font-black text-[#f4b266] shadow-sm'>
+            A
+          </span>
+          <span className='text-xl font-black tracking-normal text-[var(--sahara-text)]'>
+            ATS PRO
+          </span>
+        </Link>
+        <Link
+          to='/careers'
+          className='text-sm font-bold text-[var(--sahara-muted)] transition-colors hover:text-[var(--sahara-primary)]'
         >
-          {isSubmitting ? "Đang kiểm tra..." : "Đăng nhập"}
-        </button>
+          Việc đang tuyển
+        </Link>
+      </nav>
 
-        {/* Link sang trang Đăng ký */}
-        <p className='text-center text-sm text-slate-400'>
-          Chưa có tài khoản?{" "}
-          <a
-            href='/register'
-            className='text-blue-400 hover:text-blue-300 font-semibold transition-colors'
+      <section className='mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl items-center justify-center py-8'>
+        <form
+          className='sahara-card w-full max-w-md space-y-5 p-7 text-[var(--sahara-text)]'
+          onSubmit={handleSubmit(onSubmit)}
+        >
+          <div>
+            <p className='mb-2 text-xs font-black uppercase text-[var(--sahara-primary)]'>
+              Sahara workspace
+            </p>
+            <h1 className='text-3xl font-black tracking-normal'>Đăng nhập</h1>
+            <p className='mt-2 text-sm text-[var(--sahara-muted)]'>
+              Quay lại bảng tuyển dụng ATS PRO của bạn.
+            </p>
+          </div>
+
+          <div>
+            <label className='mb-1.5 block text-sm font-bold'>Email</label>
+            <div className='relative'>
+              <Mail
+                size={17}
+                className='absolute left-3 top-1/2 -translate-y-1/2 text-[var(--sahara-muted)]'
+              />
+              <input
+                className='sahara-input h-11 w-full px-10 text-sm'
+                type='email'
+                placeholder='john@mail.com'
+                {...register("email")}
+              />
+            </div>
+            <p className='mt-1 min-h-[20px] text-sm font-medium text-[#9a452a]'>
+              {errors.email?.message}
+            </p>
+          </div>
+
+          <div>
+            <div className='mb-1.5 flex items-center justify-between gap-3'>
+              <label className='block text-sm font-bold'>Mật khẩu</label>
+              <Link
+                to='/forgot-password'
+                className='text-sm font-bold text-[var(--sahara-primary)] transition-colors hover:text-[var(--sahara-primary-dark)]'
+              >
+                Quên mật khẩu?
+              </Link>
+            </div>
+            <div className='relative'>
+              <LockKeyhole
+                size={17}
+                className='absolute left-3 top-1/2 -translate-y-1/2 text-[var(--sahara-muted)]'
+              />
+              <input
+                className='sahara-input h-11 w-full px-10 text-sm'
+                type='password'
+                placeholder='changeme'
+                {...register("password")}
+              />
+            </div>
+            <p className='mt-1 min-h-[20px] text-sm font-medium text-[#9a452a]'>
+              {errors.password?.message}
+            </p>
+          </div>
+
+          <button
+            type='submit'
+            disabled={isSubmitting}
+            className='sahara-button h-11 w-full disabled:cursor-not-allowed disabled:opacity-60'
           >
-            Đăng ký ngay
-          </a>
-        </p>
-      </form>
-    </div>
+            {isSubmitting ? "Đang kiểm tra..." : "Đăng nhập"}
+            {!isSubmitting && <ArrowRight size={17} />}
+          </button>
+
+          <p className='text-center text-sm text-[var(--sahara-muted)]'>
+            Chưa có tài khoản?{" "}
+            <Link
+              to='/register'
+              className='font-black text-[var(--sahara-primary)] transition-colors hover:text-[var(--sahara-primary-dark)]'
+            >
+              Đăng ký ngay
+            </Link>
+          </p>
+        </form>
+      </section>
+    </main>
   );
 };
 

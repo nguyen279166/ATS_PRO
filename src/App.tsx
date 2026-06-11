@@ -13,6 +13,8 @@ import KanbanBoard from "./pages/KanbanBoard";
 import Dashboard from "./pages/DashBoard";
 import LoginForm from "./pages/LoginForm";
 import RegisterForm from "./pages/RegisterForm";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LandingPage from "./pages/LandingPage";
@@ -91,6 +93,18 @@ export default function App() {
           <Route
             path='/register'
             element={isLoggedIn ? <Navigate to='/' replace /> : <RegisterForm />}
+          />
+          <Route
+            path='/forgot-password'
+            element={
+              isLoggedIn ? <Navigate to='/' replace /> : <ForgotPassword />
+            }
+          />
+          <Route
+            path='/reset-password'
+            element={
+              isLoggedIn ? <Navigate to='/' replace /> : <ResetPassword />
+            }
           />
 
           {/* TRANG BẢO VỆ: Phải có token mới vào được */}

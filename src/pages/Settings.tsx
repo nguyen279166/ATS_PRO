@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useDarkMode } from "../hooks/useDarkMode";
 import { useAuth } from "../hooks/useAuth";
-import { User, Lock, LogOut, Bell, Moon, Shield, Camera } from "lucide-react";
+import { Lock, LogOut, Bell, Moon, Shield, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 import { API_BASE_URL } from "../config/env";
+import Avatar from "../components/Avatar";
 
 export default function Settings() {
   const { logout } = useAuth();
@@ -144,17 +145,12 @@ export default function Settings() {
           {/* Card Profile */}
           <div className='sahara-card p-6 text-center transition-colors'>
             <div className='relative w-24 h-24 mx-auto mb-4 group'>
-              {profile?.avatar ? (
-                <img
-                  src={profile.avatar}
-                  alt='Avatar'
-                  className='w-24 h-24 rounded-full object-cover shadow-inner border-4 border-[#f4dfbd]'
-                />
-              ) : (
-                <div className='w-24 h-24 rounded-full bg-[#efe2cc] text-[#8a4518] flex items-center justify-center text-3xl font-bold shadow-inner'>
-                  {profile?.fullName?.charAt(0).toUpperCase() || <User />}
-                </div>
-              )}
+              <Avatar
+                name={profile?.fullName}
+                src={profile?.avatar}
+                className='h-24 w-24 text-3xl shadow-inner'
+                imageClassName='border-4 border-[#f4dfbd]'
+              />
 
               {/* Nút Đổi Avatar (hiện khi hover) */}
               <label className='absolute inset-0 bg-black/40 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity backdrop-blur-sm'>

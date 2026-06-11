@@ -19,6 +19,7 @@ import {
   Line,
   CartesianGrid,
 } from "recharts";
+import Avatar from "../components/Avatar";
 
 export default function Dashboard() {
   const { jobs, candidates, loading } = useData();
@@ -402,13 +403,9 @@ export default function Dashboard() {
                   >
                     <td className='py-3'>
                       <div className='flex items-center gap-3'>
-                        <img
-                          src={
-                            candidate.avatar ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(candidate.name)}&background=random`
-                          }
-                          alt=''
-                          className='w-8 h-8 rounded-full'
+                        <Avatar
+                          name={candidate.name}
+                          className='h-8 w-8 text-xs'
                         />
                         <span className='font-medium text-[#3a302a]'>
                           {candidate.name}
