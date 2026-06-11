@@ -5,6 +5,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../config/env";
 
 // Tinh chỉnh lại z.string().email() cho chuẩn v4 để không báo lỗi
 const registerSchema = z.object({
@@ -61,8 +62,7 @@ const RegisterForm = () => {
   const onSubmit = async (data: RegisterFormType) => {
     try {
       const { fullName, email, gender, password } = data;
-      const baseUrl = import.meta.env.VITE_BASE_URL;
-      const res = await axios.post(`${baseUrl}/api/auth/register`, {
+      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, {
         fullName,
         email,
         gender,

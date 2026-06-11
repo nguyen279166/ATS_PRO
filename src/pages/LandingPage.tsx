@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { MapPin, Building, ArrowRight, Sparkles, Upload, FileText, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Job } from "../types";
+import { API_BASE_URL } from "../config/env";
 
 export default function LandingPage() {
   const [openJobs, setOpenJobs] = useState<Job[]>([]);
@@ -20,7 +21,7 @@ export default function LandingPage() {
   useEffect(() => {
     const fetchPublicJobs = async () => {
       try {
-        const res = await axios.get("http://localhost:3001/api/public/jobs");
+        const res = await axios.get(`${API_BASE_URL}/api/public/jobs`);
         setOpenJobs(res.data);
       } catch (error) {
         console.error("Lỗi khi tải công việc:", error);
@@ -36,7 +37,6 @@ export default function LandingPage() {
     if (!selectedJob) return;
 
     setIsApplying(true);
-    const baseUrl = import.meta.env.VITE_BASE_URL;
     try {
       const formData = new FormData();
       formData.append("jobId", selectedJob.id);
@@ -44,7 +44,7 @@ export default function LandingPage() {
       formData.append("email", applicantEmail);
       if (cvFile) formData.append("cv", cvFile);
 
-      await axios.post(`${baseUrl}/api/public/apply`, formData, {
+      await axios.post(`${API_BASE_URL}/api/public/apply`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       toast.success("Ứng tuyển thành công! Nhà tuyển dụng sẽ sớm liên hệ với bạn.");
@@ -79,7 +79,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className='min-h-screen bg-gradient-to-b from-slate-50 to-white'>
+    <main className='min-h-screen bg-gradient-to-b from-slate-50 to-white'>
       {/* NAVBAR */}
       <nav className='flex items-center justify-between px-8 py-5 max-w-6xl mx-auto'>
         <h1 className='text-2xl font-bold text-blue-600 tracking-wider'>
@@ -311,6 +311,6 @@ export default function LandingPage() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }

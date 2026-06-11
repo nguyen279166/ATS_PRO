@@ -4,8 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { useAuth } from "../hooks/useAuth";
+import { API_BASE_URL } from "../config/env";
 
-const LOGIN_API = "http://localhost:3001/api/auth/login";
+const LOGIN_API = `${API_BASE_URL}/api/auth/login`;
 
 const loginSchema = z.object({
   email: z

@@ -4,6 +4,7 @@ import { useDarkMode } from "../hooks/useDarkMode";
 import { useAuth } from "../hooks/useAuth";
 import { User, Lock, LogOut, Bell, Moon, Shield, Camera } from "lucide-react";
 import { toast } from "react-toastify";
+import { API_BASE_URL } from "../config/env";
 
 export default function Settings() {
   const { logout } = useAuth();
@@ -40,7 +41,7 @@ export default function Settings() {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem("token_lay_duoc");
-        const res = await axios.get("http://localhost:3001/api/auth/me", {
+        const res = await axios.get(`${API_BASE_URL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setProfile(res.data);
@@ -67,9 +68,8 @@ export default function Settings() {
     setIsChangingPwd(true);
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      const baseUrl = import.meta.env.VITE_BASE_URL;
       await axios.put(
-        `${baseUrl}/api/auth/password`,
+        `${API_BASE_URL}/api/auth/password`,
         { currentPassword, newPassword },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -104,15 +104,18 @@ export default function Settings() {
     setIsUploading(true);
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      const baseUrl = import.meta.env.VITE_BASE_URL;
-      const res = await axios.post(`${baseUrl}/api/auth/upload`, formData, {
+      const res = await axios.post(`${API_BASE_URL}/api/auth/upload`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
       // Cập nhật lại state profile với link ảnh mới
-      setProfile({ ...profile, avatar: res.data.avatarUrl });
+      setProfile((currentProfile) =>
+        currentProfile
+          ? { ...currentProfile, avatar: res.data.avatarUrl }
+          : currentProfile,
+      );
       toast.success("Cập nhật ảnh đại diện thành công!");
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
@@ -134,21 +137,21 @@ export default function Settings() {
   }
 
   return (
-    <div className='max-w-4xl'>
+    <div className='max-w-5xl'>
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-8'>
         {/* CỘT TRÁI: THÔNG TIN CÁ NHÂN & ĐĂNG XUẤT */}
         <div className='lg:col-span-1 space-y-6'>
           {/* Card Profile */}
-          <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 text-center transition-colors'>
+          <div className='sahara-card p-6 text-center transition-colors'>
             <div className='relative w-24 h-24 mx-auto mb-4 group'>
               {profile?.avatar ? (
                 <img
                   src={profile.avatar}
                   alt='Avatar'
-                  className='w-24 h-24 rounded-full object-cover shadow-inner border-4 border-slate-50'
+                  className='w-24 h-24 rounded-full object-cover shadow-inner border-4 border-[#f4dfbd]'
                 />
               ) : (
-                <div className='w-24 h-24 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold shadow-inner'>
+                <div className='w-24 h-24 rounded-full bg-[#efe2cc] text-[#8a4518] flex items-center justify-center text-3xl font-bold shadow-inner'>
                   {profile?.fullName?.charAt(0).toUpperCase() || <User />}
                 </div>
               )}
@@ -170,21 +173,21 @@ export default function Settings() {
               </label>
             </div>
 
-            <h3 className='text-xl font-bold text-slate-800 dark:text-white'>
+            <h3 className='text-xl font-black text-[#3a302a]'>
               {profile?.fullName}
             </h3>
-            <p className='text-slate-500 dark:text-slate-400 mb-4'>
+            <p className='text-[#7d6f62] mb-4'>
               {profile?.email}
             </p>
-            <span className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider'>
+            <span className='inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#f4dfbd] text-[#8a4518] text-xs font-semibold uppercase tracking-wider'>
               <Shield size={14} /> {profile?.role || "USER"}
             </span>
 
-            <div className='mt-6 pt-6 border-t border-slate-100 dark:border-slate-700'>
-              <p className='text-xs text-slate-400 dark:text-slate-500'>
+            <div className='mt-6 pt-6 border-t border-[#d8c8b5]/70'>
+              <p className='text-xs text-[#9a7655]'>
                 Tham gia hệ thống từ
               </p>
-              <p className='text-sm font-medium text-slate-600 dark:text-slate-300'>
+              <p className='text-sm font-medium text-[#5b4a3a]'>
                 {profile?.createdAt
                   ? new Date(profile.createdAt).toLocaleDateString("vi-VN")
                   : "N/A"}
@@ -193,19 +196,19 @@ export default function Settings() {
           </div>
 
           {/* Cài đặt chung (Chỉ hiển thị UI cho đẹp) */}
-          <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 transition-colors'>
-            <h4 className='font-bold text-slate-800 dark:text-white mb-4'>
+          <div className='sahara-card p-6 transition-colors'>
+            <h4 className='font-bold text-[#3a302a] mb-4'>
               Tùy chỉnh hệ thống
             </h4>
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-3 text-slate-600 dark:text-slate-300'>
+                <div className='flex items-center gap-3 text-[#5b4a3a]'>
                   <Bell size={18} />{" "}
                   <span className='text-sm font-medium'>Thông báo Email</span>
                 </div>
                 <div
                   onClick={toggleEmailNotif}
-                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${emailNotif ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-600"}`}
+                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${emailNotif ? "bg-[#c2652a]" : "bg-[#d8c8b5]"}`}
                 >
                   <div
                     className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${emailNotif ? "left-6" : "left-1"}`}
@@ -213,13 +216,13 @@ export default function Settings() {
                 </div>
               </div>
               <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-3 text-slate-600 dark:text-slate-300'>
+                <div className='flex items-center gap-3 text-[#5b4a3a]'>
                   <Moon size={18} />{" "}
                   <span className='text-sm font-medium'>Giao diện Tối</span>
                 </div>
                 <div
                   onClick={toggleDarkMode}
-                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${isDark ? "bg-blue-600" : "bg-slate-200 dark:bg-slate-600"}`}
+                  className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${isDark ? "bg-[#6f7f5a]" : "bg-[#d8c8b5]"}`}
                 >
                   <div
                     className={`w-4 h-4 bg-white rounded-full absolute top-1 shadow-sm transition-all ${isDark ? "left-6" : "left-1"}`}
@@ -232,7 +235,7 @@ export default function Settings() {
           {/* Vùng nguy hiểm */}
           <button
             onClick={logout}
-            className='w-full flex items-center justify-center gap-2 py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors border border-red-100 dark:border-red-500/20'
+            className='w-full flex items-center justify-center gap-2 py-3 bg-[#f2ded4] text-[#8c3c3c] font-bold rounded-lg hover:bg-[#e8c8b8] transition-colors border border-[#d8ad99]'
           >
             <LogOut size={18} /> Đăng xuất khỏi hệ thống
           </button>
@@ -240,16 +243,16 @@ export default function Settings() {
 
         {/* CỘT PHẢI: ĐỔI MẬT KHẨU */}
         <div className='lg:col-span-2'>
-          <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6 lg:p-8 transition-colors'>
+          <div className='sahara-card p-6 lg:p-8 transition-colors'>
             <div className='flex items-center gap-3 mb-6'>
-              <div className='p-3 bg-orange-50 dark:bg-orange-500/10 text-orange-500 dark:text-orange-400 rounded-xl'>
+              <div className='p-3 bg-[#f4dfbd] text-[#8a4518] rounded-lg'>
                 <Lock size={24} />
               </div>
               <div>
-                <h3 className='text-xl font-bold text-slate-800 dark:text-white'>
+                <h3 className='text-xl font-black text-[#3a302a]'>
                   Đổi mật khẩu
                 </h3>
-                <p className='text-slate-500 dark:text-slate-400 text-sm mt-1'>
+                <p className='text-[#7d6f62] text-sm mt-1'>
                   Cập nhật mật khẩu để bảo vệ tài khoản của bạn
                 </p>
               </div>
@@ -257,7 +260,7 @@ export default function Settings() {
 
             <form onSubmit={handleChangePassword} className='space-y-5'>
               <div>
-                <label className='block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2'>
+                <label className='block text-sm font-bold text-[#5b4a3a] mb-2'>
                   Mật khẩu hiện tại
                 </label>
                 <input
@@ -265,14 +268,14 @@ export default function Settings() {
                   required
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className='w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all'
+                  className='sahara-input w-full px-4 py-3'
                   placeholder='••••••••'
                 />
               </div>
 
               <div className='grid grid-cols-1 md:grid-cols-2 gap-5'>
                 <div>
-                  <label className='block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2'>
+                  <label className='block text-sm font-bold text-[#5b4a3a] mb-2'>
                     Mật khẩu mới
                   </label>
                   <input
@@ -280,12 +283,12 @@ export default function Settings() {
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className='w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all'
+                    className='sahara-input w-full px-4 py-3'
                     placeholder='Mật khẩu mới'
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2'>
+                  <label className='block text-sm font-bold text-[#5b4a3a] mb-2'>
                     Xác nhận mật khẩu
                   </label>
                   <input
@@ -293,7 +296,7 @@ export default function Settings() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className='w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all'
+                    className='sahara-input w-full px-4 py-3'
                     placeholder='Nhập lại mật khẩu'
                   />
                 </div>
@@ -303,7 +306,7 @@ export default function Settings() {
                 <button
                   type='submit'
                   disabled={isChangingPwd}
-                  className={`px-6 py-3 bg-slate-800 text-white font-bold rounded-xl hover:bg-slate-900 transition-colors shadow-sm ${
+                  className={`sahara-button px-6 py-3 ${
                     isChangingPwd ? "opacity-70 cursor-not-allowed" : ""
                   }`}
                 >

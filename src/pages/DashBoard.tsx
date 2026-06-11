@@ -1,16 +1,20 @@
 import { useData } from "../hooks/DataProvider";
-import { Briefcase, Users, UserCheck, Clock, XCircle } from "lucide-react";
 import {
-  BarChart,
-  Bar,
+  Briefcase,
+  Users,
+  UserCheck,
+  Clock,
+  XCircle,
+  TrendingUp,
+  ChartPie,
+  BarChart3,
+  ListFilter,
+} from "lucide-react";
+import {
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
   LineChart,
   Line,
   CartesianGrid,
@@ -48,36 +52,36 @@ export default function Dashboard() {
       value: totalJobs,
       sub: `${openJobs} đang mở`,
       icon: Briefcase,
-      color: "bg-blue-500",
-      bgLight: "bg-blue-50 dark:bg-blue-900/20",
-      textColor: "text-blue-600",
+      color: "bg-[#d9a441]",
+      bgLight: "sahara-card",
+      textColor: "text-[#8a5b18]",
     },
     {
       title: "Tổng ứng viên",
       value: totalCandidates,
       sub: `${appliedCount} mới nộp`,
       icon: Users,
-      color: "bg-emerald-500",
-      bgLight: "bg-emerald-50 dark:bg-emerald-900/20",
-      textColor: "text-emerald-600",
+      color: "bg-[#c2652a]",
+      bgLight: "sahara-card",
+      textColor: "text-[#8a4518]",
     },
     {
       title: "Đã tuyển",
       value: hiredCount,
       sub: `Tỷ lệ ${hireRate}%`,
       icon: UserCheck,
-      color: "bg-amber-500",
-      bgLight: "bg-amber-50 dark:bg-amber-900/20",
-      textColor: "text-amber-600",
+      color: "bg-[#b88954]",
+      bgLight: "sahara-card",
+      textColor: "text-[#7a4d26]",
     },
     {
       title: "Đang phỏng vấn",
       value: interviewingCount,
       sub: `${rejectedCount} đã từ chối`,
       icon: Clock,
-      color: "bg-rose-500",
-      bgLight: "bg-rose-50 dark:bg-rose-900/20",
-      textColor: "text-rose-600",
+      color: "bg-[#6f7f5a]",
+      bgLight: "sahara-card",
+      textColor: "text-[#587143]",
     },
   ];
 
@@ -98,7 +102,21 @@ export default function Dashboard() {
     { name: "Hired", value: hiredCount },
     { name: "Rejected", value: rejectedCount },
   ].filter((d) => d.value > 0);
-  const PIE_COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"];
+  const PIE_COLORS = ["#d9a441", "#c2652a", "#6f7f5a", "#8c3c3c"];
+  const totalStatus = pieChartData.reduce((sum, item) => sum + item.value, 0);
+  let statusDegrees = 0;
+  const statusGradient =
+    totalStatus > 0
+      ? pieChartData
+          .map((item, index) => {
+            const start = statusDegrees;
+            statusDegrees += (item.value / totalStatus) * 360;
+            return `${PIE_COLORS[index % PIE_COLORS.length]} ${start}deg ${statusDegrees}deg`;
+          })
+          .join(", ")
+      : "#ead9bf 0deg 360deg";
+  const maxJobCandidates =
+    Math.max(...barChartData.map((job) => job.candidates), 1);
 
   // ── LINE CHART: xu hướng 6 tháng gần nhất ────────────────────
   const now = new Date();
@@ -122,42 +140,42 @@ export default function Dashboard() {
     {
       label: "Nộp đơn",
       count: appliedCount + interviewingCount + hiredCount + rejectedCount,
-      color: "bg-blue-500",
+      color: "bg-[#d9a441]",
     },
     {
       label: "Phỏng vấn",
       count: interviewingCount + hiredCount,
-      color: "bg-amber-500",
+      color: "bg-[#c2652a]",
     },
-    { label: "Đã tuyển", count: hiredCount, color: "bg-emerald-500" },
+    { label: "Đã tuyển", count: hiredCount, color: "bg-[#6f7f5a]" },
   ];
   const pipelineMax = pipeline[0].count || 1;
 
   return (
     <div className='overflow-hidden space-y-6'>
       {/* HÀNG 1: STAT CARDS */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5'>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
         {statsCards.map((card) => {
           const Icon = card.icon;
           return (
             <div
               key={card.title}
-              className={`${card.bgLight} p-5 rounded-2xl border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all`}
+              className={`${card.bgLight} p-4 hover:-translate-y-0.5 transition-all`}
             >
               <div className='flex items-center justify-between mb-3'>
-                <div className={`${card.color} p-2.5 rounded-xl text-white`}>
+                <div className={`${card.color} p-2.5 rounded-lg text-white shadow-sm`}>
                   <Icon size={20} />
                 </div>
               </div>
-              <p className='text-sm text-slate-500 dark:text-slate-400 font-medium'>
+              <p className='text-xs text-[#7d6f62] font-bold uppercase'>
                 {card.title}
               </p>
               <p
-                className={`text-3xl font-bold mt-1 ${card.textColor} dark:text-white`}
+                className={`text-3xl font-black mt-1 ${card.textColor}`}
               >
                 {card.value}
               </p>
-              <p className='text-xs text-slate-400 mt-1'>{card.sub}</p>
+              <p className='text-xs text-[#9a7655] mt-1'>{card.sub}</p>
             </div>
           );
         })}
@@ -166,28 +184,29 @@ export default function Dashboard() {
       {/* HÀNG 2: LINE CHART + PIE CHART */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {/* Line Chart: xu hướng theo tháng */}
-        <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6'>
-          <h3 className='text-base font-bold text-slate-800 dark:text-white mb-5'>
-            📈 Xu hướng ứng tuyển (6 tháng)
+        <div className='sahara-card p-5'>
+          <h3 className='mb-5 flex items-center gap-2 text-base font-black text-[#3a302a]'>
+            <TrendingUp size={18} className='text-[#c2652a]' />
+            Xu hướng ứng tuyển (6 tháng)
           </h3>
           <ResponsiveContainer width='100%' height={240}>
             <LineChart data={monthlyData} margin={{ left: -10 }}>
-              <CartesianGrid strokeDasharray='3 3' stroke='#f1f5f9' />
-              <XAxis dataKey='month' tick={{ fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+              <CartesianGrid strokeDasharray='3 3' stroke='#ead9bf' />
+              <XAxis dataKey='month' tick={{ fontSize: 11, fill: "#7d6f62" }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#7d6f62" }} />
               <Tooltip
                 contentStyle={{
                   borderRadius: "12px",
-                  border: "1px solid #e2e8f0",
+                  border: "1px solid #d8c8b5",
                   fontSize: 13,
                 }}
               />
               <Line
                 type='monotone'
                 dataKey='Ứng viên'
-                stroke='#3b82f6'
+                stroke='#c2652a'
                 strokeWidth={2.5}
-                dot={{ r: 4, fill: "#3b82f6" }}
+                dot={{ r: 4, fill: "#c2652a" }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>
@@ -195,103 +214,141 @@ export default function Dashboard() {
         </div>
 
         {/* Pie Chart: trạng thái */}
-        <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6'>
-          <h3 className='text-base font-bold text-slate-800 dark:text-white mb-5'>
-            🥧 Phân bổ trạng thái
+        <div className='sahara-card p-5'>
+          <h3 className='mb-5 flex items-center gap-2 text-base font-black text-[#3a302a]'>
+            <ChartPie size={18} className='text-[#c2652a]' />
+            Phân bổ trạng thái
           </h3>
-          <ResponsiveContainer width='100%' height={240}>
-            <PieChart>
-              <Pie
-                data={pieChartData}
-                cx='50%'
-                cy='50%'
-                innerRadius={55}
-                outerRadius={90}
-                paddingAngle={4}
-                dataKey='value'
-                label={({ name, percent }) =>
-                  `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                }
-                labelLine={false}
-              >
-                {pieChartData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={PIE_COLORS[index % PIE_COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend iconType='circle' iconSize={10} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className='grid min-h-[240px] grid-cols-1 items-center gap-5 sm:grid-cols-[180px_1fr]'>
+            <div className='relative mx-auto h-40 w-40'>
+              <div
+                className='absolute inset-0 rounded-full shadow-inner'
+                style={{ background: `conic-gradient(${statusGradient})` }}
+              />
+              <div className='absolute inset-7 flex flex-col items-center justify-center rounded-full border border-[#d8c8b5] bg-[#fffaf2] text-center'>
+                <span className='text-3xl font-black text-[#3a302a]'>
+                  {totalStatus}
+                </span>
+                <span className='text-[11px] font-bold uppercase text-[#6f4e2f]'>
+                  total
+                </span>
+              </div>
+            </div>
+            <div className='space-y-3'>
+              {pieChartData.length > 0 ? (
+                pieChartData.map((item, index) => {
+                  const percent = Math.round((item.value / totalStatus) * 100);
+                  return (
+                    <div
+                      key={item.name}
+                      className='rounded-lg border border-[#ead9bf] bg-[#fff7eb] px-3 py-2'
+                    >
+                      <div className='flex items-center justify-between gap-3'>
+                        <div className='flex items-center gap-2'>
+                          <span
+                            className='h-2.5 w-2.5 rounded-full'
+                            style={{
+                              background:
+                                PIE_COLORS[index % PIE_COLORS.length],
+                            }}
+                          />
+                          <span className='text-sm font-bold text-[#4f4034]'>
+                            {item.name}
+                          </span>
+                        </div>
+                        <span className='text-sm font-black text-[#3a302a]'>
+                          {item.value}
+                        </span>
+                      </div>
+                      <div className='mt-2 h-1.5 overflow-hidden rounded-full bg-[#ead9bf]'>
+                        <div
+                          className='h-full rounded-full'
+                          style={{
+                            width: `${percent}%`,
+                            background:
+                              PIE_COLORS[index % PIE_COLORS.length],
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className='rounded-lg border border-dashed border-[#d8c8b5] bg-[#fff7eb] p-4 text-sm font-semibold text-[#9a7655]'>
+                  Chua co du lieu trang thai.
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       {/* HÀNG 3: BAR CHART + PIPELINE */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {/* Bar Chart: ứng viên theo vị trí */}
-        <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6'>
-          <h3 className='text-base font-bold text-slate-800 dark:text-white mb-5'>
-            📊 Top vị trí nhiều ứng viên
+        <div className='sahara-card p-5'>
+          <h3 className='mb-5 flex items-center gap-2 text-base font-black text-[#3a302a]'>
+            <BarChart3 size={18} className='text-[#c2652a]' />
+            Top vị trí nhiều ứng viên
           </h3>
-          <ResponsiveContainer width='100%' height={240}>
-            <BarChart
-              data={barChartData}
-              margin={{ bottom: 30 }}
-              layout='vertical'
-            >
-              <XAxis
-                type='number'
-                allowDecimals={false}
-                tick={{ fontSize: 11 }}
-              />
-              <YAxis
-                dataKey='name'
-                type='category'
-                width={110}
-                tick={{ fontSize: 11 }}
-              />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: "12px",
-                  border: "1px solid #e2e8f0",
-                  fontSize: 13,
-                }}
-              />
-              <Bar
-                dataKey='candidates'
-                fill='#3b82f6'
-                radius={[0, 6, 6, 0]}
-                label={{ position: "right", fontSize: 11, fill: "#64748b" }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className='min-h-[240px] space-y-3'>
+            {barChartData.length > 0 ? (
+              barChartData.map((job, index) => {
+                const width = Math.max(
+                  (job.candidates / maxJobCandidates) * 100,
+                  job.candidates > 0 ? 8 : 0,
+                );
+                return (
+                  <div key={`${job.name}-${index}`}>
+                    <div className='mb-1.5 flex items-center justify-between gap-3 text-sm'>
+                      <span className='truncate font-bold text-[#4f4034]'>
+                        {job.name}
+                      </span>
+                      <span className='font-black text-[#3a302a]'>
+                        {job.candidates}
+                      </span>
+                    </div>
+                    <div className='h-3 overflow-hidden rounded-full bg-[#ead9bf]'>
+                      <div
+                        className='h-full rounded-full bg-[#c2652a] transition-all duration-500'
+                        style={{ width: `${width}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className='flex min-h-[220px] items-center justify-center rounded-lg border border-dashed border-[#d8c8b5] bg-[#fff7eb] text-sm font-semibold text-[#9a7655]'>
+                Chua co du lieu ung vien theo vi tri.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Pipeline funnel */}
-        <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6'>
-          <h3 className='text-base font-bold text-slate-800 dark:text-white mb-5'>
-            🔽 Pipeline tuyển dụng
+        <div className='sahara-card p-5'>
+          <h3 className='mb-5 flex items-center gap-2 text-base font-black text-[#3a302a]'>
+            <ListFilter size={18} className='text-[#c2652a]' />
+            Pipeline tuyển dụng
           </h3>
           <div className='space-y-4 mt-2'>
             {pipeline.map((step) => (
               <div key={step.label}>
                 <div className='flex justify-between text-sm mb-1.5'>
-                  <span className='font-medium text-slate-700 dark:text-slate-300'>
+                  <span className='font-medium text-[#5b4a3a]'>
                     {step.label}
                   </span>
-                  <span className='font-bold text-slate-800 dark:text-white'>
+                  <span className='font-bold text-[#3a302a]'>
                     {step.count}
                   </span>
                 </div>
-                <div className='w-full bg-slate-100 dark:bg-slate-700 rounded-full h-3'>
+                <div className='w-full bg-[#ead9bf] rounded-full h-3'>
                   <div
                     className={`${step.color} h-3 rounded-full transition-all duration-500`}
                     style={{ width: `${(step.count / pipelineMax) * 100}%` }}
                   />
                 </div>
-                <p className='text-xs text-slate-400 mt-1'>
+                <p className='text-xs text-[#9a7655] mt-1'>
                   {pipelineMax > 0
                     ? Math.round((step.count / pipelineMax) * 100)
                     : 0}
@@ -301,13 +358,13 @@ export default function Dashboard() {
             ))}
 
             {/* Rejected riêng */}
-            <div className='pt-2 border-t border-slate-100 dark:border-slate-700'>
+            <div className='pt-2 border-t border-[#d8c8b5]/70'>
               <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-2 text-sm text-slate-500'>
-                  <XCircle size={14} className='text-red-400' />
+                <div className='flex items-center gap-2 text-sm text-[#7d6f62]'>
+                  <XCircle size={14} className='text-[#8c3c3c]' />
                   Đã từ chối
                 </div>
-                <span className='font-bold text-red-500'>{rejectedCount}</span>
+                <span className='font-bold text-[#8c3c3c]'>{rejectedCount}</span>
               </div>
             </div>
           </div>
@@ -315,14 +372,14 @@ export default function Dashboard() {
       </div>
 
       {/* HÀNG 4: BẢNG ỨNG VIÊN GẦN ĐÂY */}
-      <div className='bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm p-6'>
-        <h3 className='text-base font-bold text-slate-800 dark:text-white mb-4'>
+      <div className='sahara-card p-5'>
+        <h3 className='text-base font-black text-[#3a302a] mb-4'>
           🕒 Ứng viên gần đây
         </h3>
         <div className='overflow-x-auto'>
-          <table className='w-full text-left'>
+          <table className='sahara-table text-left'>
             <thead>
-              <tr className='text-sm text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700'>
+              <tr>
                 <th className='pb-3 font-semibold'>Tên</th>
                 <th className='pb-3 font-semibold'>Email</th>
                 <th className='pb-3 font-semibold'>Vị trí</th>
@@ -341,7 +398,7 @@ export default function Dashboard() {
                 .map((candidate) => (
                   <tr
                     key={candidate.id}
-                    className='border-b border-slate-50 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors'
+                    className='hover:bg-[#fff4e2] transition-colors'
                   >
                     <td className='py-3'>
                       <div className='flex items-center gap-3'>
@@ -353,33 +410,33 @@ export default function Dashboard() {
                           alt=''
                           className='w-8 h-8 rounded-full'
                         />
-                        <span className='font-medium text-slate-800 dark:text-white'>
+                        <span className='font-medium text-[#3a302a]'>
                           {candidate.name}
                         </span>
                       </div>
                     </td>
-                    <td className='py-3 text-slate-500 dark:text-slate-400 text-sm'>
+                    <td className='py-3 text-[#7d6f62] text-sm'>
                       {candidate.email}
                     </td>
-                    <td className='py-3 text-slate-500 dark:text-slate-400 text-sm'>
+                    <td className='py-3 text-[#7d6f62] text-sm'>
                       {candidate.job?.title || "—"}
                     </td>
                     <td className='py-3'>
                       <span
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                           candidate.status === "Hired"
-                            ? "bg-green-100 text-green-700"
+                            ? "sahara-status sahara-status-hired"
                             : candidate.status === "Interviewing"
-                              ? "bg-blue-100 text-blue-700"
+                              ? "sahara-status sahara-status-interviewing"
                               : candidate.status === "Rejected"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-slate-100 text-slate-600"
+                                ? "sahara-status sahara-status-rejected"
+                                : "sahara-status sahara-status-applied"
                         }`}
                       >
                         {candidate.status}
                       </span>
                     </td>
-                    <td className='py-3 text-slate-500 dark:text-slate-400 text-sm'>
+                    <td className='py-3 text-[#7d6f62] text-sm'>
                       {new Date(candidate.appliedDate).toLocaleDateString(
                         "vi-VN",
                       )}

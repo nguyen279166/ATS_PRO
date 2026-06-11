@@ -9,6 +9,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../config/env";
 
 export default function Sidebar() {
   const { logout } = useAuth();
@@ -26,7 +27,7 @@ export default function Sidebar() {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem("token_lay_duoc");
-        const res = await axios.get("http://localhost:3001/api/auth/me", {
+        const res = await axios.get(`${API_BASE_URL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setProfile(res.data);
@@ -38,18 +39,18 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <aside className='w-64 bg-gradient-to-b from-slate-900 to-slate-950 text-white flex flex-col min-h-screen sticky top-0'>
+    <aside className='sahara-sidebar sticky top-0 flex h-screen max-h-screen w-56 shrink-0 flex-col overflow-hidden text-white'>
       {/* Logo */}
-      <div className='p-6 pb-8'>
+      <div className='shrink-0 p-5 pb-5'>
         <Link to='/' className='flex items-center gap-3'>
-          <div className='w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30'>
-            <span className='font-black text-lg'>A</span>
+          <div className='w-9 h-9 bg-[#fff7eb]/90 text-[#8a4518] rounded-lg flex items-center justify-center shadow-sm'>
+            <span className='font-black text-base'>A</span>
           </div>
           <div>
             <h1 className='text-xl font-bold tracking-wide'>
-              ATS<span className='text-blue-400'>PRO</span>
+              ATS<span className='text-[#fff1d8]'> PRO</span>
             </h1>
-            <p className='text-[11px] text-slate-500 font-medium -mt-0.5'>
+            <p className='text-[11px] text-[#f4dec3] font-medium -mt-0.5'>
               Recruitment System
             </p>
           </div>
@@ -57,12 +58,12 @@ export default function Sidebar() {
       </div>
 
       {/* Menu Label */}
-      <p className='px-6 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3'>
+      <p className='shrink-0 px-5 text-[11px] font-bold text-[#f3dcc0]/80 uppercase tracking-widest mb-3'>
         Menu
       </p>
 
       {/* Navigation */}
-      <nav className='flex-1 px-3'>
+      <nav className='min-h-0 flex-1 overflow-y-auto px-3 pb-3'>
         <ul className='space-y-1'>
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -74,16 +75,16 @@ export default function Sidebar() {
               <li key={item.name}>
                 <Link
                   to={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer relative ${
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg transition-all duration-200 cursor-pointer relative ${
                     isActive
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
-                      : "text-slate-400 hover:bg-white/5 hover:text-white"
+                      ? "bg-[#8f5c38] text-white shadow-sm"
+                      : "text-[#fff8ed]/80 hover:bg-[#fff8ed]/12 hover:text-white"
                   }`}
                 >
                   {isActive && (
-                    <div className='absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-300 rounded-r-full' />
+                    <div className='absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-[#fff1d8] rounded-r-full' />
                   )}
-                  <Icon size={20} />
+                  <Icon size={17} />
                   <span className='font-medium text-sm'>{item.name}</span>
                 </Link>
               </li>
@@ -93,14 +94,14 @@ export default function Sidebar() {
       </nav>
 
       {/* User Info */}
-      <div className='p-4 m-3 mb-4 bg-white/5 rounded-2xl border border-white/10'>
+      <div className='m-3 mt-auto shrink-0 rounded-lg border border-[#fff8ed]/18 bg-[#fff8ed]/12 p-3'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-3'>
-            <div className='w-10 h-10 rounded-full overflow-hidden ring-2 ring-blue-500/30'>
+            <div className='w-9 h-9 rounded-full overflow-hidden ring-2 ring-[#fff1d8]/35'>
               <img
                 src={profile?.avatar || "https://i.pravatar.cc/150?u=admin"}
                 alt='User Avatar'
-                className='w-10 h-10 rounded-full object-cover shadow-inner border-1 border-slate-50'
+                className='w-9 h-9 rounded-full object-cover shadow-inner border border-[#fff1d8]'
               />
             </div>
             <div>
@@ -109,8 +110,8 @@ export default function Sidebar() {
               </p>
               <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide mt-0.5 ${
                 profile?.role === "admin"
-                  ? "bg-blue-500/20 text-blue-300"
-                  : "bg-slate-600/40 text-slate-400"
+                  ? "bg-[#fff1d8]/20 text-[#fff1d8]"
+                  : "bg-[#6f7f5a]/30 text-[#f3dcc0]"
               }`}>
                 {profile?.role === "admin" ? "⚡ Admin" : "HR"}
               </span>
@@ -118,7 +119,7 @@ export default function Sidebar() {
           </div>
           <button
             onClick={() => logout()}
-            className='text-slate-400 hover:text-red-400 transition-colors cursor-pointer p-2 hover:bg-white/5 rounded-lg'
+            className='text-[#fff8ed]/75 hover:text-white transition-colors cursor-pointer p-2 hover:bg-[#fff8ed]/10 rounded-lg'
             title='Đăng xuất'
           >
             <LogOut size={18} />

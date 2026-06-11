@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 interface AddJobModalProps {
   onClose: () => void;
   onSave: (job: { title: string; department: string; location: string; description: string }) => void;
-  initialData?: { title: string; department: string; location: string; description: string | null };
+  initialData?: { title: string; department: string; location: string; description?: string | null };
 }
 
 export default function AddJobModal({ onClose, onSave, initialData }: AddJobModalProps) {
@@ -31,16 +31,16 @@ export default function AddJobModal({ onClose, onSave, initialData }: AddJobModa
       onClick={onClose}
     >
       <div
-        className='bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl dark:bg-slate-800 dark:border-slate-700 dark:text-white'
+        className='sahara-card p-8 w-full max-w-md shadow-2xl text-[#3a302a]'
         onClick={(e) => e.stopPropagation()}
       >
         <div className='flex justify-between items-center mb-6'>
-          <h3 className='text-xl font-bold text-slate-800 dark:text-white'>
+          <h3 className='text-xl font-black text-[#3a302a]'>
             {initialData ? "Cập nhật tin tuyển dụng" : "Tạo tin tuyển dụng mới"}
           </h3>
           <button
             onClick={onClose}
-            className='text-slate-400 hover:text-slate-600 transition-colors cursor-pointer'
+            className='text-[#9a7655] hover:text-[#3a302a] transition-colors cursor-pointer'
           >
             <X size={20} />
           </button>
@@ -48,7 +48,7 @@ export default function AddJobModal({ onClose, onSave, initialData }: AddJobModa
 
         <form onSubmit={handleSubmit} className='space-y-5'>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
+            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
               Chức danh (Job Title)
             </label>
             <input
@@ -56,11 +56,11 @@ export default function AddJobModal({ onClose, onSave, initialData }: AddJobModa
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder='Ví dụ: Frontend Engineer'
-              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all dark:bg-slate-700 dark:border-slate-800 dark:text-white'
+              className='sahara-input w-full px-4 py-2.5'
             />
           </div>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
+            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
               Phòng ban
             </label>
             <input
@@ -68,11 +68,11 @@ export default function AddJobModal({ onClose, onSave, initialData }: AddJobModa
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
               placeholder='Ví dụ: Tech'
-              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all dark:bg-slate-700 dark:border-slate-800 dark:text-white'
+              className='sahara-input w-full px-4 py-2.5'
             />
           </div>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
+            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
               Địa điểm
             </label>
             <input
@@ -80,11 +80,11 @@ export default function AddJobModal({ onClose, onSave, initialData }: AddJobModa
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder='Ví dụ: Hà Nội'
-              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all  dark:bg-slate-700'
+              className='sahara-input w-full px-4 py-2.5'
             />
           </div>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
+            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
               Mô tả công việc (JD)
             </label>
             <textarea
@@ -92,13 +92,13 @@ export default function AddJobModal({ onClose, onSave, initialData }: AddJobModa
               onChange={(e) => setDescription(e.target.value)}
               placeholder='Nhập chi tiết yêu cầu công việc...'
               rows={4}
-              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all dark:bg-slate-700 dark:border-slate-800 dark:text-white resize-none'
+              className='sahara-input w-full px-4 py-2.5 resize-none'
             />
           </div>
 
           <button
             type='submit'
-            className='w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors mt-2 '
+            className='sahara-button w-full py-3 mt-2'
           >
             {initialData ? "Lưu thay đổi" : "Đăng tuyển"}
           </button>

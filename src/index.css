@@ -3,7 +3,379 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
+  :root {
+    --sahara-bg: #faf5ee;
+    --sahara-surface: #fffaf2;
+    --sahara-surface-low: #f6efe4;
+    --sahara-surface-high: #efe2cc;
+    --sahara-sidebar: #c49a70;
+    --sahara-sidebar-dark: #a8784f;
+    --sahara-primary: #c2652a;
+    --sahara-primary-dark: #8a4518;
+    --sahara-secondary: #6f7f5a;
+    --sahara-border: #d8c8b5;
+    --sahara-text: #3a302a;
+    --sahara-muted: #7d6f62;
+    --sahara-shadow: 0 12px 32px rgba(95, 63, 33, 0.12);
+  }
+
+  .dark {
+    --sahara-bg: #181413;
+    --sahara-surface: #28211d;
+    --sahara-surface-low: #211b18;
+    --sahara-surface-high: #3b3029;
+    --sahara-sidebar: #4f372b;
+    --sahara-sidebar-dark: #2d211d;
+    --sahara-primary: #d1783b;
+    --sahara-primary-dark: #a85d2a;
+    --sahara-secondary: #94a36d;
+    --sahara-border: #6c5748;
+    --sahara-text: #f6ead8;
+    --sahara-muted: #c8b6a0;
+    --sahara-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white transition-colors duration-200;
+    margin: 0;
+    background:
+      radial-gradient(circle at 20% 0%, rgba(226, 177, 105, 0.24), transparent 32rem),
+      linear-gradient(135deg, #fbf4e6 0%, #f5e2bf 52%, #fbf4e8 100%);
+    color: var(--sahara-text);
+    font-family:
+      Manrope,
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    transition:
+      background-color 200ms ease,
+      color 200ms ease;
+  }
+
+  .dark body {
+    background:
+      radial-gradient(circle at 20% 0%, rgba(209, 120, 59, 0.16), transparent 30rem),
+      linear-gradient(135deg, #171311 0%, #241b17 48%, #141110 100%);
+  }
+}
+
+@layer components {
+  .sahara-app-shell {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 85% 10%, rgba(255, 255, 255, 0.38), transparent 20rem),
+      linear-gradient(135deg, #fbf1dc 0%, #edd2a6 48%, #fbf4e8 100%);
+    color: var(--sahara-text);
+  }
+
+  .sahara-sidebar {
+    background: linear-gradient(180deg, var(--sahara-sidebar) 0%, var(--sahara-sidebar-dark) 100%);
+    color: #fff8ed;
+    border-right: 1px solid rgba(104, 63, 30, 0.18);
+    box-shadow: 8px 0 28px rgba(96, 64, 32, 0.12);
+  }
+
+  .sahara-main {
+    min-width: 0;
+    background:
+      radial-gradient(circle at 75% 4%, rgba(255, 255, 255, 0.44), transparent 22rem),
+      linear-gradient(135deg, rgba(255, 250, 242, 0.82), rgba(246, 224, 185, 0.56));
+  }
+
+  .sahara-page-title {
+    color: var(--sahara-text);
+    letter-spacing: 0;
+  }
+
+  .sahara-card {
+    background: rgba(255, 250, 242, 0.9);
+    border: 1px solid rgba(216, 200, 181, 0.84);
+    border-radius: 8px;
+    box-shadow: var(--sahara-shadow);
+  }
+
+  .sahara-card-soft {
+    background: rgba(246, 239, 228, 0.86);
+    border: 1px solid rgba(216, 200, 181, 0.72);
+    border-radius: 8px;
+  }
+
+  .sahara-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 8px;
+    background: var(--sahara-primary);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 8px 18px rgba(194, 101, 42, 0.2);
+    transition:
+      transform 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .sahara-button:hover {
+    background: var(--sahara-primary-dark);
+    box-shadow: 0 10px 22px rgba(138, 69, 24, 0.22);
+    transform: translateY(-1px);
+  }
+
+  .sahara-button-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 8px;
+    border: 1px solid rgba(176, 145, 112, 0.9);
+    background: rgba(255, 250, 242, 0.78);
+    color: var(--sahara-text);
+    font-weight: 700;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .sahara-button-secondary:hover {
+    background: #fff7eb;
+    border-color: var(--sahara-primary);
+  }
+
+  .sahara-input {
+    border-radius: 8px;
+    border: 1px solid rgba(176, 145, 112, 0.7);
+    background: rgba(255, 250, 242, 0.9);
+    color: var(--sahara-text);
+    outline: none;
+    transition:
+      border-color 160ms ease,
+      box-shadow 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .sahara-input:focus {
+    border-color: var(--sahara-primary);
+    box-shadow: 0 0 0 3px rgba(194, 101, 42, 0.15);
+    background: #fffaf2;
+  }
+
+  .sahara-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .sahara-table th {
+    color: #8b775f;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    background: rgba(240, 226, 205, 0.7);
+  }
+
+  .sahara-table td,
+  .sahara-table th {
+    border-bottom: 1px solid rgba(216, 200, 181, 0.62);
+  }
+
+  .sahara-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    border: 1px solid transparent;
+  }
+
+  .sahara-status-applied {
+    background: #efe4d0;
+    color: #6f4e2f;
+    border-color: #ddc8a8;
+  }
+
+  .sahara-status-interviewing {
+    background: #f4dfbd;
+    color: #7f4616;
+    border-color: #ddb778;
+  }
+
+  .sahara-status-hired {
+    background: #e4eddc;
+    color: #587143;
+    border-color: #bdcdaa;
+  }
+
+  .sahara-status-rejected {
+    background: #f2ded4;
+    color: #9a452a;
+    border-color: #d8ad99;
+  }
+}
+
+@layer utilities {
+  .dark .sahara-app-shell {
+    background:
+      radial-gradient(circle at 80% 8%, rgba(209, 120, 59, 0.12), transparent 22rem),
+      linear-gradient(135deg, #171311 0%, #241b17 52%, #15110f 100%);
+    color: var(--sahara-text);
+  }
+
+  .dark .sahara-sidebar {
+    background: linear-gradient(180deg, var(--sahara-sidebar) 0%, var(--sahara-sidebar-dark) 100%);
+    border-right-color: rgba(214, 177, 132, 0.16);
+    box-shadow: 8px 0 28px rgba(0, 0, 0, 0.24);
+  }
+
+  .dark .sahara-main {
+    background:
+      radial-gradient(circle at 75% 4%, rgba(209, 120, 59, 0.1), transparent 24rem),
+      linear-gradient(135deg, rgba(32, 25, 22, 0.94), rgba(25, 20, 18, 0.96));
+  }
+
+  .dark .sahara-card {
+    background: rgba(40, 33, 29, 0.92);
+    border-color: rgba(108, 87, 72, 0.82);
+    box-shadow: var(--sahara-shadow);
+  }
+
+  .dark .sahara-card-soft {
+    background: rgba(33, 27, 24, 0.9);
+    border-color: rgba(108, 87, 72, 0.74);
+  }
+
+  .dark .sahara-button {
+    box-shadow: 0 10px 24px rgba(209, 120, 59, 0.18);
+  }
+
+  .dark .sahara-button-secondary {
+    background: rgba(44, 36, 31, 0.9);
+    border-color: rgba(145, 119, 92, 0.76);
+    color: var(--sahara-text);
+  }
+
+  .dark .sahara-button-secondary:hover {
+    background: #3b3029;
+    border-color: var(--sahara-primary);
+  }
+
+  .dark .sahara-input {
+    background: rgba(35, 29, 26, 0.96);
+    border-color: rgba(145, 119, 92, 0.74);
+    color: var(--sahara-text);
+  }
+
+  .dark .sahara-input:focus {
+    background: rgba(44, 36, 31, 0.98);
+    box-shadow: 0 0 0 3px rgba(209, 120, 59, 0.18);
+  }
+
+  .dark .sahara-input::placeholder {
+    color: #9d8c7a;
+  }
+
+  .dark .sahara-table th {
+    background: rgba(59, 48, 41, 0.76);
+    color: #c8b6a0;
+  }
+
+  .dark .sahara-table td,
+  .dark .sahara-table th {
+    border-bottom-color: rgba(108, 87, 72, 0.62);
+  }
+
+  .dark .sahara-status-applied {
+    background: rgba(94, 75, 54, 0.64);
+    color: #ead2ad;
+    border-color: rgba(176, 145, 112, 0.48);
+  }
+
+  .dark .sahara-status-interviewing {
+    background: rgba(136, 79, 34, 0.34);
+    color: #f0be84;
+    border-color: rgba(209, 120, 59, 0.42);
+  }
+
+  .dark .sahara-status-hired {
+    background: rgba(92, 112, 67, 0.34);
+    color: #c7d8a7;
+    border-color: rgba(148, 163, 109, 0.42);
+  }
+
+  .dark .sahara-status-rejected {
+    background: rgba(128, 57, 49, 0.36);
+    color: #e9a295;
+    border-color: rgba(150, 76, 65, 0.46);
+  }
+
+  .dark [class*="text-[#3a302a]"],
+  .dark [class*="text-[#4f4034]"],
+  .dark [class*="text-[#5b4a3a]"] {
+    color: #f6ead8 !important;
+  }
+
+  .dark [class*="text-[#7d6f62]"],
+  .dark [class*="text-[#8b775f]"],
+  .dark [class*="text-[#9a7655]"],
+  .dark [class*="text-[#6f4e2f]"] {
+    color: #c8b6a0 !important;
+  }
+
+  .dark [class*="text-[#8a4518]"],
+  .dark [class*="text-[#8a5b18]"],
+  .dark [class*="text-[#7a4d26]"] {
+    color: #e5a35f !important;
+  }
+
+  .dark [class*="text-[#587143]"] {
+    color: #bacc91 !important;
+  }
+
+  .dark [class*="text-[#8c3c3c]"],
+  .dark [class*="text-[#9a452a]"] {
+    color: #e9a295 !important;
+  }
+
+  .dark [class*="bg-[#fffaf2]"],
+  .dark [class*="bg-[#fff7eb]"],
+  .dark [class*="bg-[#fff4e2]"] {
+    background-color: rgba(40, 33, 29, 0.92) !important;
+  }
+
+  .dark [class*="bg-[#f6efe4]"],
+  .dark [class*="bg-[#efe2cc]"],
+  .dark [class*="bg-[#f4dfbd]"],
+  .dark [class*="bg-[#ead9bf]"] {
+    background-color: rgba(59, 48, 41, 0.86) !important;
+  }
+
+  .dark [class*="border-[#d8c8b5]"],
+  .dark [class*="border-[#ead9bf]"] {
+    border-color: rgba(108, 87, 72, 0.7) !important;
+  }
+
+  .dark [class*="hover:bg-[#f4dfbd]"]:hover,
+  .dark [class*="hover:bg-[#fff4e2]"]:hover {
+    background-color: rgba(74, 58, 48, 0.88) !important;
+  }
+
+  .dark .recharts-cartesian-axis-tick text {
+    fill: #c8b6a0 !important;
+  }
+
+  .dark .recharts-cartesian-grid line {
+    stroke: rgba(108, 87, 72, 0.62) !important;
+  }
+
+  .dark .recharts-default-tooltip {
+    background-color: #28211d !important;
+    border-color: rgba(108, 87, 72, 0.82) !important;
+    color: #f6ead8 !important;
   }
 }

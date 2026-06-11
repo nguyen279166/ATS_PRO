@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, Trash2, Filter, X, FileSpreadsheet, FileText } from "lucide-react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
@@ -7,6 +7,7 @@ import Pagination from "../components/Pagination";
 import { useData } from "../hooks/DataProvider";
 import { useAuth } from "../hooks/useAuth";
 import type { Candidate } from "../types";
+import { API_BASE_URL } from "../config/env";
 
 interface PaginationInfo {
   total: number;
@@ -16,15 +17,13 @@ interface PaginationInfo {
 }
 
 const LIMIT = 10;
-const baseUrl = import.meta.env.VITE_BASE_URL;
-
 const STATUSES = ["Applied", "Interviewing", "Hired", "Rejected"] as const;
 
 const STATUS_COLORS: Record<string, string> = {
-  Applied:      "bg-slate-100 text-slate-600",
-  Interviewing: "bg-blue-100 text-blue-700",
-  Hired:        "bg-green-100 text-green-700",
-  Rejected:     "bg-red-100 text-red-700",
+  Applied:      "sahara-status sahara-status-applied",
+  Interviewing: "sahara-status sahara-status-interviewing",
+  Hired:        "sahara-status sahara-status-hired",
+  Rejected:     "sahara-status sahara-status-rejected",
 };
 
 export default function CandidateList() {
@@ -46,7 +45,7 @@ export default function CandidateList() {
   const [filterDateTo, setFilterDateTo] = useState("");
 
   const token = localStorage.getItem("token_lay_duoc");
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   // Đếm số filter đang active
   const activeFilterCount = [filterStatus, filterJobId, filterDateFrom, filterDateTo].filter(Boolean).length;
@@ -62,7 +61,7 @@ export default function CandidateList() {
         ...(filterDateFrom && { dateFrom: filterDateFrom }),
         ...(filterDateTo   && { dateTo: filterDateTo }),
       });
-      const res = await axios.get(`${baseUrl}/api/candidates?${params}`, { headers });
+      const res = await axios.get(`${API_BASE_URL}/api/candidates?${params}`, { headers });
       setCandidates(res.data.data);
       setPagination(res.data.pagination);
     } catch {
@@ -70,7 +69,7 @@ export default function CandidateList() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, filterJobId, filterDateFrom, filterDateTo]);
+  }, [filterStatus, filterJobId, filterDateFrom, filterDateTo, headers]);
 
   // Reset page về 1 khi filter thay đổi
   useEffect(() => {
@@ -116,7 +115,7 @@ export default function CandidateList() {
 
   const handleBulkStatusUpdate = async (status: string) => {
     try {
-      await axios.patch(`${baseUrl}/api/candidates/bulk`, { ids: selectedIds, action: "updateStatus", status }, { headers });
+      await axios.patch(`${API_BASE_URL}/api/candidates/bulk`, { ids: selectedIds, action: "updateStatus", status }, { headers });
       toast.success(`Đã cập nhật ${selectedIds.length} ứng viên sang ${status}`);
       setSelectedIds([]);
       fetchCandidates(currentPage);
@@ -126,7 +125,7 @@ export default function CandidateList() {
   const handleBulkDelete = async () => {
     if (!window.confirm(`Xóa ${selectedIds.length} ứng viên đã chọn?`)) return;
     try {
-      await axios.patch(`${baseUrl}/api/candidates/bulk`, { ids: selectedIds, action: "delete" }, { headers });
+      await axios.patch(`${API_BASE_URL}/api/candidates/bulk`, { ids: selectedIds, action: "delete" }, { headers });
       toast.success(`Đã xóa ${selectedIds.length} ứng viên`);
       setSelectedIds([]);
       fetchCandidates(currentPage);
@@ -137,7 +136,7 @@ export default function CandidateList() {
   // Xuất Excel
   const handleExportExcel = async () => {
     try {
-      const res = await axios.get(`${baseUrl}/api/export/candidates.xlsx`, {
+      const res = await axios.get(`${API_BASE_URL}/api/export/candidates.xlsx`, {
         headers,
         responseType: "blob",
       });
@@ -155,7 +154,7 @@ export default function CandidateList() {
   // Xuất PDF
   const handleExportPDF = async () => {
     try {
-      const res = await axios.get(`${baseUrl}/api/export/report.pdf`, {
+      const res = await axios.get(`${API_BASE_URL}/api/export/report.pdf`, {
         headers,
         responseType: "blob",
       });
@@ -173,7 +172,7 @@ export default function CandidateList() {
   const handleDeleteCandidate = async (candidateId: string) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa ứng viên này?")) return;
     try {
-      await axios.delete(`${baseUrl}/api/candidates/${candidateId}`, { headers });
+      await axios.delete(`${API_BASE_URL}/api/candidates/${candidateId}`, { headers });
       toast.success("Xóa ứng viên thành công!");
       const isLastOnPage = candidates.length === 1 && currentPage > 1;
       fetchCandidates(isLastOnPage ? currentPage - 1 : currentPage);
@@ -193,10 +192,10 @@ export default function CandidateList() {
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+        <h2 className="text-2xl font-black text-[#3a302a]">
           Danh sách Ứng viên
           {pagination && (
-            <span className="ml-3 text-base font-normal text-slate-400">
+            <span className="ml-3 text-base font-normal text-[#9a7655]">
               ({pagination.total} người)
             </span>
           )}
@@ -205,14 +204,14 @@ export default function CandidateList() {
           {/* Search */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-slate-400" />
+              <Search size={16} className="text-[#9a7655]" />
             </div>
             <input
               type="text"
               placeholder="Tìm theo tên..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 w-52 dark:bg-slate-800 dark:text-white text-sm"
+              className="sahara-input pl-9 pr-4 py-2 w-56 text-sm"
             />
           </div>
 
@@ -221,14 +220,14 @@ export default function CandidateList() {
             onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm transition-colors border ${
               activeFilterCount > 0
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-blue-400"
+                ? "bg-[#c2652a] text-white border-[#c2652a]"
+                : "bg-[#fffaf2] text-[#5b4a3a] border-[#d8c8b5] hover:border-[#c2652a]"
             }`}
           >
             <Filter size={16} />
             Lọc
             {activeFilterCount > 0 && (
-              <span className="bg-white text-blue-600 text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              <span className="bg-white text-[#c2652a] text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
                 {activeFilterCount}
               </span>
             )}
@@ -239,14 +238,14 @@ export default function CandidateList() {
             <>
               <button
                 onClick={handleExportExcel}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-sm text-sm"
+                className="sahara-button px-4 py-2 text-sm"
               >
                 <FileSpreadsheet size={16} /> Excel
               </button>
 
               <button
                 onClick={handleExportPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition-colors shadow-sm text-sm"
+                className="sahara-button-secondary px-4 py-2 text-sm"
               >
                 <FileText size={16} /> PDF
               </button>
@@ -257,13 +256,13 @@ export default function CandidateList() {
 
       {/* Filter Panel */}
       {showFilters && (
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 mb-5 shadow-sm">
+        <div className="sahara-card p-5 mb-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm">Bộ lọc nâng cao</h3>
+            <h3 className="font-semibold text-[#3a302a] text-sm">Bộ lọc nâng cao</h3>
             {activeFilterCount > 0 && (
               <button
                 onClick={handleClearFilters}
-                className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors"
+                className="flex items-center gap-1 text-xs text-[#9a7655] hover:text-[#8c3c3c] transition-colors"
               >
                 <X size={13} /> Xóa tất cả bộ lọc
               </button>
@@ -273,11 +272,11 @@ export default function CandidateList() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Status filter */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1.5">Trạng thái</label>
+              <label className="block text-xs font-semibold text-[#7d6f62] mb-1.5">Trạng thái</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="sahara-input w-full px-3 py-2 text-sm"
               >
                 <option value="">Tất cả trạng thái</option>
                 {STATUSES.map((s) => (
@@ -288,11 +287,11 @@ export default function CandidateList() {
 
             {/* Job filter */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1.5">Vị trí ứng tuyển</label>
+              <label className="block text-xs font-semibold text-[#7d6f62] mb-1.5">Vị trí ứng tuyển</label>
               <select
                 value={filterJobId}
                 onChange={(e) => setFilterJobId(e.target.value)}
-                className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="sahara-input w-full px-3 py-2 text-sm"
               >
                 <option value="">Tất cả vị trí</option>
                 {jobs.map((job) => (
@@ -303,50 +302,50 @@ export default function CandidateList() {
 
             {/* Date from */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1.5">Ngày ứng tuyển từ</label>
+              <label className="block text-xs font-semibold text-[#7d6f62] mb-1.5">Ngày ứng tuyển từ</label>
               <input
                 type="date"
                 value={filterDateFrom}
                 onChange={(e) => setFilterDateFrom(e.target.value)}
-                className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="sahara-input w-full px-3 py-2 text-sm"
               />
             </div>
 
             {/* Date to */}
             <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1.5">đến ngày</label>
+              <label className="block text-xs font-semibold text-[#7d6f62] mb-1.5">đến ngày</label>
               <input
                 type="date"
                 value={filterDateTo}
                 onChange={(e) => setFilterDateTo(e.target.value)}
-                className="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="sahara-input w-full px-3 py-2 text-sm"
               />
             </div>
           </div>
 
           {/* Active filter chips */}
           {activeFilterCount > 0 && (
-            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#d8c8b5]/70">
               {filterStatus && (
-                <span className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
+                <span className="flex items-center gap-1 px-3 py-1 bg-[#f4dfbd] text-[#8a4518] text-xs font-semibold rounded-full">
                   {filterStatus}
                   <button onClick={() => setFilterStatus("")}><X size={11} /></button>
                 </span>
               )}
               {filterJobId && (
-                <span className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
+                <span className="flex items-center gap-1 px-3 py-1 bg-[#f4dfbd] text-[#8a4518] text-xs font-semibold rounded-full">
                   {jobs.find(j => j.id === filterJobId)?.title || filterJobId}
                   <button onClick={() => setFilterJobId("")}><X size={11} /></button>
                 </span>
               )}
               {filterDateFrom && (
-                <span className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
+                <span className="flex items-center gap-1 px-3 py-1 bg-[#f4dfbd] text-[#8a4518] text-xs font-semibold rounded-full">
                   Từ {filterDateFrom}
                   <button onClick={() => setFilterDateFrom("")}><X size={11} /></button>
                 </span>
               )}
               {filterDateTo && (
-                <span className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full">
+                <span className="flex items-center gap-1 px-3 py-1 bg-[#f4dfbd] text-[#8a4518] text-xs font-semibold rounded-full">
                   Đến {filterDateTo}
                   <button onClick={() => setFilterDateTo("")}><X size={11} /></button>
                 </span>
@@ -358,12 +357,12 @@ export default function CandidateList() {
 
       {/* Bulk Action Bar */}
       {selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-xl">
-          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+        <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-[#f4dfbd]/80 border border-[#d8c8b5] rounded-lg">
+          <span className="text-sm font-semibold text-[#8a4518]">
             Đã chọn {selectedIds.length} ứng viên
           </span>
           <div className="flex items-center gap-2 ml-auto">
-            <span className="text-xs text-slate-500">Chuyển sang:</span>
+            <span className="text-xs text-[#7d6f62]">Chuyển sang:</span>
             {STATUSES.map((s) => (
               <button
                 key={s}
@@ -381,7 +380,7 @@ export default function CandidateList() {
             </button>
             <button
               onClick={() => setSelectedIds([])}
-              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
+              className="p-1.5 text-[#9a7655] hover:text-[#3a302a] rounded-lg transition-colors"
             >
               <X size={14} />
             </button>
@@ -390,7 +389,7 @@ export default function CandidateList() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 dark:bg-slate-800 text-black dark:text-white">
+      <div className="sahara-card p-5 text-[#3a302a]">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
@@ -398,16 +397,16 @@ export default function CandidateList() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="sahara-table text-left">
                 <thead>
-                  <tr className="text-sm text-slate-500 border-b border-slate-100 dark:border-slate-700">
+                  <tr>
                     <th className="pb-3 pl-2 w-12">
                       <button
                         onClick={toggleSelectAll}
                         className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                           isAllSelected
-                            ? "bg-blue-600 border-blue-600"
-                            : "border-slate-300 dark:border-slate-600 hover:border-blue-400"
+                            ? "bg-[#c2652a] border-[#c2652a]"
+                            : "border-[#d8c8b5] hover:border-[#c2652a]"
                         }`}
                       >
                         {isAllSelected && (
@@ -431,18 +430,18 @@ export default function CandidateList() {
                       <tr
                         key={candidate.id}
                         onClick={() => toggleSelect(candidate.id)}
-                        className={`border-b border-slate-50 dark:border-slate-700 transition-colors cursor-pointer ${
+                        className={`transition-colors cursor-pointer ${
                           selectedIds.includes(candidate.id)
-                            ? "bg-blue-50 dark:bg-blue-900/20"
-                            : "hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                            ? "bg-[#f4dfbd]/70"
+                            : "hover:bg-[#fff4e2]"
                         }`}
                       >
                         <td className="py-4 pl-2">
                           <div
                             className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                               selectedIds.includes(candidate.id)
-                                ? "bg-blue-600 border-blue-600"
-                                : "border-slate-300 dark:border-slate-600"
+                                ? "bg-[#c2652a] border-[#c2652a]"
+                                : "border-[#d8c8b5]"
                             }`}
                           >
                             {selectedIds.includes(candidate.id) && (
@@ -462,14 +461,14 @@ export default function CandidateList() {
                               alt=""
                               className="w-10 h-10 rounded-full"
                             />
-                            <span className="font-bold text-black dark:text-white">
+                            <span className="font-bold text-[#3a302a]">
                               {candidate.name}
                             </span>
                           </div>
                         </td>
-                        <td className="py-4 text-slate-500 text-sm">{candidate.email}</td>
+                        <td className="py-4 text-[#7d6f62] text-sm">{candidate.email}</td>
                         <td className="py-4">
-                          <span className="font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-3 py-1 rounded-lg text-sm">
+                          <span className="font-medium text-[#5b4a3a] bg-[#f4dfbd]/70 px-3 py-1 rounded-lg text-sm">
                             {candidate.job?.title || "Không rõ"}
                           </span>
                         </td>
@@ -478,13 +477,13 @@ export default function CandidateList() {
                             {candidate.status}
                           </span>
                         </td>
-                        <td className="py-4 text-slate-500 text-sm font-medium">
+                        <td className="py-4 text-[#7d6f62] text-sm font-medium">
                           {new Date(candidate.appliedDate).toLocaleDateString("vi-VN")}
                         </td>
                         <td className="py-4 text-right">
                           <button
                             onClick={() => handleDeleteCandidate(candidate.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="p-1.5 text-[#9a7655] hover:text-[#8c3c3c] hover:bg-[#f2ded4] rounded-lg transition-colors"
                             title="Xóa"
                           >
                             <Trash2 size={16} />
@@ -494,7 +493,7 @@ export default function CandidateList() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500">
+                      <td colSpan={6} className="py-8 text-center text-[#7d6f62]">
                         Không tìm thấy ứng viên nào.
                       </td>
                     </tr>

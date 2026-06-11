@@ -1,73 +1,137 @@
-# React + TypeScript + Vite
+# ATS Pro
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Full-stack applicant tracking system built as an internship portfolio project.
+The app helps HR teams publish jobs, manage candidates through a Kanban hiring
+pipeline, store notes/interviews/CVs, and export reports.
 
-Currently, two official plugins are available:
+## Highlights
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Authentication with JWT and role-based access control for Admin and HR users.
+- Job CRUD with public job listing and candidate application flow.
+- Candidate management with pagination, filters, bulk actions, CV upload, notes,
+  interviews, and Kanban status updates.
+- Admin-only Excel/PDF export endpoints.
+- End-to-end coverage with Playwright.
+- Production-style environment configuration through `.env` files.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Frontend: React, TypeScript, Vite, Tailwind CSS, React Router, React Hook Form,
+  Zod, Axios, Recharts, Lucide icons.
+- Backend: Node.js, Express, TypeScript, Prisma, PostgreSQL, JWT, Multer,
+  Nodemailer, PDFKit, XLSX.
+- Testing: ESLint, TypeScript build checks, Playwright E2E.
 
-## Expanding the ESLint configuration
+## Project Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/              Frontend source
+server/src/       Express API source
+server/prisma/    Prisma schema and migrations
+tests/e2e/        Playwright E2E tests
+public/           Static assets
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Environment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create the frontend env file:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cp .env.example .env
 ```
+
+Create the backend env file:
+
+```bash
+cp server/.env.example server/.env
+```
+
+Required values:
+
+```env
+VITE_BASE_URL=http://localhost:3001
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
+JWT_SECRET=replace_with_a_long_random_secret
+BASE_URL=http://localhost:3001
+GMAIL_USER=
+GMAIL_APP_PASSWORD=
+```
+
+Do not commit real `.env` files. If real secrets were ever shared publicly,
+rotate the database password, JWT secret, and mail app password before demoing.
+
+## Local Setup
+
+Install frontend dependencies:
+
+```bash
+npm install
+```
+
+Install backend dependencies:
+
+```bash
+cd server
+npm install
+cd ..
+```
+
+Run the backend:
+
+```bash
+cd server
+npm run dev
+```
+
+Run the frontend in another terminal:
+
+```bash
+npm run dev
+```
+
+Frontend runs on `http://localhost:5173`; backend defaults to
+`http://localhost:3001`.
+
+## Quality Checks
+
+Frontend build:
+
+```bash
+npm run build
+```
+
+Lint and build:
+
+```bash
+npm run check
+```
+
+Backend build:
+
+```bash
+cd server
+npm run build
+```
+
+E2E tests require the backend and frontend to be running:
+
+```bash
+npm run test:e2e
+```
+
+## Deployment Notes
+
+- Frontend can be deployed to Vercel, Netlify, or similar static hosting.
+- Backend can be deployed to Render, Railway, Fly.io, or another Node host.
+- PostgreSQL can be hosted on Neon, Supabase, Railway, or Render.
+- Set `VITE_BASE_URL` to the deployed backend URL.
+- Set backend CORS rules to allow the deployed frontend domain before sharing
+  the demo link.
+
+## Portfolio Pitch
+
+Suggested CV description:
+
+> ATS Pro - Full-stack recruitment management system using React, TypeScript,
+> Express, Prisma, PostgreSQL, JWT auth, RBAC, Kanban hiring pipeline, CV upload,
+> reports export, and Playwright E2E tests.

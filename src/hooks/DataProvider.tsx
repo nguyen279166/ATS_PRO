@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { useAuth } from "./useAuth";
 import type { Job, Candidate } from "../types";
+import { API_BASE_URL } from "../config/env";
 
 export const DataContext = createContext<{
   jobs: Job[];
@@ -24,12 +25,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (showLoader) setLoading(true);
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      const baseUrl = import.meta.env.VITE_BASE_URL;
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       const [jobsRes, candidatesRes] = await Promise.all([
-        axios.get(`${baseUrl}/api/jobs`, config),
-        axios.get(`${baseUrl}/api/candidates?page=1&limit=1000`, config),
+        axios.get(`${API_BASE_URL}/api/jobs`, config),
+        axios.get(`${API_BASE_URL}/api/candidates?page=1&limit=1000`, config),
       ]);
 
       setJobs(jobsRes.data);
