@@ -6,10 +6,11 @@ import cors from "cors";
 import jobRoutes from "./routes/jobRoutes";
 import candidateRoutes from "./routes/candidateRoutes";
 import authRoutes from "./routes/authRoutes";
-import authMiddleware from "./routes/authMiddleware";
+import authMiddleware, { requireAdmin } from "./routes/authMiddleware";
 import publicRoutes from "./routes/publicRoutes";
 import noteRoutes from "./routes/noteRoutes";
 import interviewRoutes from "./routes/interviewRoutes";
+import exportRoutes from "./routes/exportRoutes";
 import path from "path";
 import { initMailer } from "./utils/mailer";
 
@@ -32,6 +33,7 @@ app.use("/api/jobs", authMiddleware, jobRoutes);
 app.use("/api/candidates", authMiddleware, candidateRoutes);
 app.use("/api/notes", authMiddleware, noteRoutes);
 app.use("/api/interviews", authMiddleware, interviewRoutes);
+app.use("/api/export", authMiddleware, requireAdmin, exportRoutes);
 
 app.listen(PORT, async () => {
   console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);

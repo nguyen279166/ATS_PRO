@@ -5,8 +5,7 @@ import {
   useLocation,
   Navigate,
 } from "react-router-dom";
-import { useContext } from "react";
-import { AuthContext } from "./hooks/AuthProvider";
+import { useAuth } from "./hooks/useAuth";
 import Sidebar from "./layouts/Sidebar";
 import CandidateList from "./pages/CandidateList";
 import JobList from "./pages/JobList";
@@ -49,7 +48,7 @@ function LayoutCore({ children }: { children: React.ReactNode }) {
 
 // Component "Bảo vệ cửa": Chặn người lạ, chỉ cho người có token đi qua
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isLoggedIn } = useContext(AuthContext);
+  const { isLoggedIn } = useAuth();
 
   // Nếu chưa đăng nhập → Đá ngược về trang Login
   if (!isLoggedIn) {
@@ -64,7 +63,7 @@ import { DataProvider } from "./hooks/DataProvider";
 import Settings from "./pages/Settings";
 
 export default function App() {
-  const { isLoggedIn } = useContext(AuthContext);
+  const { isLoggedIn } = useAuth();
 
   return (
     <BrowserRouter>

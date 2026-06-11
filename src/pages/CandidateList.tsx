@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, Download, Trash2, Filter, X } from "lucide-react";
+import { Search, Trash2, Filter, X, FileSpreadsheet, FileText } from "lucide-react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Pagination from "../components/Pagination";
 import { useData } from "../hooks/DataProvider";
+import { useAuth } from "../hooks/useAuth";
 import type { Candidate } from "../types";
 
 interface PaginationInfo {
@@ -28,6 +29,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function CandidateList() {
   const { jobs } = useData();
+  const { isAdmin } = useAuth();
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
@@ -132,28 +134,40 @@ export default function CandidateList() {
   };
 
 
-  // Xuất CSV
-  const handleExportCSV = () => {
-    const BOM = "\uFEFF";
-    const csvData = [
-      ["Họ và Tên", "Email", "Vị trí ứng tuyển", "Trạng thái", "Ngày ứng tuyển"],
-      ...filteredCandidates.map((c) => [
-        `"${c.name}"`,
-        `"${c.email}"`,
-        `"${c.job?.title || "N/A"}"`,
-        `"${c.status}"`,
-        `"${c.appliedDate}"`,
-      ]),
-    ];
-    const csvContent = BOM + csvData.map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "danh_sach_ung_vien.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Xuất Excel
+  const handleExportExcel = async () => {
+    try {
+      const res = await axios.get(`${baseUrl}/api/export/candidates.xlsx`, {
+        headers,
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "danh_sach_ung_vien.xlsx";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Lỗi khi xuất Excel");
+    }
+  };
+
+  // Xuất PDF
+  const handleExportPDF = async () => {
+    try {
+      const res = await axios.get(`${baseUrl}/api/export/report.pdf`, {
+        headers,
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "bao_cao_tuyen_dung.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Lỗi khi xuất PDF");
+    }
   };
 
   const handleDeleteCandidate = async (candidateId: string) => {
@@ -220,13 +234,24 @@ export default function CandidateList() {
             )}
           </button>
 
-          {/* Export CSV */}
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-sm text-sm"
-          >
-            <Download size={16} /> Xuất CSV
-          </button>
+          {/* Export — chỉ Admin */}
+          {isAdmin && (
+            <>
+              <button
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-sm text-sm"
+              >
+                <FileSpreadsheet size={16} /> Excel
+              </button>
+
+              <button
+                onClick={handleExportPDF}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white font-semibold rounded-xl hover:bg-red-600 transition-colors shadow-sm text-sm"
+              >
+                <FileText size={16} /> PDF
+              </button>
+            </>
+          )}
         </div>
       </div>
 

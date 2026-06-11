@@ -1,12 +1,12 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useDarkMode } from "../hooks/useDarkMode";
-import { AuthContext } from "../hooks/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 import { User, Lock, LogOut, Bell, Moon, Shield, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 
 export default function Settings() {
-  const { logout } = useContext(AuthContext);
+  const { logout } = useAuth();
   const [profile, setProfile] = useState<{
     fullName: string;
     email: string;
