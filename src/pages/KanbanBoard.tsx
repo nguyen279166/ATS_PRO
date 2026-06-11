@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, type SyntheticEvent } from "react";
 import { useData } from "../hooks/DataProvider";
 import axios from "axios";
 import type { Candidate, CandidateStatus, Job } from "../types";
@@ -12,6 +12,7 @@ import CandidateCV from "../components/CandidateCV";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { API_BASE_URL } from "../config/env";
 
 export default function KanbanBoard() {
   const { jobId } = useParams();
@@ -24,25 +25,19 @@ export default function KanbanBoard() {
   } = useData();
 
   const currentJob = jobs.find((j: Job) => j.id === jobId);
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [localCandidateState, setLocalCandidateState] = useState<{
+    jobId?: string;
+    candidates: Candidate[];
+  } | null>(null);
 
-  // isDirty = true khi local state đã bị thay đổi bởi drag
-  // → ngăn useEffect bên dưới overwrite local state
-  const isDirty = useRef(false);
-
-  // Khi navigate sang job khác → reset isDirty để sync lại từ globalCandidates
-  useEffect(() => {
-    isDirty.current = false;
-  }, [jobId]);
-
-  // Sync từ global CHỈ khi chưa có thay đổi local (mount lần đầu hoặc đổi job)
-  useEffect(() => {
-    if (globalCandidates && !isDirty.current) {
-      setCandidates(
-        globalCandidates.filter((c: Candidate) => c.jobId === jobId),
-      );
-    }
-  }, [globalCandidates, jobId]);
+  const globalJobCandidates = useMemo(
+    () => globalCandidates.filter((c: Candidate) => c.jobId === jobId),
+    [globalCandidates, jobId],
+  );
+  const candidates =
+    localCandidateState && localCandidateState.jobId === jobId
+      ? localCandidateState.candidates
+      : globalJobCandidates;
 
   // Lưu chữ đang gõ (Cái này thay đổi liên tục, làm React rặn render liên tục)
   const [searchTerm, setSearchTerm] = useState("");
@@ -64,36 +59,51 @@ export default function KanbanBoard() {
 
   // Mảng thiết kế 4 cột
   const columns = [
-    { title: "Applied", status: "Applied" as const },
-    { title: "Interviewing", status: "Interviewing" as const },
-    { title: "Hired", status: "Hired" as const },
-    { title: "Rejected", status: "Rejected" as const },
+    { title: "Applied", status: "Applied" as const, accent: "border-t-[#b88954]" },
+    { title: "Interviewing", status: "Interviewing" as const, accent: "border-t-[#c2652a]" },
+    { title: "Hired", status: "Hired" as const, accent: "border-t-[#6f7f5a]" },
+    { title: "Rejected", status: "Rejected" as const, accent: "border-t-[#8c3c3c]" },
   ];
+  const avatarUrl = (candidate: Candidate) =>
+    candidate.avatar ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(candidate.name)}&background=efe2cc&color=8a4518&bold=true`;
+  const handleAvatarError = (
+    event: SyntheticEvent<HTMLImageElement>,
+    candidate: Candidate,
+  ) => {
+    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(candidate.name)}&background=efe2cc&color=8a4518&bold=true`;
+    if (event.currentTarget.src !== fallback) {
+      event.currentTarget.src = fallback;
+    }
+  };
+
   const handleDrop = async (e: React.DragEvent, newStatus: CandidateStatus) => {
     // Móc ID của ứng viên trong túi hành lý (được gói lúc DragStart)
     const candidateId = e.dataTransfer.getData("candidateId");
 
     // Optimistic update: cập nhật UI ngay lập tức
-    isDirty.current = true;
-    setCandidates((prev: Candidate[]) => {
-      const draggedCandidate = prev.find(
+    setLocalCandidateState((prev) => {
+      const prevCandidates =
+        prev && prev.jobId === jobId ? prev.candidates : candidates;
+      const draggedCandidate = prevCandidates.find(
         (candidate) => candidate.id === candidateId,
       );
-      if (!draggedCandidate) return prev;
-      if (draggedCandidate.status === newStatus) return prev;
-      const remainingCandidates = prev.filter(
+      if (!draggedCandidate) return { jobId, candidates: prevCandidates };
+      if (draggedCandidate.status === newStatus) {
+        return { jobId, candidates: prevCandidates };
+      }
+      const remainingCandidates = prevCandidates.filter(
         (candidate) => candidate.id !== candidateId,
       );
       remainingCandidates.push({ ...draggedCandidate, status: newStatus });
-      return remainingCandidates;
+      return { jobId, candidates: remainingCandidates };
     });
 
     // BÁO CÁO LÊN BACKEND:
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      const baseUrl = import.meta.env.VITE_BASE_URL;
       await axios.put(
-        `${baseUrl}/api/candidates/${candidateId}`,
+        `${API_BASE_URL}/api/candidates/${candidateId}`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -110,9 +120,8 @@ export default function KanbanBoard() {
   }) => {
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      const baseUrl = import.meta.env.VITE_BASE_URL;
       const res = await axios.post(
-        `${baseUrl}/api/candidates`,
+        `${API_BASE_URL}/api/candidates`,
         {
           name: data.name,
           email: data.email,
@@ -130,7 +139,11 @@ export default function KanbanBoard() {
         appliedDate: new Date().toLocaleDateString(),
         avatar: `https://i.pravatar.cc/150?u=${res.data.id}`,
       };
-      setCandidates((prev) => [...prev, newCandidate]);
+      setLocalCandidateState((prev) => {
+        const prevCandidates =
+          prev && prev.jobId === jobId ? prev.candidates : candidates;
+        return { jobId, candidates: [...prevCandidates, newCandidate] };
+      });
       refreshData(); // Đồng bộ Global state
     } catch (error) {
       console.error("Lỗi tạo candidate:", error);
@@ -146,29 +159,32 @@ export default function KanbanBoard() {
 
     const draggedId = e.dataTransfer.getData("candidateId");
     if (draggedId === targetId) return;
-    isDirty.current = true;
-    setCandidates((prev) => {
+    setLocalCandidateState((prev) => {
+      const prevCandidates =
+        prev && prev.jobId === jobId ? prev.candidates : candidates;
       // 1. Tìm vị trí Index hiện tại của 2 người
-      const draggedIndex = prev.findIndex((c) => c.id === draggedId);
-      const targetIndex = prev.findIndex((c) => c.id === targetId);
+      const draggedIndex = prevCandidates.findIndex((c) => c.id === draggedId);
+      const targetIndex = prevCandidates.findIndex((c) => c.id === targetId);
+      if (draggedIndex === -1 || targetIndex === -1) {
+        return { jobId, candidates: prevCandidates };
+      }
       // 2. Tạo bản sao của mảng để thao tác
-      const newArray = [...prev];
+      const newArray = [...prevCandidates];
       // 3. Rút anh kéo (A) ra khỏi mảng
       const [draggedItem] = newArray.splice(draggedIndex, 1);
 
       // 4. Mặc áo mới cho anh (đề phòng kéo thả qua cột khác mà rớt trúng thẻ người ta)
-      draggedItem.status = newStatus;
+      const updatedDraggedItem = { ...draggedItem, status: newStatus };
       // 5. Chèn anh A vào đúng vị trí Index của người bị thả đè lên (B)
-      newArray.splice(targetIndex, 0, draggedItem);
-      return newArray;
+      newArray.splice(targetIndex, 0, updatedDraggedItem);
+      return { jobId, candidates: newArray };
     });
 
     // BÁO CÁO LÊN BACKEND:
     try {
       const token = localStorage.getItem("token_lay_duoc");
-      const baseUrl = import.meta.env.VITE_BASE_URL;
       await axios.put(
-        `${baseUrl}/api/candidates/${draggedId}`,
+        `${API_BASE_URL}/api/candidates/${draggedId}`,
         { status: newStatus },
         { headers: { Authorization: `Bearer ${token}` } },
       );
@@ -193,20 +209,20 @@ export default function KanbanBoard() {
         <div>
           <Link
             to='/jobs'
-            className='flex items-center gap-1 text-sm text-slate-400 hover:text-blue-600 transition-colors mb-2'
+            className='flex items-center gap-1 text-sm text-[#9a7655] hover:text-[#8a4518] transition-colors mb-2'
           >
             <ArrowLeft size={16} /> Quay lại danh sách
           </Link>
-          <h3 className='text-2xl font-bold text-slate-800 dark:text-white'>
+          <h3 className='text-2xl font-black text-[#3a302a]'>
             {currentJob.title}
           </h3>
-          <p className='text-slate-500 mt-1'>Sơ đồ tuyển dụng ứng viên</p>
+          <p className='text-[#7d6f62] mt-1'>Sơ đồ tuyển dụng ứng viên</p>
         </div>
 
         {/* Cục Thanh Tìm Kiếm Ứng Viên */}
         <div className='flex items-center gap-4'>
-          <div className='relative w-96 dark:text-white text-black'>
-            <label className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-400'>
+          <div className='relative w-96 text-[#3a302a]'>
+            <label className='absolute left-3 top-1/2 -translate-y-1/2 text-[#9a7655]'>
               <Search size={18} />
             </label>
             <input
@@ -214,12 +230,12 @@ export default function KanbanBoard() {
               placeholder='Tìm theo tên ứng viên...'
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className='w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm'
+              className='sahara-input w-full pl-10 pr-4 py-2 shadow-sm'
             />
           </div>
           <button
             onClick={() => setShowModal(true)}
-            className='flex items-center gap-2 px-5 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm cursor-pointer'
+            className='sahara-button px-5 py-2 cursor-pointer'
           >
             <Plus size={18} /> Thêm
           </button>
@@ -227,7 +243,7 @@ export default function KanbanBoard() {
       </div>
 
       {/* Grid chia 4 cột Kanban đều nhau */}
-      <div className='grid grid-cols-4 gap-6 flex-1 min-h-[600px]'>
+      <div className='grid grid-cols-1 xl:grid-cols-4 gap-4 flex-1 min-h-[600px]'>
         {/* Lặp 4 vòng để vẽ ra 4 cột Cứng */}
         {columns.map((col) => {
           // Lọc tiếp ứng viên thuộc trạng thái của 1 Cột nhất định (ví dụ Cột Hired có bao nhiêu người)
@@ -238,16 +254,16 @@ export default function KanbanBoard() {
           return (
             <div
               key={col.title}
-              className='bg-slate-100 rounded-2xl p-4 flex flex-col gap-4 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-black dark:text-white'
+              className={`sahara-card-soft border-t-4 ${col.accent} p-4 flex flex-col gap-4 text-[#3a302a]`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => handleDrop(e, col.status)}
             >
               {/* Header của một Cột */}
               <div className='flex justify-between items-center px-1'>
-                <h4 className='font-bold text-slate-700 dark:text-white text-black'>
+                <h4 className='font-black text-[#3a302a]'>
                   {col.title}
                 </h4>
-                <span className='bg-slate-200 text-slate-600 px-2 py-0.5 rounded-md text-xs font-bold'>
+                <span className='bg-[#efe2cc] text-[#7a4d26] px-2 py-0.5 rounded-md text-xs font-bold'>
                   {columnCandidates.length}
                 </span>
               </div>
@@ -258,7 +274,7 @@ export default function KanbanBoard() {
                 {columnCandidates.map((candidate) => (
                   <div
                     key={candidate.id}
-                    className='bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-grab hover:shadow-md hover:border-blue-300 hover:-translate-y-1 transition-all dark:bg-slate-700 dark:border-slate-800'
+                    className='bg-[#fffaf2] p-4 rounded-lg shadow-sm border border-[#d8c8b5] cursor-grab hover:shadow-md hover:border-[#c2652a] hover:-translate-y-1 transition-all'
                     onClick={() => setSelectedCandidate(candidate)}
                     draggable={true} // Cờ cho phép bế đi
                     onDragOver={(e) => e.preventDefault()}
@@ -271,15 +287,16 @@ export default function KanbanBoard() {
                   >
                     <div className='flex items-center gap-3 mb-2'>
                       <img
-                        src={candidate.avatar}
+                        src={avatarUrl(candidate)}
                         alt='avatar'
-                        className='w-8 h-8 rounded-full bg-slate-100'
+                        className='w-8 h-8 rounded-full bg-[#efe2cc]'
+                        onError={(event) => handleAvatarError(event, candidate)}
                       />
                       <div>
-                        <h5 className='font-bold text-sm text-slate-800 dark:text-white'>
+                        <h5 className='font-bold text-sm text-[#3a302a]'>
                           {candidate.name}
                         </h5>
-                        <p className='text-xs text-slate-500 font-medium'>
+                        <p className='text-xs text-[#7d6f62] font-medium'>
                           {candidate.appliedDate}
                         </p>
                       </div>
@@ -309,42 +326,45 @@ export default function KanbanBoard() {
             onClick={() => setSelectedCandidate(null)}
           />
           {/* Panel bên phải */}
-          <div className='w-full max-w-md bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col'>
+          <div className='w-full max-w-md bg-[#fffaf2] h-full shadow-2xl flex flex-col'>
             {/* Header panel */}
-            <div className='flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700 shrink-0'>
+            <div className='flex items-center justify-between p-5 border-b border-[#d8c8b5] shrink-0'>
               <div className='flex items-center gap-3'>
                 <img
-                  src={selectedCandidate.avatar}
+                  src={avatarUrl(selectedCandidate)}
                   alt='avatar'
                   className='w-10 h-10 rounded-full object-cover'
+                  onError={(event) =>
+                    handleAvatarError(event, selectedCandidate)
+                  }
                 />
                 <div>
-                  <h3 className='font-bold text-slate-800 dark:text-white'>
+                  <h3 className='font-bold text-[#3a302a]'>
                     {selectedCandidate.name}
                   </h3>
-                  <p className='text-xs text-slate-500'>
+                  <p className='text-xs text-[#7d6f62]'>
                     {selectedCandidate.email}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedCandidate(null)}
-                className='p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors'
+                className='p-2 text-[#9a7655] hover:text-[#3a302a] hover:bg-[#f4dfbd] rounded-lg transition-colors'
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Tab Navigation */}
-            <div className='flex border-b border-slate-100 dark:border-slate-700 shrink-0'>
+            <div className='flex border-b border-[#d8c8b5] shrink-0'>
                           {(["notes", "interviews", "cv"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`flex-1 py-3 text-sm font-semibold transition-colors ${
                     activeTab === tab
-                      ? "text-blue-600 border-b-2 border-blue-600"
-                      : "text-slate-400 hover:text-slate-600"
+                      ? "text-[#c2652a] border-b-2 border-[#c2652a]"
+                      : "text-[#9a7655] hover:text-[#3a302a]"
                   }`}
                 >
                   {tab === "notes" ? "📝 Ghi chú" : tab === "interviews" ? "📅 Lịch PV" : "📄 CV"}

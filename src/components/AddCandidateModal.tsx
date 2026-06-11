@@ -43,17 +43,17 @@ export default function AddCandidateModal({
     >
       {/* Hộp thoại chính - stopPropagation để click bên trong không bị đóng */}
       <div
-        className='bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl dark:bg-slate-800'
+        className='sahara-card p-8 w-full max-w-md shadow-2xl text-[#3a302a]'
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className='flex justify-between items-center mb-6'>
-          <h3 className='text-xl font-bold text-slate-800 dark:text-white'>
+          <h3 className='text-xl font-black text-[#3a302a]'>
             Thêm ứng viên mới
           </h3>
           <button
             onClick={onClose}
-            className='text-slate-400 hover:text-slate-600 transition-colors cursor-pointer'
+            className='text-[#9a7655] hover:text-[#3a302a] transition-colors cursor-pointer'
           >
             <X size={20} />
           </button>
@@ -62,7 +62,7 @@ export default function AddCandidateModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className='space-y-5'>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
+            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
               Họ và tên
             </label>
             <input
@@ -70,11 +70,11 @@ export default function AddCandidateModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder='Nhập họ tên ứng viên...'
-              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all'
+              className='sahara-input w-full px-4 py-2.5'
             />
           </div>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
+            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
               Email
             </label>
             <input
@@ -82,17 +82,17 @@ export default function AddCandidateModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder='email@example.com'
-              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all'
+              className='sahara-input w-full px-4 py-2.5'
             />
           </div>
           <div>
-            <label className='block text-sm font-semibold text-slate-700 mb-1 dark:text-white'>
+            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
               Trạng thái ban đầu
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as CandidateStatus)}
-              className='w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-white dark:bg-slate-700 dark:text-white'
+              className='sahara-input w-full px-4 py-2.5'
             >
               <option value='Applied'>Applied</option>
               <option value='Interviewing'>Interviewing</option>
@@ -103,7 +103,7 @@ export default function AddCandidateModal({
 
           <button
             type='submit'
-            className='w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors mt-2'
+            className='sahara-button w-full py-3 mt-2'
           >
             Thêm ứng viên
           </button>

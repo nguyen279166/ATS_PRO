@@ -46,7 +46,6 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
   test("HR workflow: Login, Verify HR Role, Hidden Export & Delete restrictions", async ({ page }) => {
     const loginPage = new LoginPage(page);
     const sidebar = new SidebarComponent(page);
-    const jobsPage = new JobsPage(page);
     const candidatesPage = new CandidatesPage(page);
 
     // 1. Login as HR

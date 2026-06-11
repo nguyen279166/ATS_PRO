@@ -21,24 +21,35 @@ import LandingPage from "./pages/LandingPage";
 function LayoutCore({ children }: { children: React.ReactNode }) {
   const location = useLocation();
 
-  const pageTitle =
-    location.pathname === "/jobs"
-      ? "Job Listings"
-      : location.pathname === "/"
-        ? "Dashboard Overview"
-        : "Application Tracking System";
+  const pageTitle = (() => {
+    if (location.pathname === "/") return "Dashboard Overview";
+    if (location.pathname === "/jobs") return "Job Openings";
+    if (location.pathname.startsWith("/jobs/")) return "Kanban Board";
+    if (location.pathname === "/candidates") return "Candidates Directory";
+    if (location.pathname === "/settings") return "Settings & Profile";
+    return "Application Tracking System";
+  })();
 
   return (
-    <div className='flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-200'>
+    <div className='sahara-app-shell flex min-h-screen transition-colors duration-200'>
       <Sidebar />
-      <main className='flex-1 p-8 flex flex-col'>
-        <header className='mb-8'>
-          <h2 className='text-3xl font-bold text-slate-800 dark:text-white tracking-tight'>
+      <main className='sahara-main flex-1 p-7 flex flex-col'>
+        <header className='mb-6 flex items-end justify-between gap-4'>
+          <div>
+            <p className='text-[11px] font-bold uppercase text-[#9a7655]'>
+            ATS PRO
+            </p>
+            <h2 className='sahara-page-title text-3xl font-black tracking-tight'>
             {pageTitle}
-          </h2>
-          <p className='text-slate-500 dark:text-slate-400 mt-1'>
+            </h2>
+            <p className='text-[#7d6f62] mt-1 text-sm'>
             Quản lý và theo dõi các luồng công việc tuyển dụng của bạn.
           </p>
+          </div>
+          <div className='hidden md:flex items-center gap-2 rounded-lg border border-[#d8c8b5] bg-[#fffaf2]/70 px-3 py-2 text-xs font-bold text-[#7d6f62]'>
+            <span className='h-2 w-2 rounded-full bg-[#6f7f5a]' />
+            Sahara workspace
+          </div>
         </header>
         {children}
       </main>
