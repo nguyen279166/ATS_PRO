@@ -2,14 +2,13 @@ import { useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { Upload, FileText, Trash2, Download, Loader2 } from "lucide-react";
+import { API_BASE_URL } from "../config/env";
 
 interface Props {
   candidateId: string;
   candidateName: string;
   initialCvUrl?: string | null;
 }
-
-const baseUrl = import.meta.env.VITE_BASE_URL;
 
 export default function CandidateCV({ candidateId, candidateName, initialCvUrl }: Props) {
   const [cvUrl, setCvUrl] = useState<string | null>(initialCvUrl ?? null);
@@ -41,7 +40,7 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
       formData.append("cv", file);
 
       const res = await axios.post(
-        `${baseUrl}/api/candidates/${candidateId}/cv`,
+        `${API_BASE_URL}/api/candidates/${candidateId}/cv`,
         formData,
         { headers: { ...headers, "Content-Type": "multipart/form-data" } }
       );
@@ -63,7 +62,7 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
     if (!window.confirm("Xóa CV của ứng viên này?")) return;
     setDeleting(true);
     try {
-      await axios.delete(`${baseUrl}/api/candidates/${candidateId}/cv`, { headers });
+      await axios.delete(`${API_BASE_URL}/api/candidates/${candidateId}/cv`, { headers });
       setCvUrl(null);
       toast.success("Đã xóa CV!");
     } catch {
@@ -77,27 +76,27 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
 
   return (
     <div className="mt-6">
-      <h4 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-3">
+      <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-[#7d6f62]">
         CV / Hồ sơ
       </h4>
 
       {cvUrl ? (
         /* Đã có CV */
-        <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl">
-          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-lg flex items-center justify-center flex-shrink-0">
-            <FileText size={20} className="text-blue-600 dark:text-blue-400" />
+        <div className="flex items-center gap-3 rounded-lg border border-[#d8c8b5] bg-[#fff7eb] p-4">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#f4dfbd]">
+            <FileText size={20} className="text-[#8a4518]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{fileName}</p>
-            <p className="text-xs text-slate-400">PDF / DOC / DOCX / JPG / PNG</p>
+            <p className="truncate text-sm font-bold text-[#3a302a]">{fileName}</p>
+            <p className="text-xs text-[#9a7655]">PDF / DOC / DOCX / JPG / PNG</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Download */}
             <a
-              href={`${baseUrl}${cvUrl}`}
+              href={`${API_BASE_URL}${cvUrl}`}
               target="_blank"
               rel="noreferrer"
-              className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
+              className="rounded-lg p-2 text-[#8a4518] transition-colors hover:bg-[#f4dfbd]"
               title="Tải xuống"
             >
               <Download size={16} />
@@ -105,7 +104,7 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
             {/* Re-upload */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="rounded-lg p-2 text-[#9a7655] transition-colors hover:bg-[#f4dfbd] hover:text-[#8a4518]"
               title="Upload lại"
               disabled={uploading}
             >
@@ -114,7 +113,7 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
             {/* Delete */}
             <button
               onClick={handleDelete}
-              className="p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              className="rounded-lg p-2 text-[#9a7655] transition-colors hover:bg-[#f2ded4] hover:text-[#8c3c3c]"
               title="Xóa CV"
               disabled={deleting}
             >
@@ -127,17 +126,17 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="w-full flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-all group"
+          className="group flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-[#d8c8b5] p-6 transition-all hover:border-[#c2652a] hover:bg-[#fff7eb]"
         >
           {uploading ? (
-            <Loader2 size={24} className="animate-spin text-blue-500" />
+            <Loader2 size={24} className="animate-spin text-[#c2652a]" />
           ) : (
-            <Upload size={24} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+            <Upload size={24} className="text-[#9a7655] transition-colors group-hover:text-[#c2652a]" />
           )}
-          <span className="text-sm font-medium text-slate-500 group-hover:text-blue-600 transition-colors">
+          <span className="text-sm font-semibold text-[#7d6f62] transition-colors group-hover:text-[#8a4518]">
             {uploading ? "Đang upload..." : `Upload CV cho ${candidateName}`}
           </span>
-          <span className="text-xs text-slate-400">PDF, DOC, DOCX, JPG, PNG · Tối đa 10MB</span>
+          <span className="text-xs text-[#9a7655]">PDF, DOC, DOCX, JPG, PNG · Tối đa 10MB</span>
         </button>
       )}
 
