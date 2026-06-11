@@ -1,13 +1,13 @@
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import axios from "axios";
+import { ArrowRight, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { z } from "zod";
 import { API_BASE_URL } from "../config/env";
 
-// Tinh chỉnh lại z.string().email() cho chuẩn v4 để không báo lỗi
 const registerSchema = z.object({
   fullName: z
     .string()
@@ -33,14 +33,15 @@ const registerSchema = z.object({
     .refine((val) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>?]/.test(val), {
       message: "Mật khẩu phải chứa ít nhất một ký tự đặc biệt",
     }),
-  agreeTerms: z
-    .boolean()
-    .refine((val) => val === true, { message: "Bắt buộc đồng ý điều khoản" }),
+  agreeTerms: z.boolean().refine((val) => val === true, {
+    message: "Bắt buộc đồng ý điều khoản",
+  }),
 });
 
 type RegisterFormType = z.infer<typeof registerSchema>;
 
 const RegisterForm = () => {
+  const navigate = useNavigate();
   const {
     register,
     handleSubmit,
@@ -57,26 +58,25 @@ const RegisterForm = () => {
     },
   });
 
-  const navigate = useNavigate();
-
   const onSubmit = async (data: RegisterFormType) => {
     try {
       const { fullName, email, gender, password } = data;
-      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, {
+      await axios.post(`${API_BASE_URL}/api/auth/register`, {
         fullName,
         email,
         gender,
         password,
       });
-      console.log("Thông tin đăng nhập:", res.data);
       toast.success("Đăng ký thành công!");
       reset();
-      // Chờ 1.5s để user thấy thông báo rồi mới chuyển trang
-      setTimeout(() => navigate("/login"), 1500);
+      setTimeout(() => navigate("/login"), 1200);
     } catch (error) {
       console.error("Lỗi từ Server:", error);
       if (axios.isAxiosError(error)) {
-        toast.error(error.response?.data?.error || "Đăng ký thất bại, vui lòng thử lại!");
+        toast.error(
+          error.response?.data?.error ||
+            "Đăng ký thất bại, vui lòng thử lại!",
+        );
       } else {
         toast.error("Không thể kết nối server, vui lòng thử lại!");
       }
@@ -84,133 +84,159 @@ const RegisterForm = () => {
   };
 
   return (
-    // 1. Thẻ bọc ngoài cùng: Nền xám, căn giữa toàn màn hình
-    <div className='min-h-screen bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4'>
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className='bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl w-full max-w-md p-8 rounded-2xl space-y-4'
-      >
-        <div className='text-center mb-2'>
-          <h1 className='text-2xl font-bold text-blue-400 tracking-wider'>
-            ATS<span className='text-white'>PRO</span>
-          </h1>
-        </div>
-        <h2 className='text-2xl font-bold text-center text-white mb-4'>
-          Tạo Tài Khoản
-        </h2>
-        {/* 3. Nhóm Họ và tên */}
-        <div>
-          <label className='block text-sm font-medium text-slate-300 mb-1'>
-            Họ và tên
-          </label>
-          <input
-            placeholder='Ví dụ: Nguyễn Văn A'
-            type='text'
-            // CSS Input: Viền xám, bo góc, padding, hiệu ứng viền xanh khi nhấp vào
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border-white/20 bg-white/10 text-white placeholder:text-slate-400
-'
-            {...register("fullName")}
-          />
-          {/* Lỗi đỏ dùng Tailwind thay cho style inline, thêm min-h để không nhảy form */}
-          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
-            {errors.fullName?.message}
-          </p>
-        </div>
-        {/* Nhóm Password */}
-        <div>
-          <label className='block text-sm font-medium text-slate-300 mb-1'>
-            Mật khẩu
-          </label>
-          <input
-            placeholder='Mật khẩu'
-            type='password'
-            // CSS Input: Viền xám, bo góc, padding, hiệu ứng viền xanh khi nhấp vào
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border-white/20 bg-white/10 text-white placeholder:text-slate-400
-'
-            {...register("password")}
-          />
-          {/* Lỗi đỏ dùng Tailwind thay cho style inline, thêm min-h để không nhảy form */}
-          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
-            {errors.password?.message}
-          </p>
-        </div>
-
-        {/* Nhóm Email */}
-        <div>
-          <label className='block text-sm font-medium text-slate-300 mb-1'>
-            Địa chỉ Email
-          </label>
-          <input
-            placeholder='email@example.com'
-            type='email'
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all border-white/20 bg-white/10 text-white placeholder:text-slate-400
-'
-            {...register("email")}
-          />
-          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
-            {errors.email?.message}
-          </p>
-        </div>
-
-        {/* Nhóm Giới tính */}
-        <div>
-          <label className='block text-sm font-medium text-slate-300 mb-1'>
-            Giới tính
-          </label>
-          <select
-            className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white dark:bg-gray-700 dark:text-white'
-            {...register("gender")}
-          >
-            <option value='nam'>Nam</option>
-            <option value='nữ'>Nữ</option>
-            <option value='khác'>Khác</option>
-          </select>
-          <p className='min-h-[20px]'></p>
-        </div>
-
-        {/* Nhóm Checkbox */}
-        <div>
-          <div className='flex items-center gap-2'>
-            <input
-              type='checkbox'
-              id='terms'
-              className='w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer'
-              {...register("agreeTerms")}
-            />
-            <label
-              htmlFor='terms'
-              className='text-sm text-slate-300 cursor-pointer select-none'
-            >
-              Tôi đồng ý với điều khoản dịch vụ
-            </label>
-          </div>
-          <p className='text-red-400 text-sm mt-1 min-h-[20px]'>
-            {errors.agreeTerms?.message}
-          </p>
-        </div>
-
-        {/* Nút Submit */}
-        <button
-          type='submit'
-          disabled={isSubmitting}
-          // Nút bấm xanh, bo góc, đổi màu mờ đi nếu đang submit
-          className={`w-full py-2.5 rounded-lg text-white font-semibold transition-all duration-200 
-            ${isSubmitting ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg"}`}
+    <main className='sahara-auth-shell min-h-screen px-4 py-6'>
+      <nav className='mx-auto flex w-full max-w-5xl items-center justify-between'>
+        <Link to='/' className='flex items-center gap-3'>
+          <span className='flex h-10 w-10 items-center justify-center rounded-lg bg-[#3a302a] text-lg font-black text-[#f4b266] shadow-sm'>
+            A
+          </span>
+          <span className='text-xl font-black tracking-normal text-[var(--sahara-text)]'>
+            ATS PRO
+          </span>
+        </Link>
+        <Link
+          to='/login'
+          className='text-sm font-bold text-[var(--sahara-muted)] transition-colors hover:text-[var(--sahara-primary)]'
         >
-          {isSubmitting ? "Đang xử lý..." : "Đăng ký ngay"}
-        </button>
-        <p className='text-center text-sm text-slate-400'>
-          Đã có tài khoản?{" "}
-          <a
-            href='/login'
-            className='text-blue-400 hover:text-blue-300 font-semibold transition-colors'
+          Đăng nhập
+        </Link>
+      </nav>
+
+      <section className='mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl items-center justify-center py-8'>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className='sahara-card w-full max-w-lg space-y-4 p-7 text-[var(--sahara-text)]'
+        >
+          <div>
+            <p className='mb-2 text-xs font-black uppercase text-[var(--sahara-primary)]'>
+              ATS PRO
+            </p>
+            <h1 className='text-3xl font-black tracking-normal'>
+              Tạo tài khoản
+            </h1>
+            <p className='mt-2 text-sm text-[var(--sahara-muted)]'>
+              Bắt đầu quản lý pipeline tuyển dụng trong một workspace ấm và gọn.
+            </p>
+          </div>
+
+          <div>
+            <label className='mb-1.5 block text-sm font-bold'>Họ và tên</label>
+            <div className='relative'>
+              <UserRound
+                size={17}
+                className='absolute left-3 top-1/2 -translate-y-1/2 text-[var(--sahara-muted)]'
+              />
+              <input
+                placeholder='Ví dụ: Nguyễn Văn A'
+                type='text'
+                className='sahara-input h-11 w-full px-10 text-sm'
+                {...register("fullName")}
+              />
+            </div>
+            <p className='mt-1 min-h-[20px] text-sm font-medium text-[#9a452a]'>
+              {errors.fullName?.message}
+            </p>
+          </div>
+
+          <div className='grid gap-4 sm:grid-cols-2'>
+            <div>
+              <label className='mb-1.5 block text-sm font-bold'>
+                Địa chỉ Email
+              </label>
+              <div className='relative'>
+                <Mail
+                  size={17}
+                  className='absolute left-3 top-1/2 -translate-y-1/2 text-[var(--sahara-muted)]'
+                />
+                <input
+                  placeholder='email@example.com'
+                  type='email'
+                  className='sahara-input h-11 w-full px-10 text-sm'
+                  {...register("email")}
+                />
+              </div>
+              <p className='mt-1 min-h-[20px] text-sm font-medium text-[#9a452a]'>
+                {errors.email?.message}
+              </p>
+            </div>
+
+            <div>
+              <label className='mb-1.5 block text-sm font-bold'>
+                Giới tính
+              </label>
+              <select
+                className='sahara-input h-11 w-full px-3 text-sm'
+                {...register("gender")}
+              >
+                <option value='nam'>Nam</option>
+                <option value='nữ'>Nữ</option>
+                <option value='khác'>Khác</option>
+              </select>
+              <p className='mt-1 min-h-[20px]' />
+            </div>
+          </div>
+
+          <div>
+            <label className='mb-1.5 block text-sm font-bold'>Mật khẩu</label>
+            <div className='relative'>
+              <ShieldCheck
+                size={17}
+                className='absolute left-3 top-1/2 -translate-y-1/2 text-[var(--sahara-muted)]'
+              />
+              <input
+                placeholder='Mật khẩu'
+                type='password'
+                className='sahara-input h-11 w-full px-10 text-sm'
+                {...register("password")}
+              />
+            </div>
+            <p className='mt-1 min-h-[20px] text-sm font-medium text-[#9a452a]'>
+              {errors.password?.message}
+            </p>
+          </div>
+
+          <div>
+            <div className='flex items-center gap-2'>
+              <input
+                type='checkbox'
+                id='terms'
+                className='h-4 w-4 cursor-pointer rounded border-[#d8c8b5] text-[var(--sahara-primary)] focus:ring-[var(--sahara-primary)]'
+                {...register("agreeTerms")}
+              />
+              <label
+                htmlFor='terms'
+                className='cursor-pointer select-none text-sm text-[var(--sahara-muted)]'
+              >
+                Tôi đồng ý với điều khoản dịch vụ
+              </label>
+            </div>
+            <p className='mt-1 min-h-[20px] text-sm font-medium text-[#9a452a]'>
+              {errors.agreeTerms?.message}
+            </p>
+          </div>
+
+          <button
+            type='submit'
+            disabled={isSubmitting}
+            className='sahara-button h-11 w-full disabled:cursor-not-allowed disabled:opacity-60'
           >
-            Đăng nhập
-          </a>
-        </p>
-      </form>
+            {isSubmitting ? "Đang xử lý..." : "Đăng ký ngay"}
+            {!isSubmitting && <ArrowRight size={17} />}
+          </button>
+
+          <p className='text-center text-sm text-[var(--sahara-muted)]'>
+            Đã có tài khoản?{" "}
+            <Link
+              to='/login'
+              className='font-black text-[var(--sahara-primary)] transition-colors hover:text-[var(--sahara-primary-dark)]'
+            >
+              Đăng nhập
+            </Link>
+          </p>
+        </form>
+      </section>
       <ToastContainer position='bottom-right' />
-    </div>
+    </main>
   );
 };
 

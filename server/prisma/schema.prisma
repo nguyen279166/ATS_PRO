@@ -7,96 +7,79 @@ datasource db {
   provider = "postgresql"
 }
 
-// =============================================
-// 🏢 BẢNG USER - Lưu thông tin HR / Admin
-// =============================================
 model User {
-  id        String   @id @default(uuid())    // Mã định danh duy nhất, tự động sinh
-  email     String   @unique                 // Email không được trùng
-  password  String                           // Mật khẩu (sẽ được mã hoá)
-  fullName  String
-  avatar    String?                          // 👈 Thêm trường ảnh đại diện (có thể null)
-  role      String   @default("hr")          // Vai trò: "hr" hoặc "admin"
-  createdAt DateTime @default(now())         // Ngày tạo: Tự động lấy thời điểm hiện tại
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  password             String
+  fullName             String
+  avatar               String?
+  role                 String    @default("hr")
+  createdAt            DateTime  @default(now())
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
 
-  jobs      Job[]        // 👈 1 User quản lý NHIỀU Job
-  notes     Note[]       // 👈 1 User viết NHIỀU Note
-  interviews Interview[] // 👈 1 User tạo NHIỀU lịch phỏng vấn
+  jobs       Job[]
+  notes      Note[]
+  interviews Interview[]
+
+  @@index([resetPasswordToken])
 }
 
-// =============================================
-// 💼 BẢNG JOB - Tin tuyển dụng
-// =============================================
 model Job {
-  id         String   @id @default(uuid())
-  title      String                          // "Frontend Developer"
-  department String                          // "Engineering"
-  location   String                          // "Remote"
+  id          String   @id @default(uuid())
+  title       String
+  department  String
+  location    String
   description String?  @db.Text
-  status     String   @default("Open")       // "Open" hoặc "Closed"
-  createdAt  DateTime @default(now())
+  status      String   @default("Open")
+  createdAt   DateTime @default(now())
 
-  // 👈 MỐI QUAN HỆ: Job này thuộc về User nào (HR nào tạo)
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  candidates Candidate[]  // 👈 1 Job có NHIỀU Candidate
+  candidates Candidate[]
 }
 
-// =============================================
-// 👤 BẢNG CANDIDATE - Ứng viên
-// =============================================
 model Candidate {
   id          String   @id @default(uuid())
   name        String
   email       String
-  status      String   @default("Applied")   // "Applied" | "Interviewing" | "Hired" | "Rejected"
+  status      String   @default("Applied")
   appliedDate DateTime @default(now())
-  avatar      String?                        // Dấu ? = CÓ THỂ TRỐNG (optional)
-  cvUrl       String?                        // Đường dẫn file CV (PDF/DOCX)
+  avatar      String?
+  cvUrl       String?
 
-  // 👈 MỐI QUAN HỆ: Candidate này ứng tuyển vào Job nào
-  jobId       String
-  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  notes       Note[]       // 👈 1 Candidate có NHIỀU Note
-  interviews  Interview[]  // 👈 1 Candidate có NHIỀU buổi phỏng vấn
+  notes      Note[]
+  interviews Interview[]
 }
 
-// =============================================
-// 📝 BẢNG NOTE - Ghi chú của HR về ứng viên
-// =============================================
 model Note {
-  id          String    @id @default(uuid())
-  content     String    @db.Text               // Nội dung ghi chú (dài)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt             // Tự động cập nhật khi sửa
+  id        String   @id @default(uuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // 👈 Ghi chú này thuộc về Candidate nào
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
-  // 👈 Ghi chú này do HR nào viết
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 }
 
-// =============================================
-// 📅 BẢNG INTERVIEW - Lịch phỏng vấn
-// =============================================
 model Interview {
   id          String   @id @default(uuid())
-  scheduledAt DateTime                          // Ngày giờ phỏng vấn
-  location    String?                           // Địa điểm hoặc link Meet/Zoom
-  notes       String?  @db.Text                // Ghi chú thêm về buổi PV
-  status      String   @default("Scheduled")   // "Scheduled" | "Done" | "Cancelled"
+  scheduledAt DateTime
+  location    String?
+  notes       String?  @db.Text
+  status      String   @default("Scheduled")
   createdAt   DateTime @default(now())
 
-  // 👈 Buổi phỏng vấn này dành cho Candidate nào
   candidateId String
   candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 
-  // 👈 Do HR nào tạo
-  createdBy   String
-  creator     User      @relation(fields: [createdBy], references: [id])
+  createdBy String
+  creator   User   @relation(fields: [createdBy], references: [id])
 }

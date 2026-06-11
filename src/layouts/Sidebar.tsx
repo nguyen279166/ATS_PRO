@@ -10,6 +10,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../config/env";
+import Avatar from "../components/Avatar";
 
 export default function Sidebar() {
   const { logout } = useAuth();
@@ -97,13 +98,12 @@ export default function Sidebar() {
       <div className='m-3 mt-auto shrink-0 rounded-lg border border-[#fff8ed]/18 bg-[#fff8ed]/12 p-3'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-3'>
-            <div className='w-9 h-9 rounded-full overflow-hidden ring-2 ring-[#fff1d8]/35'>
-              <img
-                src={profile?.avatar || "https://i.pravatar.cc/150?u=admin"}
-                alt='User Avatar'
-                className='w-9 h-9 rounded-full object-cover shadow-inner border border-[#fff1d8]'
-              />
-            </div>
+            <Avatar
+              name={profile?.fullName}
+              src={profile?.avatar}
+              className='h-9 w-9 text-xs shadow-inner ring-2 ring-[#fff1d8]/35'
+              imageClassName='border border-[#fff1d8]'
+            />
             <div>
               <p className='text-sm font-semibold'>
                 {profile?.fullName?.split(" ").pop()}

@@ -88,7 +88,9 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
 
     // 3. We'll search for any test job cards and clean them up
     const testJobTitlePattern = "E2E Automated Tester Job";
-    const jobCard = page.locator(`div.bg-white:has(h3:has-text("${testJobTitlePattern}"))`).first();
+    const jobCard = page
+      .locator(`.sahara-card:has(h3:has-text("${testJobTitlePattern}"))`)
+      .first();
     
     if (await jobCard.isVisible()) {
       const jobTitle = await jobCard.locator("h3").innerText();

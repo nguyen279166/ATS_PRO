@@ -3,6 +3,7 @@ import axios from "axios";
 import { MessageSquare, Send, Pencil, Trash2, X, Check } from "lucide-react";
 import { toast } from "react-toastify";
 import { API_BASE_URL } from "../config/env";
+import Avatar from "./Avatar";
 
 interface Note {
   id: string;
@@ -170,13 +171,11 @@ export default function CandidateNotes({ candidateId, candidateName }: Candidate
               {/* Header của mỗi note */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  {note.user.avatar ? (
-                    <img src={note.user.avatar} className="w-6 h-6 rounded-full object-cover" />
-                  ) : (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f4dfbd] text-xs font-bold text-[#8a4518]">
-                      {note.user.fullName.charAt(0)}
-                    </div>
-                  )}
+                  <Avatar
+                    name={note.user.fullName}
+                    src={note.user.avatar}
+                    className="h-6 w-6 text-[10px]"
+                  />
                   <span className="text-xs font-bold text-[#5b4a3a]">
                     {note.user.fullName}
                   </span>

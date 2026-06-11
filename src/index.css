@@ -184,6 +184,24 @@
     border-bottom: 1px solid rgba(216, 200, 181, 0.62);
   }
 
+  .candidates-table tbody tr:first-child td {
+    padding-top: 1.5rem !important;
+  }
+
+  .sahara-public-shell,
+  .sahara-auth-shell {
+    background:
+      radial-gradient(circle at 14% 6%, rgba(255, 250, 242, 0.76), transparent 24rem),
+      radial-gradient(circle at 86% 12%, rgba(111, 127, 90, 0.18), transparent 22rem),
+      linear-gradient(135deg, #fbf1dc 0%, #edd2a6 50%, #fbf4e8 100%);
+    color: var(--sahara-text);
+  }
+
+  .sahara-auth-shell {
+    display: flex;
+    flex-direction: column;
+  }
+
   .sahara-status {
     display: inline-flex;
     align-items: center;
@@ -288,6 +306,14 @@
   .dark .sahara-table td,
   .dark .sahara-table th {
     border-bottom-color: rgba(108, 87, 72, 0.62);
+  }
+
+  .dark .sahara-public-shell,
+  .dark .sahara-auth-shell {
+    background:
+      radial-gradient(circle at 14% 6%, rgba(209, 120, 59, 0.14), transparent 24rem),
+      radial-gradient(circle at 86% 12%, rgba(148, 163, 109, 0.12), transparent 22rem),
+      linear-gradient(135deg, #171311 0%, #241b17 50%, #141110 100%);
   }
 
   .dark .sahara-status-applied {

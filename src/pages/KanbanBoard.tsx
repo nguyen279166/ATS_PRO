@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { useMemo, useState, type SyntheticEvent } from "react";
+import { useMemo, useState } from "react";
 import { useData } from "../hooks/DataProvider";
 import axios from "axios";
 import type { Candidate, CandidateStatus, Job } from "../types";
@@ -13,6 +13,7 @@ import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { API_BASE_URL } from "../config/env";
+import Avatar from "../components/Avatar";
 
 export default function KanbanBoard() {
   const { jobId } = useParams();
@@ -64,19 +65,6 @@ export default function KanbanBoard() {
     { title: "Hired", status: "Hired" as const, accent: "border-t-[#6f7f5a]" },
     { title: "Rejected", status: "Rejected" as const, accent: "border-t-[#8c3c3c]" },
   ];
-  const avatarUrl = (candidate: Candidate) =>
-    candidate.avatar ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(candidate.name)}&background=efe2cc&color=8a4518&bold=true`;
-  const handleAvatarError = (
-    event: SyntheticEvent<HTMLImageElement>,
-    candidate: Candidate,
-  ) => {
-    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(candidate.name)}&background=efe2cc&color=8a4518&bold=true`;
-    if (event.currentTarget.src !== fallback) {
-      event.currentTarget.src = fallback;
-    }
-  };
-
   const handleDrop = async (e: React.DragEvent, newStatus: CandidateStatus) => {
     // Móc ID của ứng viên trong túi hành lý (được gói lúc DragStart)
     const candidateId = e.dataTransfer.getData("candidateId");
@@ -137,7 +125,6 @@ export default function KanbanBoard() {
         jobId: jobId || "",
         status: data.status,
         appliedDate: new Date().toLocaleDateString(),
-        avatar: `https://i.pravatar.cc/150?u=${res.data.id}`,
       };
       setLocalCandidateState((prev) => {
         const prevCandidates =
@@ -286,11 +273,9 @@ export default function KanbanBoard() {
                     } // Túi hành lý mang theo ID
                   >
                     <div className='flex items-center gap-3 mb-2'>
-                      <img
-                        src={avatarUrl(candidate)}
-                        alt='avatar'
-                        className='w-8 h-8 rounded-full bg-[#efe2cc]'
-                        onError={(event) => handleAvatarError(event, candidate)}
+                      <Avatar
+                        name={candidate.name}
+                        className='h-8 w-8 text-xs'
                       />
                       <div>
                         <h5 className='font-bold text-sm text-[#3a302a]'>
@@ -330,13 +315,9 @@ export default function KanbanBoard() {
             {/* Header panel */}
             <div className='flex items-center justify-between p-5 border-b border-[#d8c8b5] shrink-0'>
               <div className='flex items-center gap-3'>
-                <img
-                  src={avatarUrl(selectedCandidate)}
-                  alt='avatar'
-                  className='w-10 h-10 rounded-full object-cover'
-                  onError={(event) =>
-                    handleAvatarError(event, selectedCandidate)
-                  }
+                <Avatar
+                  name={selectedCandidate.name}
+                  className='h-10 w-10 text-sm'
                 />
                 <div>
                   <h3 className='font-bold text-[#3a302a]'>

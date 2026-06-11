@@ -1,14 +1,28 @@
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { createHash, randomBytes } from "crypto";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import prisma from "../prisma";
 import authMiddleware, { AuthRequest } from "./authMiddleware";
 import { Response } from "express";
+import { sendEmail } from "../utils/mailer";
 
 const router = Router();
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const RESET_PASSWORD_MESSAGE =
+  "Nếu email tồn tại, hệ thống đã gửi hướng dẫn đặt lại mật khẩu.";
+
+const hashResetToken = (token: string) =>
+  createHash("sha256").update(token).digest("hex");
+
+const getClientUrl = () =>
+  (process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:5173").replace(
+    /\/$/,
+    "",
+  );
 
 // ========================
 // Cấu hình Multer cho Upload File
@@ -120,6 +134,114 @@ router.post("/login", async (req, res) => {
 // ========================
 // GET /api/auth/me → Lấy thông tin user hiện tại
 // ========================
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const email =
+      typeof req.body.email === "string"
+        ? req.body.email.trim().toLowerCase()
+        : "";
+
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({ error: "Email không hợp lệ" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.json({ message: RESET_PASSWORD_MESSAGE });
+    }
+
+    const rawToken = randomBytes(32).toString("hex");
+    const resetPasswordToken = hashResetToken(rawToken);
+    const resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+    const resetUrl = `${getClientUrl()}/reset-password?token=${rawToken}`;
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken,
+        resetPasswordExpires,
+      },
+    });
+
+    await sendEmail(
+      user.email,
+      "Đặt lại mật khẩu ATS PRO",
+      `
+        <div style="font-family: Arial, sans-serif; color: #3a302a; line-height: 1.6;">
+          <h2 style="color: #8a4518;">Đặt lại mật khẩu ATS PRO</h2>
+          <p>Xin chào ${user.fullName},</p>
+          <p>Bạn vừa yêu cầu đặt lại mật khẩu. Link này sẽ hết hạn sau 60 phút.</p>
+          <p>
+            <a href="${resetUrl}" style="display: inline-block; padding: 12px 18px; background: #c2652a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 700;">
+              Đặt lại mật khẩu
+            </a>
+          </p>
+          <p>Nếu bạn không yêu cầu thao tác này, hãy bỏ qua email này.</p>
+        </div>
+      `,
+    );
+
+    const response: { message: string; devResetUrl?: string } = {
+      message: RESET_PASSWORD_MESSAGE,
+    };
+    if (process.env.NODE_ENV !== "production") {
+      response.devResetUrl = resetUrl;
+      console.log(`Password reset dev link for ${user.email}: ${resetUrl}`);
+    }
+
+    res.json(response);
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ error: "Lỗi server khi gửi email khôi phục" });
+  }
+});
+
+router.post("/reset-password", async (req, res) => {
+  try {
+    const token = typeof req.body.token === "string" ? req.body.token : "";
+    const password =
+      typeof req.body.password === "string" ? req.body.password : "";
+
+    if (!token) {
+      return res.status(400).json({ error: "Token không hợp lệ" });
+    }
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ error: "Mật khẩu phải có ít nhất 8 ký tự" });
+    }
+
+    const resetPasswordToken = hashResetToken(token);
+    const user = await prisma.user.findFirst({
+      where: {
+        resetPasswordToken,
+        resetPasswordExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      return res
+        .status(400)
+        .json({ error: "Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+      },
+    });
+
+    res.json({ message: "Đặt lại mật khẩu thành công" });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ error: "Lỗi server khi đặt lại mật khẩu" });
+  }
+});
+
 router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -199,8 +321,7 @@ router.post(
 
       // Tạo URL để truy cập file từ Frontend
       // File được lưu trong thư mục uploads/ với tên mới
-      const baseUrl = process.env.BASE_URL;
-      const avatarUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      const avatarUrl = `/uploads/${req.file.filename}`;
 
       // Lưu vào Database
       await prisma.user.update({
