@@ -1,6 +1,7 @@
 import { Router } from "express";
 import prisma from "../prisma";
 import type { AuthRequest } from "./authMiddleware";
+import { requireAdmin } from "./authMiddleware";
 
 const router = Router();
 
@@ -59,8 +60,8 @@ router.put("/:id", async (req: AuthRequest, res) => {
   }
 });
 
-// DELETE /api/jobs/:id → Xóa Job
-router.delete("/:id", async (req: AuthRequest, res) => {
+// DELETE /api/jobs/:id → Xóa Job (chỉ Admin)
+router.delete("/:id", requireAdmin, async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
     await prisma.job.delete({ where: { id } });

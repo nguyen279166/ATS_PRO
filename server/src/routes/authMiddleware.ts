@@ -46,3 +46,15 @@ const authMiddleware = (
 };
 
 export default authMiddleware;
+
+// Middleware chỉ cho phép Admin
+export const requireAdmin = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (req.user?.role !== "admin") {
+    return res.status(403).json({ error: "Chỉ Admin mới có quyền thực hiện thao tác này" });
+  }
+  next();
+};

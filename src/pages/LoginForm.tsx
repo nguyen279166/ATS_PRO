@@ -3,8 +3,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { useContext } from "react";
-import { AuthContext } from "../hooks/AuthProvider";
+import { useAuth } from "../hooks/useAuth";
 
 const LOGIN_API = "http://localhost:3001/api/auth/login";
 
@@ -19,7 +18,7 @@ const loginSchema = z.object({
 type LoginFormType = z.infer<typeof loginSchema>;
 
 const LoginForm = () => {
-  const { login } = useContext(AuthContext);
+  const { login } = useAuth();
 
   const {
     register,
@@ -41,10 +40,11 @@ const LoginForm = () => {
         password,
       });
       const token = res.data.token;
+      const role = res.data.user?.role || "hr";
       if (!token) {
         throw new Error("API không trả về token");
       }
-      login(token);
+      login(token, role);
       toast.success("Đăng nhập thành công");
     } catch (error) {
       console.log("Lỗi đăng nhập:", error);

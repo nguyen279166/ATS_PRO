@@ -107,9 +107,13 @@ export default function Sidebar() {
               <p className='text-sm font-semibold'>
                 {profile?.fullName?.split(" ").pop()}
               </p>
-              <p className='text-xs text-slate-400 uppercase'>
-                {profile?.role}
-              </p>
+              <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide mt-0.5 ${
+                profile?.role === "admin"
+                  ? "bg-blue-500/20 text-blue-300"
+                  : "bg-slate-600/40 text-slate-400"
+              }`}>
+                {profile?.role === "admin" ? "⚡ Admin" : "HR"}
+              </span>
             </div>
           </div>
           <button

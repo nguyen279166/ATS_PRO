@@ -69,7 +69,9 @@ router.post("/apply", upload.single("cv"), async (req, res) => {
     // Kiểm tra xem Job có tồn tại và đang Open không
     const job = await prisma.job.findUnique({ where: { id: jobId } });
     if (!job || job.status !== "Open") {
-      return res.status(400).json({ error: "Công việc này không còn nhận ứng viên" });
+      return res
+        .status(400)
+        .json({ error: "Công việc này không còn nhận ứng viên" });
     }
 
     // Lưu đường dẫn CV nếu có upload
@@ -88,7 +90,8 @@ router.post("/apply", upload.single("cv"), async (req, res) => {
 
     res.status(201).json({ message: "Ứng tuyển thành công!", candidate });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Lỗi server khi nộp đơn";
+    const msg =
+      error instanceof Error ? error.message : "Lỗi server khi nộp đơn";
     console.error("Lỗi khi ứng tuyển:", error);
     res.status(500).json({ error: msg });
   }

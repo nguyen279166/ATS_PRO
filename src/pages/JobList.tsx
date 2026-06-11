@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import { useData } from "../hooks/DataProvider";
+import { useAuth } from "../hooks/useAuth";
 import { Calendar, MapPin, Building, Plus, Edit2, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AddJobModal from "../components/AddJobModal";
@@ -10,6 +11,7 @@ import type { Job } from "../types";
 
 export default function JobList() {
   const { jobs, loading, refreshData } = useData();
+  const { isAdmin } = useAuth();
   const [showModal, setShowModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
@@ -129,13 +131,15 @@ export default function JobList() {
                 >
                   <Edit2 size={14} />
                 </button>
-                <button
-                  onClick={(e) => handleDeleteJob(e, job.id)}
-                  className='p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors'
-                  title='Xóa'
-                >
-                  <Trash2 size={14} />
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={(e) => handleDeleteJob(e, job.id)}
+                    className='p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+                    title='Xóa (chỉ Admin)'
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-medium ${
