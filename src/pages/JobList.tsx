@@ -9,6 +9,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import type { Job } from "../types";
 import { API_BASE_URL } from "../config/env";
+import { formatDate } from "../utils/date";
 
 export default function JobList() {
   const { jobs, loading, refreshData } = useData();
@@ -163,7 +164,7 @@ export default function JobList() {
               </div>
               <div className='flex items-center gap-2'>
                 <Calendar size={16} className='text-[#b88954]' />{" "}
-                <span>Đăng ngày: {job.createdAt}</span>
+                <span>Đăng ngày: {formatDate(job.createdAt)}</span>
               </div>
             </div>
 

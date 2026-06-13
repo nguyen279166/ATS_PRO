@@ -6,6 +6,7 @@ import { Lock, LogOut, Bell, Moon, Shield, Camera } from "lucide-react";
 import { toast } from "react-toastify";
 import { API_BASE_URL } from "../config/env";
 import Avatar from "../components/Avatar";
+import { formatDate } from "../utils/date";
 
 export default function Settings() {
   const { logout } = useAuth();
@@ -14,7 +15,7 @@ export default function Settings() {
     email: string;
     role: string;
     avatar?: string;
-    createdAt: Date;
+    createdAt: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -184,9 +185,7 @@ export default function Settings() {
                 Tham gia hệ thống từ
               </p>
               <p className='text-sm font-medium text-[#5b4a3a]'>
-                {profile?.createdAt
-                  ? new Date(profile.createdAt).toLocaleDateString("vi-VN")
-                  : "N/A"}
+                {formatDate(profile?.createdAt)}
               </p>
             </div>
           </div>

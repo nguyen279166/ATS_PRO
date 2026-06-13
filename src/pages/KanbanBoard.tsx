@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { API_BASE_URL } from "../config/env";
 import Avatar from "../components/Avatar";
+import { formatDate } from "../utils/date";
 
 export default function KanbanBoard() {
   const { jobId } = useParams();
@@ -124,7 +125,7 @@ export default function KanbanBoard() {
         email: data.email,
         jobId: jobId || "",
         status: data.status,
-        appliedDate: new Date().toLocaleDateString(),
+        appliedDate: res.data.appliedDate ?? new Date().toISOString(),
       };
       setLocalCandidateState((prev) => {
         const prevCandidates =
@@ -282,7 +283,7 @@ export default function KanbanBoard() {
                           {candidate.name}
                         </h5>
                         <p className='text-xs text-[#7d6f62] font-medium'>
-                          {candidate.appliedDate}
+                          {formatDate(candidate.appliedDate)}
                         </p>
                       </div>
                     </div>

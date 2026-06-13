@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { Upload, FileText, Trash2, Download, Loader2 } from "lucide-react";
 import { API_BASE_URL } from "../config/env";
+import { resolveMediaUrl } from "../utils/media";
 
 interface Props {
   candidateId: string;
@@ -18,6 +19,26 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
 
   const token = localStorage.getItem("token_lay_duoc");
   const headers = { Authorization: `Bearer ${token}` };
+
+  const getDownloadName = (contentType?: string) => {
+    const fromUrl = cvUrl?.match(/\.(pdf|docx?|jpe?g|png)(?=($|[?#]))/i)?.[1];
+    const fromType = contentType?.includes("png")
+      ? "png"
+      : contentType?.includes("jpeg")
+        ? "jpg"
+        : contentType?.includes("pdf")
+          ? "pdf"
+          : undefined;
+    const ext = (fromUrl || fromType || "cv").toLowerCase();
+    const safeName = candidateName
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+
+    return `cv-${safeName || "candidate"}.${ext}`;
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,6 +93,26 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
     }
   };
 
+  const handleDownload = async () => {
+    const href = resolveMediaUrl(cvUrl);
+    if (!href) return;
+
+    try {
+      const response = await axios.get(href, { responseType: "blob" });
+      const objectUrl = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = getDownloadName(response.headers["content-type"]);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(href, "_blank", "noopener,noreferrer");
+      toast.error("Khong tai duoc CV truc tiep, da mo file trong tab moi");
+    }
+  };
+
   const fileName = cvUrl?.split("/").pop() || "CV";
 
   return (
@@ -92,15 +133,14 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Download */}
-            <a
-              href={`${API_BASE_URL}${cvUrl}`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={handleDownload}
               className="rounded-lg p-2 text-[#8a4518] transition-colors hover:bg-[#f4dfbd]"
               title="Tải xuống"
             >
               <Download size={16} />
-            </a>
+            </button>
             {/* Re-upload */}
             <button
               onClick={() => fileInputRef.current?.click()}

@@ -8,8 +8,9 @@ pipeline, store notes/interviews/CVs, and export reports.
 
 - Authentication with JWT and role-based access control for Admin and HR users.
 - Job CRUD with public job listing and candidate application flow.
-- Candidate management with pagination, filters, bulk actions, CV upload, notes,
-  interviews, and Kanban status updates.
+- Candidate management with pagination, filters, bulk actions, CV upload with
+  Cloudinary/local fallback storage, notes, interviews, and Kanban status
+  updates.
 - Admin-only Excel/PDF export endpoints.
 - End-to-end coverage with Playwright.
 - Production-style environment configuration through `.env` files.
@@ -19,8 +20,9 @@ pipeline, store notes/interviews/CVs, and export reports.
 - Frontend: React, TypeScript, Vite, Tailwind CSS, React Router, React Hook Form,
   Zod, Axios, Recharts, Lucide icons.
 - Backend: Node.js, Express, TypeScript, Prisma, PostgreSQL, JWT, Multer,
-  Nodemailer, PDFKit, XLSX.
-- Testing: ESLint, TypeScript build checks, Playwright E2E.
+  Cloudinary, Nodemailer, PDFKit, XLSX.
+- Testing and delivery: ESLint, TypeScript build checks, Playwright E2E,
+  GitHub Actions CI, Docker.
 
 ## Project Structure
 
@@ -55,7 +57,14 @@ JWT_SECRET=replace_with_a_long_random_secret
 BASE_URL=http://localhost:3001
 GMAIL_USER=
 GMAIL_APP_PASSWORD=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_CV_FOLDER=ats-pro/cv
 ```
+
+Cloudinary variables are optional in local development. If they are not set, CVs
+are saved under `server/uploads/cv`.
 
 Do not commit real `.env` files. If real secrets were ever shared publicly,
 rotate the database password, JWT secret, and mail app password before demoing.
@@ -119,6 +128,22 @@ E2E tests require the backend and frontend to be running:
 npm run test:e2e
 ```
 
+GitHub Actions runs lint and production builds for both frontend and backend on
+push and pull request.
+
+## Docker
+
+Build and run both services:
+
+```bash
+docker compose up --build
+```
+
+The frontend container serves the Vite build through Nginx on
+`http://localhost:5173`; the backend runs on `http://localhost:3001`. Provide
+`DATABASE_URL` and `JWT_SECRET` through your shell or a root `.env` file before
+starting Docker Compose.
+
 ## Deployment Notes
 
 - Frontend can be deployed to Vercel, Netlify, or similar static hosting.
@@ -133,5 +158,6 @@ npm run test:e2e
 Suggested CV description:
 
 > ATS Pro - Full-stack recruitment management system using React, TypeScript,
-> Express, Prisma, PostgreSQL, JWT auth, RBAC, Kanban hiring pipeline, CV upload,
-> reports export, and Playwright E2E tests.
+> Express, Prisma, PostgreSQL, JWT auth, RBAC, Kanban hiring pipeline,
+> Cloudinary CV storage, reports export, Docker, GitHub Actions CI, and
+> Playwright E2E tests.

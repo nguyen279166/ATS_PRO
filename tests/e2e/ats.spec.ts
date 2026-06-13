@@ -6,6 +6,9 @@ import { CandidatesPage } from "./pages/CandidatesPage";
 
 test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
   const TEST_JOB_TITLE = "E2E Automated Tester Job " + Date.now();
+  const HR_TEST_EMAIL = `e2e.hr.${Date.now()}@ats.test`;
+  const HR_TEST_PASSWORD = "Password123";
+  const API_BASE_URL = process.env.VITE_BASE_URL || "http://localhost:3001";
 
   test("Admin workflow: Login, Create Job, Verify Admin Roles & Export Buttons", async ({ page }) => {
     const loginPage = new LoginPage(page);
@@ -43,14 +46,22 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
     await page.waitForURL("**/login");
   });
 
-  test("HR workflow: Login, Verify HR Role, Hidden Export & Delete restrictions", async ({ page }) => {
+  test("HR workflow: Login, Verify HR Role, Hidden Export & Delete restrictions", async ({ page, request }) => {
     const loginPage = new LoginPage(page);
     const sidebar = new SidebarComponent(page);
     const candidatesPage = new CandidatesPage(page);
 
+    await request.post(`${API_BASE_URL}/api/auth/register`, {
+      data: {
+        fullName: "E2E HR User",
+        email: HR_TEST_EMAIL,
+        password: HR_TEST_PASSWORD,
+      },
+    });
+
     // 1. Login as HR
     await loginPage.navigate();
-    await loginPage.login("nguyen2791661@gmail.com", "Password123");
+    await loginPage.login(HR_TEST_EMAIL, HR_TEST_PASSWORD);
 
     // 2. Verify sidebar role
     await sidebar.verifyRole("hr");

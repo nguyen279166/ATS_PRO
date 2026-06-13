@@ -2,16 +2,14 @@ import { Router } from "express";
 import prisma from "../prisma";
 import { sendEmail } from "../utils/mailer";
 import type { AuthRequest } from "./authMiddleware";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { cvUpload, deleteCv, saveCv } from "../utils/cvStorage";
 
 // ── Email template dùng chung ─────────────────────────────────
 const buildEmailTemplate = (
   status: string,
   name: string,
   jobTitle: string,
-  dept: string
+  dept: string,
 ): { subject: string; html: string } | null => {
   const footer = `<br/><p style="color:#64748b;font-size:13px">Trân trọng,<br/><strong>Bộ phận Tuyển dụng – ATSPRO</strong></p>`;
 
@@ -46,30 +44,6 @@ const buildEmailTemplate = (
   return templates[status] ?? null;
 };
 
-
-// Multer config: lưu file vào /uploads/cv, giữ tên gốc + timestamp
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const dir = path.join(__dirname, "../../uploads/cv");
-    fs.mkdirSync(dir, { recursive: true }); // tạo thư mục nếu chưa có
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `cv_${Date.now()}${ext}`);
-  },
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // tối đa 10MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) cb(null, true);
-    else cb(new Error("Chỉ chấp nhận file PDF, DOC, DOCX, JPG, PNG"));
-  },
-});
-
 const router = Router();
 router.get("/", async (req: AuthRequest, res) => {
   try {
@@ -78,19 +52,21 @@ router.get("/", async (req: AuthRequest, res) => {
     const skip = (page - 1) * limit;
 
     // Advanced filters
-    const status = req.query.status as string | undefined;   // "Applied" | "Interviewing" | ...
-    const jobId  = req.query.jobId  as string | undefined;   // UUID của job
+    const status = req.query.status as string | undefined; // "Applied" | "Interviewing" | ...
+    const jobId = req.query.jobId as string | undefined; // UUID của job
     const dateFrom = req.query.dateFrom as string | undefined; // "2024-01-01"
-    const dateTo   = req.query.dateTo   as string | undefined; // "2024-12-31"
+    const dateTo = req.query.dateTo as string | undefined; // "2024-12-31"
 
     // Build Prisma where clause động
     const where: Record<string, unknown> = {};
-    if (status)   where.status = status;
-    if (jobId)    where.jobId  = jobId;
+    if (status) where.status = status;
+    if (jobId) where.jobId = jobId;
     if (dateFrom || dateTo) {
       where.appliedDate = {
         ...(dateFrom && { gte: new Date(dateFrom) }),
-        ...(dateTo   && { lte: new Date(new Date(dateTo).setHours(23, 59, 59, 999)) }),
+        ...(dateTo && {
+          lte: new Date(new Date(dateTo).setHours(23, 59, 59, 999)),
+        }),
       };
     }
 
@@ -135,7 +111,7 @@ router.put("/:id", async (req, res) => {
   try {
     const id = req.params.id as string;
     const { status } = req.body;
-    
+
     // Tìm candidate cũ để biết nó có thực sự thay đổi trạng thái không
     const oldCandidate = await prisma.candidate.findUnique({ where: { id } });
 
@@ -151,7 +127,7 @@ router.put("/:id", async (req, res) => {
         status,
         updatedCandidate.name,
         updatedCandidate.job.title,
-        updatedCandidate.job.department
+        updatedCandidate.job.department,
       );
       if (tpl) sendEmail(updatedCandidate.email, tpl.subject, tpl.html);
     }
@@ -167,6 +143,11 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
+    const candidate = await prisma.candidate.findUnique({ where: { id } });
+    if (!candidate)
+      return res.status(404).json({ error: "KhĂ´ng tĂ¬m tháº¥y á»©ng viĂªn" });
+
+    await deleteCv(candidate.cvUrl, candidate.cvPublicId);
     await prisma.candidate.delete({ where: { id } });
     res.json({ message: "Xóa ứng viên thành công" });
   } catch (error) {
@@ -191,17 +172,28 @@ router.patch("/bulk", async (req: AuthRequest, res) => {
       if (!status) return res.status(400).json({ error: "Cần truyền status" });
       await prisma.candidate.updateMany({
         where: { id: { in: ids } },
-        data: { status: status as "Applied" | "Interviewing" | "Hired" | "Rejected" },
+        data: {
+          status: status as "Applied" | "Interviewing" | "Hired" | "Rejected",
+        },
       });
 
       // Gửi email cho từng ứng viên (fire-and-forget)
-      if (status === "Interviewing" || status === "Hired" || status === "Rejected") {
+      if (
+        status === "Interviewing" ||
+        status === "Hired" ||
+        status === "Rejected"
+      ) {
         const affectedCandidates = await prisma.candidate.findMany({
           where: { id: { in: ids } },
           include: { job: true },
         });
         for (const c of affectedCandidates) {
-          const tpl = buildEmailTemplate(status, c.name, c.job.title, c.job.department);
+          const tpl = buildEmailTemplate(
+            status,
+            c.name,
+            c.job.title,
+            c.job.department,
+          );
           if (tpl) sendEmail(c.email, tpl.subject, tpl.html);
         }
       }
@@ -210,6 +202,15 @@ router.patch("/bulk", async (req: AuthRequest, res) => {
     }
 
     if (action === "delete") {
+      const candidatesToDelete = await prisma.candidate.findMany({
+        where: { id: { in: ids } },
+        select: { cvUrl: true, cvPublicId: true },
+      });
+      await Promise.all(
+        candidatesToDelete.map((candidate) =>
+          deleteCv(candidate.cvUrl, candidate.cvPublicId),
+        ),
+      );
       await prisma.candidate.deleteMany({ where: { id: { in: ids } } });
       return res.json({ message: `Đã xóa ${ids.length} ứng viên` });
     }
@@ -221,24 +222,22 @@ router.patch("/bulk", async (req: AuthRequest, res) => {
   }
 });
 // POST /api/candidates/:id/cv → Upload CV
-router.post("/:id/cv", upload.single("cv"), async (req: AuthRequest, res) => {
+router.post("/:id/cv", cvUpload.single("cv"), async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
-    if (!req.file) return res.status(400).json({ error: "Không có file được upload" });
+    if (!req.file)
+      return res.status(400).json({ error: "Không có file được upload" });
 
     const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate) return res.status(404).json({ error: "Không tìm thấy ứng viên" });
+    if (!candidate)
+      return res.status(404).json({ error: "Không tìm thấy ứng viên" });
 
     // Xóa file CV cũ nếu có
-    if (candidate.cvUrl) {
-      const oldPath = path.join(__dirname, "../../", candidate.cvUrl.replace(/^\//, ""));
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    }
-
-    const cvUrl = `/uploads/cv/${req.file.filename}`;
+    await deleteCv(candidate.cvUrl, candidate.cvPublicId);
+    const storedCv = await saveCv(req.file);
     const updated = await prisma.candidate.update({
       where: { id },
-      data: { cvUrl },
+      data: storedCv,
     });
     res.json(updated);
   } catch (error: unknown) {
@@ -252,14 +251,14 @@ router.delete("/:id/cv", async (req: AuthRequest, res) => {
   try {
     const id = String(req.params.id);
     const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate || !candidate.cvUrl) return res.status(404).json({ error: "Không có CV" });
+    if (!candidate || !candidate.cvUrl)
+      return res.status(404).json({ error: "Không có CV" });
 
-    const filePath = path.join(__dirname, "../../", candidate.cvUrl.replace(/^\//, ""));
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await deleteCv(candidate.cvUrl, candidate.cvPublicId);
 
     const updated = await prisma.candidate.update({
       where: { id },
-      data: { cvUrl: null },
+      data: { cvUrl: null, cvPublicId: null },
     });
     res.json(updated);
   } catch {

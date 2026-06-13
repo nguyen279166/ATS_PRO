@@ -1,34 +1,9 @@
 import { Router } from "express";
 import prisma from "../prisma";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { cvUpload, saveCv } from "../utils/cvStorage";
 
 const router = Router();
 
-// Multer config cho public apply (không cần auth)
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    const dir = path.join(__dirname, "../../uploads/cv");
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `cv_${Date.now()}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = [".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png"];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) cb(null, true);
-    else cb(new Error("Chỉ chấp nhận PDF, DOC, DOCX, JPG, PNG"));
-  },
-});
 
 // ========================
 // GET /api/public/jobs → Lấy danh sách công việc đang tuyển dụng
@@ -58,7 +33,7 @@ router.get("/jobs", async (req, res) => {
 // ========================
 // POST /api/public/apply → Ứng viên nộp CV (có thể kèm file)
 // ========================
-router.post("/apply", upload.single("cv"), async (req, res) => {
+router.post("/apply", cvUpload.single("cv"), async (req, res) => {
   try {
     const { jobId, name, email } = req.body;
 
@@ -75,7 +50,7 @@ router.post("/apply", upload.single("cv"), async (req, res) => {
     }
 
     // Lưu đường dẫn CV nếu có upload
-    const cvUrl = req.file ? `/uploads/cv/${req.file.filename}` : null;
+    const storedCv = req.file ? await saveCv(req.file) : null;
 
     // Tạo Candidate mới
     const candidate = await prisma.candidate.create({
@@ -84,7 +59,7 @@ router.post("/apply", upload.single("cv"), async (req, res) => {
         email,
         jobId,
         status: "Applied",
-        ...(cvUrl && { cvUrl }),
+        ...(storedCv && storedCv),
       },
     });
 

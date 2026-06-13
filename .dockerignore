@@ -1,0 +1,15 @@
+.git
+.agent
+.vscode
+node_modules
+dist
+server/node_modules
+server/dist
+server/generated
+server/uploads
+test-results
+playwright-report
+blob-report
+.env
+server/.env
+*.log
