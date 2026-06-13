@@ -20,16 +20,34 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
   const token = localStorage.getItem("token_lay_duoc");
   const headers = { Authorization: `Bearer ${token}` };
 
-  const getDownloadName = (contentType?: string) => {
+  const detectFileExtension = async (blob: Blob, contentType?: string) => {
     const fromUrl = cvUrl?.match(/\.(pdf|docx?|jpe?g|png)(?=($|[?#]))/i)?.[1];
-    const fromType = contentType?.includes("png")
-      ? "png"
-      : contentType?.includes("jpeg")
-        ? "jpg"
-        : contentType?.includes("pdf")
-          ? "pdf"
-          : undefined;
-    const ext = (fromUrl || fromType || "cv").toLowerCase();
+    if (fromUrl) return fromUrl.toLowerCase();
+
+    const normalizedType = (contentType || blob.type || "").toLowerCase();
+    if (normalizedType.includes("png")) return "png";
+    if (normalizedType.includes("jpeg") || normalizedType.includes("jpg")) return "jpg";
+    if (normalizedType.includes("pdf")) return "pdf";
+    if (normalizedType.includes("officedocument.wordprocessingml.document")) return "docx";
+    if (normalizedType.includes("msword")) return "doc";
+
+    const bytes = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+    if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "png";
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";
+    if (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) return "pdf";
+    if (bytes[0] === 0x50 && bytes[1] === 0x4b) return "docx";
+    if (
+      bytes[0] === 0xd0 &&
+      bytes[1] === 0xcf &&
+      bytes[2] === 0x11 &&
+      bytes[3] === 0xe0
+    ) return "doc";
+
+    return "bin";
+  };
+
+  const getDownloadName = async (blob: Blob, contentType?: string) => {
+    const ext = await detectFileExtension(blob, contentType);
     const safeName = candidateName
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -102,7 +120,10 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
       const objectUrl = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = getDownloadName(response.headers["content-type"]);
+      link.download = await getDownloadName(
+        response.data,
+        response.headers["content-type"],
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
