@@ -16,6 +16,7 @@ import { useAuth } from "../hooks/useAuth";
 import type { Candidate } from "../types";
 import { API_BASE_URL } from "../config/env";
 import Avatar from "../components/Avatar";
+import { formatDate } from "../utils/date";
 
 interface PaginationInfo {
   total: number;
@@ -566,9 +567,7 @@ export default function CandidateList() {
                           </span>
                         </td>
                         <td className='py-4 text-[#7d6f62] text-sm font-medium'>
-                          {new Date(candidate.appliedDate).toLocaleDateString(
-                            "vi-VN",
-                          )}
+                          {formatDate(candidate.appliedDate)}
                         </td>
                         <td className='py-4 text-right'>
                           <button

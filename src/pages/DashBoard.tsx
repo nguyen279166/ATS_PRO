@@ -20,6 +20,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import Avatar from "../components/Avatar";
+import { formatDate } from "../utils/date";
 
 export default function Dashboard() {
   const { jobs, candidates, loading } = useData();
@@ -434,9 +435,7 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td className='py-3 text-[#7d6f62] text-sm'>
-                      {new Date(candidate.appliedDate).toLocaleDateString(
-                        "vi-VN",
-                      )}
+                              {formatDate(candidate.appliedDate)}
                     </td>
                   </tr>
                 ))}

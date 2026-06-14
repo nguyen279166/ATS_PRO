@@ -2,13 +2,11 @@ import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { createHash, randomBytes } from "crypto";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 import prisma from "../prisma";
 import authMiddleware, { AuthRequest } from "./authMiddleware";
 import { Response } from "express";
 import { sendEmail } from "../utils/mailer";
+import { avatarUpload, saveAvatar } from "../utils/cvStorage";
 
 const router = Router();
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -24,33 +22,6 @@ const getClientUrl = () =>
     "",
   );
 
-// ========================
-// Cấu hình Multer cho Upload File
-// ========================
-const uploadDir = path.join(__dirname, "../../uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    // Đổi tên file để tránh trùng lặp: timestamp-tên_gốc
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Giới hạn 5MB
-});
-
-// ========================
-// POST /api/auth/register → Đăng ký tài khoản mới
-// ========================
 router.post("/register", async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
@@ -309,7 +280,7 @@ router.put(
 router.post(
   "/upload",
   authMiddleware,
-  upload.single("avatar"),
+  avatarUpload.single("avatar"),
   async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user?.userId;
@@ -321,7 +292,7 @@ router.post(
 
       // Tạo URL để truy cập file từ Frontend
       // File được lưu trong thư mục uploads/ với tên mới
-      const avatarUrl = `/uploads/${req.file.filename}`;
+      const avatarUrl = await saveAvatar(req.file);
 
       // Lưu vào Database
       await prisma.user.update({

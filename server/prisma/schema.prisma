@@ -48,6 +48,7 @@ model Candidate {
   appliedDate DateTime @default(now())
   avatar      String?
   cvUrl       String?
+  cvPublicId  String?
 
   jobId String
   job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
