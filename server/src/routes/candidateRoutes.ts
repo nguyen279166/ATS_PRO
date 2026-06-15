@@ -234,7 +234,7 @@ router.post("/:id/cv", cvUpload.single("cv"), async (req: AuthRequest, res) => {
 
     // Xóa file CV cũ nếu có
     await deleteCv(candidate.cvUrl, candidate.cvPublicId);
-    const storedCv = await saveCv(req.file);
+    const storedCv = await saveCv(req.file, candidate.name);
     const updated = await prisma.candidate.update({
       where: { id },
       data: storedCv,
@@ -258,7 +258,7 @@ router.delete("/:id/cv", async (req: AuthRequest, res) => {
 
     const updated = await prisma.candidate.update({
       where: { id },
-      data: { cvUrl: null, cvPublicId: null },
+      data: { cvUrl: null, cvPublicId: null, cvFileName: null },
     });
     res.json(updated);
   } catch {

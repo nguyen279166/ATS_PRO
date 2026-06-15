@@ -23,5 +23,6 @@ export interface Candidate {
   appliedDate: string;
   avatar?: string;
   cvUrl?: string | null;
+  cvFileName?: string | null;
   job?: Job;
 }

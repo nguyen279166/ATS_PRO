@@ -9,10 +9,19 @@ interface Props {
   candidateId: string;
   candidateName: string;
   initialCvUrl?: string | null;
+  initialCvFileName?: string | null;
 }
 
-export default function CandidateCV({ candidateId, candidateName, initialCvUrl }: Props) {
+export default function CandidateCV({
+  candidateId,
+  candidateName,
+  initialCvUrl,
+  initialCvFileName,
+}: Props) {
   const [cvUrl, setCvUrl] = useState<string | null>(initialCvUrl ?? null);
+  const [cvFileName, setCvFileName] = useState<string | null>(
+    initialCvFileName ?? null,
+  );
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +57,11 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
 
   const getDownloadName = async (blob: Blob, contentType?: string) => {
     const ext = await detectFileExtension(blob, contentType);
+    if (cvFileName) {
+      const hasKnownExt = /\.(pdf|docx?|jpe?g|png)$/i.test(cvFileName);
+      return hasKnownExt ? cvFileName : `${cvFileName}.${ext}`;
+    }
+
     const safeName = candidateName
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -84,6 +98,7 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
         { headers: { ...headers, "Content-Type": "multipart/form-data" } }
       );
       setCvUrl(res.data.cvUrl);
+      setCvFileName(res.data.cvFileName ?? file.name);
       toast.success("Upload CV thành công!");
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -103,6 +118,7 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
     try {
       await axios.delete(`${API_BASE_URL}/api/candidates/${candidateId}/cv`, { headers });
       setCvUrl(null);
+      setCvFileName(null);
       toast.success("Đã xóa CV!");
     } catch {
       toast.error("Lỗi khi xóa CV");
@@ -134,7 +150,7 @@ export default function CandidateCV({ candidateId, candidateName, initialCvUrl }
     }
   };
 
-  const fileName = cvUrl?.split("/").pop() || "CV";
+  const fileName = cvFileName || cvUrl?.split("/").pop() || "CV";
 
   return (
     <div className="mt-6">

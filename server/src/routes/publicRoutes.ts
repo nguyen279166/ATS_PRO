@@ -50,7 +50,7 @@ router.post("/apply", cvUpload.single("cv"), async (req, res) => {
     }
 
     // Lưu đường dẫn CV nếu có upload
-    const storedCv = req.file ? await saveCv(req.file) : null;
+    const storedCv = req.file ? await saveCv(req.file, name) : null;
 
     // Tạo Candidate mới
     const candidate = await prisma.candidate.create({

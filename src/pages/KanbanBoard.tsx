@@ -368,6 +368,7 @@ export default function KanbanBoard() {
                   candidateId={selectedCandidate.id}
                   candidateName={selectedCandidate.name}
                   initialCvUrl={selectedCandidate.cvUrl}
+                  initialCvFileName={selectedCandidate.cvFileName}
                 />
               )}
             </div>
