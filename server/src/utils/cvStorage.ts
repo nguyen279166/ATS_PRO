@@ -52,16 +52,53 @@ function configureCloudinary() {
   });
 }
 
-function uploadToCloudinary(file: Express.Multer.File) {
+function slugify(value: string) {
+  const slug = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return slug || "file";
+}
+
+function cleanOriginalFileName(originalName: string) {
+  return path
+    .basename(originalName)
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120) || "cv";
+}
+
+function getFileExtension(originalName: string) {
+  return path.extname(originalName).toLowerCase();
+}
+
+function buildReadableCvPublicId(file: Express.Multer.File, candidateName?: string) {
+  const folder = process.env.CLOUDINARY_CV_FOLDER || "ats-pro/cv";
+  const ext = getFileExtension(file.originalname);
+  const originalBase = path.basename(file.originalname, ext);
+  const namePart = slugify(candidateName || "candidate");
+  const filePart = slugify(originalBase || "cv");
+  const stamp = new Date()
+    .toISOString()
+    .replace(/[-:T.Z]/g, "")
+    .slice(0, 14);
+
+  return `${folder}/${namePart}-${filePart}-${stamp}${ext}`;
+}
+
+function uploadToCloudinary(file: Express.Multer.File, candidateName?: string) {
   configureCloudinary();
 
   return new Promise<UploadApiResponse>((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
-        folder: process.env.CLOUDINARY_CV_FOLDER || "ats-pro/cv",
         resource_type: "raw",
-        use_filename: true,
-        unique_filename: true,
+        public_id: buildReadableCvPublicId(file, candidateName),
+        overwrite: true,
       },
       (error, result) => {
         if (error || !result) {
@@ -105,7 +142,7 @@ function uploadAvatarToCloudinary(file: Express.Multer.File) {
 }
 
 function buildLocalFileName(originalName: string) {
-  const ext = path.extname(originalName).toLowerCase();
+  const ext = getFileExtension(originalName);
   return `cv_${Date.now()}_${Math.round(Math.random() * 1e9)}${ext}`;
 }
 
@@ -119,7 +156,11 @@ async function saveLocalCv(file: Express.Multer.File) {
   const fileName = buildLocalFileName(file.originalname);
   const filePath = path.join(LOCAL_UPLOAD_DIR, fileName);
   await fs.promises.writeFile(filePath, file.buffer);
-  return { cvUrl: `/uploads/cv/${fileName}`, cvPublicId: null };
+  return {
+    cvUrl: `/uploads/cv/${fileName}`,
+    cvPublicId: null,
+    cvFileName: cleanOriginalFileName(file.originalname),
+  };
 }
 
 async function saveLocalAvatar(file: Express.Multer.File) {
@@ -130,13 +171,17 @@ async function saveLocalAvatar(file: Express.Multer.File) {
   return `/uploads/${fileName}`;
 }
 
-export async function saveCv(file: Express.Multer.File) {
+export async function saveCv(file: Express.Multer.File, candidateName?: string) {
   if (!isCloudinaryConfigured()) {
     return saveLocalCv(file);
   }
 
-  const result = await uploadToCloudinary(file);
-  return { cvUrl: result.secure_url, cvPublicId: result.public_id };
+  const result = await uploadToCloudinary(file, candidateName);
+  return {
+    cvUrl: result.secure_url,
+    cvPublicId: result.public_id,
+    cvFileName: cleanOriginalFileName(file.originalname),
+  };
 }
 
 export async function saveAvatar(file: Express.Multer.File) {

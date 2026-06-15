@@ -49,6 +49,7 @@ model Candidate {
   avatar      String?
   cvUrl       String?
   cvPublicId  String?
+  cvFileName  String?
 
   jobId String
   job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
