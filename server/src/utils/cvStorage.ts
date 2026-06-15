@@ -77,7 +77,6 @@ function getFileExtension(originalName: string) {
 }
 
 function buildReadableCvPublicId(file: Express.Multer.File, candidateName?: string) {
-  const folder = process.env.CLOUDINARY_CV_FOLDER || "ats-pro/cv";
   const ext = getFileExtension(file.originalname);
   const originalBase = path.basename(file.originalname, ext);
   const namePart = slugify(candidateName || "candidate");
@@ -87,7 +86,7 @@ function buildReadableCvPublicId(file: Express.Multer.File, candidateName?: stri
     .replace(/[-:T.Z]/g, "")
     .slice(0, 14);
 
-  return `${folder}/${namePart}-${filePart}-${stamp}${ext}`;
+  return `${namePart}-${filePart}-${stamp}${ext}`;
 }
 
 function uploadToCloudinary(file: Express.Multer.File, candidateName?: string) {
@@ -96,6 +95,7 @@ function uploadToCloudinary(file: Express.Multer.File, candidateName?: string) {
   return new Promise<UploadApiResponse>((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
+        folder: process.env.CLOUDINARY_CV_FOLDER || "ats-pro/cv",
         resource_type: "raw",
         public_id: buildReadableCvPublicId(file, candidateName),
         overwrite: true,
