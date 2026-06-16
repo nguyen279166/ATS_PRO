@@ -1,14 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import axios from "axios";
 import { ArrowRight, LockKeyhole, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { z } from "zod";
-import { API_BASE_URL } from "../config/env";
+import { apiClient } from "../api/client";
 import { useAuth } from "../hooks/useAuth";
-
-const LOGIN_API = `${API_BASE_URL}/api/auth/login`;
 
 const loginSchema = z.object({
   email: z
@@ -37,7 +34,7 @@ const LoginForm = () => {
 
   const onSubmit = async (data: LoginFormType) => {
     try {
-      const res = await axios.post(LOGIN_API, data);
+      const res = await apiClient.post("/api/auth/login", data);
       const token = res.data.token;
       const role = res.data.user?.role || "hr";
       if (!token) {

@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { Upload, FileText, Trash2, Download, Loader2 } from "lucide-react";
-import { API_BASE_URL } from "../config/env";
+import { apiClient, isApiError } from "../api/client";
 import { resolveMediaUrl } from "../utils/media";
 
 interface Props {
@@ -25,9 +25,6 @@ export default function CandidateCV({
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const token = localStorage.getItem("token_lay_duoc");
-  const headers = { Authorization: `Bearer ${token}` };
 
   const detectFileExtension = async (blob: Blob, contentType?: string) => {
     const fromUrl = cvUrl?.match(/\.(pdf|docx?|jpe?g|png)(?=($|[?#]))/i)?.[1];
@@ -92,16 +89,15 @@ export default function CandidateCV({
       const formData = new FormData();
       formData.append("cv", file);
 
-      const res = await axios.post(
-        `${API_BASE_URL}/api/candidates/${candidateId}/cv`,
+      const res = await apiClient.post(
+        `/api/candidates/${candidateId}/cv`,
         formData,
-        { headers: { ...headers, "Content-Type": "multipart/form-data" } }
       );
       setCvUrl(res.data.cvUrl);
       setCvFileName(res.data.cvFileName ?? file.name);
       toast.success("Upload CV thành công!");
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
+      if (isApiError(err)) {
         toast.error(err.response?.data?.error || "Lỗi upload CV");
       } else {
         toast.error("Lỗi upload CV");
@@ -116,7 +112,7 @@ export default function CandidateCV({
     if (!window.confirm("Xóa CV của ứng viên này?")) return;
     setDeleting(true);
     try {
-      await axios.delete(`${API_BASE_URL}/api/candidates/${candidateId}/cv`, { headers });
+      await apiClient.delete(`/api/candidates/${candidateId}/cv`);
       setCvUrl(null);
       setCvFileName(null);
       toast.success("Đã xóa CV!");

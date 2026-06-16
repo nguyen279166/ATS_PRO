@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import { apiClient, isApiError } from "../api/client";
 import { useData } from "../hooks/DataProvider";
 import { useAuth } from "../hooks/useAuth";
 import { Calendar, MapPin, Building, Plus, Edit2, Trash2 } from "lucide-react";
@@ -8,7 +8,6 @@ import AddJobModal from "../components/AddJobModal";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import type { Job } from "../types";
-import { API_BASE_URL } from "../config/env";
 import { formatDate } from "../utils/date";
 
 export default function JobList() {
@@ -32,26 +31,20 @@ export default function JobList() {
     description: string;
   }) => {
     try {
-      const token = localStorage.getItem("token_lay_duoc");
       if (selectedJob) {
-        await axios.put(
-          `${API_BASE_URL}/api/jobs/${selectedJob.id}`,
+        await apiClient.put(
+          `/api/jobs/${selectedJob.id}`,
           data,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          },
         );
         toast.success("Cập nhật tin tuyển dụng thành công!");
       } else {
-        await axios.post(`${API_BASE_URL}/api/jobs`, data, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await apiClient.post("/api/jobs", data);
         toast.success("Đăng tin tuyển dụng thành công!");
       }
       await refreshData();
     } catch (error: unknown) {
       console.error("Lỗi khi lưu job:", error);
-      if (axios.isAxiosError(error)) {
+      if (isApiError(error)) {
         toast.error(
           error.response?.data?.error ||
             "Lỗi khi lưu Job. Mở console để xem chi tiết!",
@@ -77,14 +70,11 @@ export default function JobList() {
     )
       return;
     try {
-      const token = localStorage.getItem("token_lay_duoc");
-      await axios.delete(`${API_BASE_URL}/api/jobs/${jobId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await apiClient.delete(`/api/jobs/${jobId}`);
       toast.success("Xóa Job thành công!");
       await refreshData();
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
+      if (isApiError(error)) {
         toast.error(error.response?.data?.error || "Lỗi khi xóa Job");
       } else {
         toast.error("Lỗi khi xóa Job");

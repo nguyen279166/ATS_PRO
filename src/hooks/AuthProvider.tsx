@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState } from "react";
+import { AUTH_TOKEN_KEY, USER_ROLE_KEY } from "../api/client";
 
 export type UserRole = "admin" | "hr";
 
@@ -15,22 +16,22 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(
-    !!localStorage.getItem("token_lay_duoc"),
+    !!localStorage.getItem(AUTH_TOKEN_KEY),
   );
   const [role, setRole] = useState<UserRole>(
-    (localStorage.getItem("user_role") as UserRole) || "hr",
+    (localStorage.getItem(USER_ROLE_KEY) as UserRole) || "hr",
   );
 
   const login = (token: string, userRole: UserRole) => {
-    localStorage.setItem("token_lay_duoc", token);
-    localStorage.setItem("user_role", userRole);
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(USER_ROLE_KEY, userRole);
     setIsLoggedIn(true);
     setRole(userRole);
   };
 
   const logout = () => {
-    localStorage.removeItem("token_lay_duoc");
-    localStorage.removeItem("user_role");
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(USER_ROLE_KEY);
     setIsLoggedIn(false);
     setRole("hr");
   };
