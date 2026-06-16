@@ -16,6 +16,53 @@ import { toast } from "react-toastify";
 import { API_BASE_URL } from "../config/env";
 import type { Job } from "../types";
 
+const splitDescriptionSections = (description: string) =>
+  description
+    .replace(/\s+([A-ZÀ-ỸĐ][A-ZÀ-ỸĐ\s/+-]{2,}:)/gu, "\n$1")
+    .split("\n")
+    .map((section) => section.trim())
+    .filter(Boolean);
+
+const renderJobDescription = (description: string) => (
+  <div className='space-y-4'>
+    {splitDescriptionSections(description).map((section, index) => {
+      const match = section.match(/^([^:]{2,48}):\s*(.*)$/s);
+      const title = match?.[1]?.trim();
+      const body = (match?.[2] || section).trim();
+      const bulletItems = body
+        .split("•")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const hasBullets = body.includes("•") && bulletItems.length > 0;
+
+      return (
+        <section key={`${title || "section"}-${index}`} className='space-y-2'>
+          {title && (
+            <h5 className='text-xs font-black uppercase tracking-normal text-[var(--sahara-primary)]'>
+              {title}
+            </h5>
+          )}
+          {hasBullets ? (
+            <ul className='grid gap-2 pl-1'>
+              {bulletItems.map((item) => (
+                <li
+                  key={item}
+                  className='flex gap-2 text-sm leading-6 text-[var(--sahara-muted)]'
+                >
+                  <span className='mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--sahara-primary)]' />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className='text-sm leading-7 text-[var(--sahara-muted)]'>{body}</p>
+          )}
+        </section>
+      );
+    })}
+  </div>
+);
+
 export default function LandingPage() {
   const [openJobs, setOpenJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -278,8 +325,8 @@ export default function LandingPage() {
                   <h4 className='mb-2 text-sm font-black uppercase tracking-normal text-[var(--sahara-text)]'>
                     Mô tả công việc
                   </h4>
-                  <div className='rounded-lg border border-[#d8c8b5] bg-[#f6efe4]/72 p-4 text-sm leading-6 text-[var(--sahara-muted)]'>
-                    {selectedJob.description}
+                  <div className='rounded-lg border border-[#d8c8b5] bg-[#f6efe4]/72 p-4'>
+                    {renderJobDescription(selectedJob.description)}
                   </div>
                 </div>
               )}
