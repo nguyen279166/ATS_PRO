@@ -61,10 +61,11 @@ CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_CV_FOLDER=ats-pro/cv
+CLOUDINARY_AVATAR_FOLDER=ats-pro/avatars
 ```
 
 Cloudinary variables are optional in local development. If they are not set, CVs
-are saved under `server/uploads/cv`.
+and avatars are saved under `server/uploads`.
 
 Do not commit real `.env` files. If real secrets were ever shared publicly,
 rotate the database password, JWT secret, and mail app password before demoing.
@@ -136,13 +137,12 @@ push and pull request.
 Build and run both services:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 The frontend container serves the Vite build through Nginx on
-`http://localhost:5173`; the backend runs on `http://localhost:3001`. Provide
-`DATABASE_URL` and `JWT_SECRET` through your shell or a root `.env` file before
-starting Docker Compose.
+`http://localhost:5173`; the backend runs on `http://localhost:3001`. Docker
+Compose reads backend environment variables from `server/.env`.
 
 ## Deployment Notes
 
@@ -152,6 +152,7 @@ starting Docker Compose.
 - Set `VITE_BASE_URL` to the deployed backend URL.
 - Set backend CORS rules to allow the deployed frontend domain before sharing
   the demo link.
+- See [`docs/deployment.md`](docs/deployment.md) for the deployment checklist.
 
 ## Portfolio Pitch
 
