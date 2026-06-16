@@ -7,6 +7,14 @@ import authMiddleware, { AuthRequest } from "./authMiddleware";
 import { Response } from "express";
 import { sendEmail } from "../utils/mailer";
 import { avatarUpload, saveAvatar } from "../utils/cvStorage";
+import { validateBody } from "../middleware/validate";
+import {
+  changePasswordSchema,
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from "../validation/schemas";
 
 const router = Router();
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -22,7 +30,7 @@ const getClientUrl = () =>
     "",
   );
 
-router.post("/register", async (req, res) => {
+router.post("/register", validateBody(registerSchema), async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
 
@@ -60,7 +68,7 @@ router.post("/register", async (req, res) => {
 // ========================
 // POST /api/auth/login → Đăng nhập
 // ========================
-router.post("/login", async (req, res) => {
+router.post("/login", validateBody(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -105,7 +113,7 @@ router.post("/login", async (req, res) => {
 // ========================
 // GET /api/auth/me → Lấy thông tin user hiện tại
 // ========================
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", validateBody(forgotPasswordSchema), async (req, res) => {
   try {
     const email =
       typeof req.body.email === "string"
@@ -167,7 +175,7 @@ router.post("/forgot-password", async (req, res) => {
   }
 });
 
-router.post("/reset-password", async (req, res) => {
+router.post("/reset-password", validateBody(resetPasswordSchema), async (req, res) => {
   try {
     const token = typeof req.body.token === "string" ? req.body.token : "";
     const password =
@@ -241,6 +249,7 @@ router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
 router.put(
   "/password",
   authMiddleware,
+  validateBody(changePasswordSchema),
   async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.user?.userId;
