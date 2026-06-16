@@ -147,7 +147,7 @@ export default function LandingPage() {
                 Tuyển dụng hôm nay
               </h2>
             </div>
-            <div className='rounded-lg bg-[#e4eddc] p-3 text-[#587143]'>
+            <div className='rounded-lg border border-[#ddb778] bg-[#f4dfbd]/80 p-3 text-[var(--sahara-primary)]'>
               <BriefcaseBusiness size={22} />
             </div>
           </div>
