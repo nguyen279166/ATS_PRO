@@ -31,6 +31,7 @@ server/uploads
 
 # Playwright
 /test-results/
+/server/test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/

@@ -4,6 +4,14 @@ Full-stack applicant tracking system built as an internship portfolio project.
 The app helps HR teams publish jobs, manage candidates through a Kanban hiring
 pipeline, store notes/interviews/CVs, and export reports.
 
+## Live Demo
+
+- Frontend: https://ats-pro-five.vercel.app
+- Backend health check: https://ats-pro-api.onrender.com/api/health
+
+The backend is hosted on Render's free tier, so the first request after a long
+idle period can take about 50 seconds while the service wakes up.
+
 ## Highlights
 
 - Authentication with JWT and role-based access control for Admin and HR users.
@@ -33,6 +41,30 @@ server/prisma/    Prisma schema and migrations
 tests/e2e/        Playwright E2E tests
 public/           Static assets
 ```
+
+## Production Architecture
+
+```mermaid
+flowchart LR
+  User["User / HR"] --> Vercel["Vercel\nReact + Vite"]
+  Vercel --> Render["Render\nExpress API"]
+  Render --> Neon["Neon\nPostgreSQL"]
+  Render --> Cloudinary["Cloudinary\nCVs + avatars"]
+  Render --> Gmail["Gmail SMTP\nPassword reset + notifications"]
+```
+
+Frontend requests use `VITE_BASE_URL` to reach the Render API. The backend
+allows the deployed frontend through `CLIENT_URL` and stores relational data in
+PostgreSQL, while uploaded CVs and avatars are stored in Cloudinary.
+
+## Core Workflows
+
+- Public candidates browse open roles and apply with contact information plus
+  an optional CV file.
+- HR users manage jobs, move candidates through a Kanban pipeline, add notes,
+  schedule interviews, and upload/download CVs.
+- Admin users can export candidate reports to Excel/PDF and access protected
+  management actions.
 
 ## Environment
 
