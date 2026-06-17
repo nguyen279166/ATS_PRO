@@ -56,6 +56,20 @@ model Candidate {
 
   notes      Note[]
   interviews Interview[]
+  cvChunks   CandidateCvChunk[]
+}
+
+model CandidateCvChunk {
+  id          String   @id @default(uuid())
+  candidateId String
+  content     String   @db.Text
+  chunkIndex  Int
+  embedding   Unsupported("vector(1536)")
+  createdAt   DateTime @default(now())
+
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
 }
 
 model Note {

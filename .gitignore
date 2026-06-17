@@ -33,6 +33,7 @@ server/uploads
 /test-results/
 /server/test-results/
 /playwright-report/
+/reports/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/

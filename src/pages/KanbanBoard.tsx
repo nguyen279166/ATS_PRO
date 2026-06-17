@@ -9,12 +9,20 @@ import AddCandidateModal from "../components/AddCandidateModal";
 import CandidateNotes from "../components/CandidateNotes";
 import CandidateInterviews from "../components/CandidateInterviews";
 import CandidateCV from "../components/CandidateCV";
+import CandidateAskAi from "../components/CandidateAskAi";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { API_BASE_URL } from "../config/env";
 import Avatar from "../components/Avatar";
 import { formatDate } from "../utils/date";
+
+const candidatePanelTabs = [
+  { key: "notes", label: "Ghi chú" },
+  { key: "interviews", label: "Lịch PV" },
+  { key: "cv", label: "CV" },
+  { key: "ai", label: "AI" },
+] as const;
 
 export default function KanbanBoard() {
   const { jobId } = useParams();
@@ -47,7 +55,7 @@ export default function KanbanBoard() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
     null,
   );
-  const [activeTab, setActiveTab] = useState<"notes" | "interviews" | "cv">("notes");
+  const [activeTab, setActiveTab] = useState<(typeof candidatePanelTabs)[number]["key"]>("notes");
 
   // Dùng bảo kiếm: Chặn từ khoá lại, khi tay người gõ ngưng nghỉ đủ 500ms thì mới thả chạy
   const debouncedSearchTerm = useDebounce(searchTerm, 200);
@@ -339,23 +347,23 @@ export default function KanbanBoard() {
 
             {/* Tab Navigation */}
             <div className='flex border-b border-[#d8c8b5] shrink-0'>
-                          {(["notes", "interviews", "cv"] as const).map((tab) => (
+              {candidatePanelTabs.map((tab) => (
                 <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
                   className={`flex-1 py-3 text-sm font-semibold transition-colors ${
-                    activeTab === tab
+                    activeTab === tab.key
                       ? "text-[#c2652a] border-b-2 border-[#c2652a]"
                       : "text-[#9a7655] hover:text-[#3a302a]"
                   }`}
                 >
-                  {tab === "notes" ? "📝 Ghi chú" : tab === "interviews" ? "📅 Lịch PV" : "📄 CV"}
+                  {tab.label}
                 </button>
               ))}
             </div>
 
             {/* Tab Content */}
-                        <div className='p-5 flex-1 overflow-y-auto'>
+            <div className='p-5 flex-1 overflow-y-auto'>
               {activeTab === "notes" ? (
                 <CandidateNotes
                   candidateId={selectedCandidate.id}
@@ -363,12 +371,17 @@ export default function KanbanBoard() {
                 />
               ) : activeTab === "interviews" ? (
                 <CandidateInterviews candidateId={selectedCandidate.id} />
-              ) : (
+              ) : activeTab === "cv" ? (
                 <CandidateCV
                   candidateId={selectedCandidate.id}
                   candidateName={selectedCandidate.name}
                   initialCvUrl={selectedCandidate.cvUrl}
                   initialCvFileName={selectedCandidate.cvFileName}
+                />
+              ) : (
+                <CandidateAskAi
+                  candidateId={selectedCandidate.id}
+                  candidateName={selectedCandidate.name}
                 />
               )}
             </div>

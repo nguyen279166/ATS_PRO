@@ -5,10 +5,16 @@ import type { AuthRequest } from "./authMiddleware";
 import { cvUpload, deleteCv, saveCv } from "../utils/cvStorage";
 import { validateBody } from "../middleware/validate";
 import {
+  askCandidateCvSchema,
   bulkCandidateSchema,
   candidateBodySchema,
   updateCandidateStatusSchema,
 } from "../validation/schemas";
+import {
+  askCandidateCv,
+  deleteCandidateCvIndex,
+  indexCandidateCv,
+} from "../utils/rag";
 
 // ── Email template dùng chung ─────────────────────────────────
 const buildEmailTemplate = (
@@ -245,6 +251,9 @@ router.post("/:id/cv", cvUpload.single("cv"), async (req: AuthRequest, res) => {
       where: { id },
       data: storedCv,
     });
+    indexCandidateCv(id, req.file).catch((error) => {
+      console.error("Loi khi index CV:", error);
+    });
     res.json(updated);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Lỗi server";
@@ -261,6 +270,7 @@ router.delete("/:id/cv", async (req: AuthRequest, res) => {
       return res.status(404).json({ error: "Không có CV" });
 
     await deleteCv(candidate.cvUrl, candidate.cvPublicId);
+    await deleteCandidateCvIndex(id);
 
     const updated = await prisma.candidate.update({
       where: { id },
@@ -271,5 +281,27 @@ router.delete("/:id/cv", async (req: AuthRequest, res) => {
     res.status(500).json({ error: "Lỗi khi xóa CV" });
   }
 });
+
+// POST /api/candidates/:id/ask -> Hoi AI ve noi dung CV
+router.post(
+  "/:id/ask",
+  validateBody(askCandidateCvSchema),
+  async (req: AuthRequest, res) => {
+    try {
+      const id = String(req.params.id);
+      const candidate = await prisma.candidate.findUnique({ where: { id } });
+      if (!candidate) {
+        return res.status(404).json({ error: "Khong tim thay ung vien" });
+      }
+
+      const result = await askCandidateCv(id, req.body.question);
+      res.json(result);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Khong the hoi dap CV";
+      res.status(400).json({ error: message });
+    }
+  },
+);
 
 export default router;

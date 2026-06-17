@@ -3,6 +3,7 @@ import prisma from "../prisma";
 import { cvUpload, saveCv } from "../utils/cvStorage";
 import { validateBody } from "../middleware/validate";
 import { publicApplySchema } from "../validation/schemas";
+import { indexCandidateCv } from "../utils/rag";
 
 const router = Router();
 
@@ -66,6 +67,11 @@ router.post("/apply", cvUpload.single("cv"), validateBody(publicApplySchema), as
     });
 
     res.status(201).json({ message: "Ứng tuyển thành công!", candidate });
+    if (req.file) {
+      indexCandidateCv(candidate.id, req.file).catch((error) => {
+        console.error("Loi khi index CV public apply:", error);
+      });
+    }
   } catch (error: unknown) {
     const msg =
       error instanceof Error ? error.message : "Lỗi server khi nộp đơn";
