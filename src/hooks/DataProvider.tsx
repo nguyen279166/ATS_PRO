@@ -1,9 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect, useContext } from "react";
-import axios from "axios";
 import { useAuth } from "./useAuth";
 import type { Job, Candidate } from "../types";
-import { API_BASE_URL } from "../config/env";
+import { apiClient } from "../api/client";
 
 export const DataContext = createContext<{
   jobs: Job[];
@@ -24,12 +23,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (!isLoggedIn) return; // Không tải data nếu chưa đăng nhập
     if (showLoader) setLoading(true);
     try {
-      const token = localStorage.getItem("token_lay_duoc");
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-
       const [jobsRes, candidatesRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/jobs`, config),
-        axios.get(`${API_BASE_URL}/api/candidates?page=1&limit=1000`, config),
+        apiClient.get("/api/jobs"),
+        apiClient.get("/api/candidates?page=1&limit=1000"),
       ]);
 
       setJobs(jobsRes.data);

@@ -3,6 +3,12 @@ import prisma from "../prisma";
 import { sendEmail } from "../utils/mailer";
 import type { AuthRequest } from "./authMiddleware";
 import { cvUpload, deleteCv, saveCv } from "../utils/cvStorage";
+import { validateBody } from "../middleware/validate";
+import {
+  bulkCandidateSchema,
+  candidateBodySchema,
+  updateCandidateStatusSchema,
+} from "../validation/schemas";
 
 // ── Email template dùng chung ─────────────────────────────────
 const buildEmailTemplate = (
@@ -95,7 +101,7 @@ router.get("/", async (req: AuthRequest, res) => {
   }
 });
 
-router.post("/", async (req, res) => {
+router.post("/", validateBody(candidateBodySchema), async (req, res) => {
   try {
     const { name, email, jobId, status } = req.body;
     const candidate = await prisma.candidate.create({
@@ -107,7 +113,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", validateBody(updateCandidateStatusSchema), async (req, res) => {
   try {
     const id = req.params.id as string;
     const { status } = req.body;
@@ -156,7 +162,7 @@ router.delete("/:id", async (req: AuthRequest, res) => {
   }
 });
 // PATCH /api/candidates/bulk → Bulk update status hoặc bulk delete
-router.patch("/bulk", async (req: AuthRequest, res) => {
+router.patch("/bulk", validateBody(bulkCandidateSchema), async (req: AuthRequest, res) => {
   try {
     const { ids, action, status } = req.body as {
       ids: string[];

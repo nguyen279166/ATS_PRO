@@ -16,7 +16,7 @@ import { initMailer } from "./utils/mailer";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const allowedOrigins = (process.env.CLIENT_URL || process.env.FRONTEND_URL || "")
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -38,7 +38,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Route kiểm tra server
 app.get("/api/health", (req, res) => {
-  res.json({ status: "OK", message: "ATS Server đang chạy! 🚀" });
+  res.status(200).json({ status: "OK"});
 });
 
 // Gắn Route Job vào đường dẫn /api/jobs

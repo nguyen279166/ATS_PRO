@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -13,7 +12,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import { API_BASE_URL } from "../config/env";
+import { apiClient, isApiError } from "../api/client";
 import type { Job } from "../types";
 
 const splitDescriptionSections = (description: string) =>
@@ -76,7 +75,7 @@ export default function LandingPage() {
   useEffect(() => {
     const fetchPublicJobs = async () => {
       try {
-        const res = await axios.get(`${API_BASE_URL}/api/public/jobs`);
+        const res = await apiClient.get("/api/public/jobs");
         setOpenJobs(res.data);
       } catch (error) {
         console.error("Lỗi khi tải công việc:", error);
@@ -99,9 +98,7 @@ export default function LandingPage() {
       formData.append("email", applicantEmail);
       if (cvFile) formData.append("cv", cvFile);
 
-      await axios.post(`${API_BASE_URL}/api/public/apply`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await apiClient.post("/api/public/apply", formData);
       toast.success(
         "Ứng tuyển thành công! Nhà tuyển dụng sẽ sớm liên hệ với bạn.",
       );
@@ -110,7 +107,7 @@ export default function LandingPage() {
       setApplicantEmail("");
       setCvFile(null);
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
+      if (isApiError(error)) {
         toast.error(error.response?.data?.error || "Lỗi khi ứng tuyển");
       } else {
         toast.error("Lỗi khi ứng tuyển");

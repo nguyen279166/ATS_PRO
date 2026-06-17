@@ -1,6 +1,8 @@
 import { Router } from "express";
 import prisma from "../prisma";
 import { cvUpload, saveCv } from "../utils/cvStorage";
+import { validateBody } from "../middleware/validate";
+import { publicApplySchema } from "../validation/schemas";
 
 const router = Router();
 
@@ -33,7 +35,7 @@ router.get("/jobs", async (req, res) => {
 // ========================
 // POST /api/public/apply → Ứng viên nộp CV (có thể kèm file)
 // ========================
-router.post("/apply", cvUpload.single("cv"), async (req, res) => {
+router.post("/apply", cvUpload.single("cv"), validateBody(publicApplySchema), async (req, res) => {
   try {
     const { jobId, name, email } = req.body;
 

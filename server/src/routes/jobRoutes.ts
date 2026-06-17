@@ -2,6 +2,8 @@ import { Router } from "express";
 import prisma from "../prisma";
 import type { AuthRequest } from "./authMiddleware";
 import { requireAdmin } from "./authMiddleware";
+import { validateBody } from "../middleware/validate";
+import { jobBodySchema } from "../validation/schemas";
 
 const router = Router();
 
@@ -23,7 +25,7 @@ router.get("/", async (_req: AuthRequest, res) => {
 });
 
 // POST /api/jobs → Tạo Job mới
-router.post("/", async (req: AuthRequest, res) => {
+router.post("/", validateBody(jobBodySchema), async (req: AuthRequest, res) => {
   try {
     const { title, department, location, description } = req.body;
     const userId = req.user?.userId;
@@ -44,7 +46,7 @@ router.post("/", async (req: AuthRequest, res) => {
 });
 
 // PUT /api/jobs/:id → Cập nhật Job
-router.put("/:id", async (req: AuthRequest, res) => {
+router.put("/:id", validateBody(jobBodySchema), async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
     const { title, department, location, description } = req.body;
