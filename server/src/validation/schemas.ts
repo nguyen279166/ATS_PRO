@@ -80,3 +80,7 @@ export const publicApplySchema = z.object({
   name: requiredText("Ho ten", 120),
   email: emailSchema,
 });
+
+export const askCandidateCvSchema = z.object({
+  question: requiredText("Cau hoi", 500),
+});
