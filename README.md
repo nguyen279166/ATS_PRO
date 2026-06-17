@@ -23,6 +23,22 @@ idle period can take about 50 seconds while the service wakes up.
 - End-to-end coverage with Playwright.
 - Production-style environment configuration through `.env` files.
 
+## Screenshots
+
+### Public Careers Page
+
+![ATS Pro public careers page](docs/screenshots/landing.png)
+
+### Dashboard
+
+![ATS Pro dashboard overview](docs/screenshots/dashboard.png)
+
+### Jobs And Candidates
+
+![ATS Pro job openings](docs/screenshots/jobs.png)
+
+![ATS Pro candidates directory](docs/screenshots/candidates.png)
+
 ## Tech Stack
 
 - Frontend: React, TypeScript, Vite, Tailwind CSS, React Router, React Hook Form,
