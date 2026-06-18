@@ -13,6 +13,7 @@ import {
 import {
   askCandidateCv,
   deleteCandidateCvIndex,
+  getRagErrorMessage,
   indexCandidateCv,
 } from "../utils/rag";
 
@@ -251,10 +252,16 @@ router.post("/:id/cv", cvUpload.single("cv"), async (req: AuthRequest, res) => {
       where: { id },
       data: storedCv,
     });
-    indexCandidateCv(id, req.file).catch((error) => {
+
+    let cvIndex: Awaited<ReturnType<typeof indexCandidateCv>>;
+    try {
+      cvIndex = await indexCandidateCv(id, req.file);
+    } catch (error) {
       console.error("Loi khi index CV:", error);
-    });
-    res.json(updated);
+      cvIndex = { indexed: false, reason: getRagErrorMessage(error) };
+    }
+
+    res.json({ ...updated, cvIndex });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Lỗi server";
     res.status(500).json({ error: msg });
@@ -297,8 +304,7 @@ router.post(
       const result = await askCandidateCv(id, req.body.question);
       res.json(result);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Khong the hoi dap CV";
+      const message = getRagErrorMessage(error);
       res.status(400).json({ error: message });
     }
   },

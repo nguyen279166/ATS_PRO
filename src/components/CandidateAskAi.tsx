@@ -29,12 +29,14 @@ export default function CandidateAskAi({ candidateId, candidateName }: Props) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AskResponse | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const askAi = async (value = question) => {
     const trimmed = value.trim();
     if (!trimmed) return;
 
     setLoading(true);
+    setErrorMessage(null);
     try {
       const res = await apiClient.post<AskResponse>(
         `/api/candidates/${candidateId}/ask`,
@@ -46,6 +48,7 @@ export default function CandidateAskAi({ candidateId, candidateName }: Props) {
       const message = isApiError(error)
         ? error.response?.data?.error || "Không thể hỏi AI về CV"
         : "Không thể hỏi AI về CV";
+      setErrorMessage(message);
       toast.error(message);
     } finally {
       setLoading(false);
@@ -102,6 +105,12 @@ export default function CandidateAskAi({ candidateId, candidateName }: Props) {
         </button>
       </form>
 
+      {errorMessage && (
+        <div className="mb-4 rounded-lg border border-[#d7a184] bg-[#fff0e8] p-3 text-sm font-semibold text-[#8c3c3c]">
+          {errorMessage}
+        </div>
+      )}
+
       {result ? (
         <div className="space-y-4">
           <div className="rounded-lg border border-[#d8c8b5] bg-[#fff7eb] p-4">
@@ -135,7 +144,7 @@ export default function CandidateAskAi({ candidateId, candidateName }: Props) {
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-[#d8c8b5] bg-[#fff7eb]/70 p-5 text-center text-sm text-[#9a7655]">
-          Upload CV PDF/DOCX trước, sau đó hỏi AI để tìm thông tin trong hồ sơ.
+          Upload CV PDF/DOCX trước, đợi thông báo index AI thành công, sau đó hỏi AI để tìm thông tin trong hồ sơ.
         </div>
       )}
     </div>

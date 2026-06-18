@@ -12,6 +12,16 @@ interface Props {
   initialCvFileName?: string | null;
 }
 
+type CvUploadResponse = {
+  cvUrl: string | null;
+  cvFileName?: string | null;
+  cvIndex?: {
+    indexed: boolean;
+    chunks?: number;
+    reason?: string;
+  };
+};
+
 export default function CandidateCV({
   candidateId,
   candidateName,
@@ -89,13 +99,21 @@ export default function CandidateCV({
       const formData = new FormData();
       formData.append("cv", file);
 
-      const res = await apiClient.post(
+      const res = await apiClient.post<CvUploadResponse>(
         `/api/candidates/${candidateId}/cv`,
         formData,
       );
       setCvUrl(res.data.cvUrl);
       setCvFileName(res.data.cvFileName ?? file.name);
-      toast.success("Upload CV thành công!");
+      if (res.data.cvIndex?.indexed) {
+        toast.success(`Upload CV và index AI thành công (${res.data.cvIndex.chunks} đoạn)`);
+      } else if (res.data.cvIndex?.reason) {
+        toast.warning(
+          `Upload CV thành công, nhưng AI chưa đọc được file này: ${res.data.cvIndex.reason}`,
+        );
+      } else {
+        toast.success("Upload CV thành công!");
+      }
     } catch (err: unknown) {
       if (isApiError(err)) {
         toast.error(err.response?.data?.error || "Lỗi upload CV");
@@ -162,7 +180,7 @@ export default function CandidateCV({
           </div>
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-bold text-[#3a302a]">{fileName}</p>
-            <p className="text-xs text-[#9a7655]">PDF / DOC / DOCX / JPG / PNG</p>
+            <p className="text-xs text-[#9a7655]">PDF / DOCX để dùng AI · JPG/PNG chỉ lưu hồ sơ</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Download */}
@@ -209,7 +227,7 @@ export default function CandidateCV({
           <span className="text-sm font-semibold text-[#7d6f62] transition-colors group-hover:text-[#8a4518]">
             {uploading ? "Đang upload..." : `Upload CV cho ${candidateName}`}
           </span>
-          <span className="text-xs text-[#9a7655]">PDF, DOC, DOCX, JPG, PNG · Tối đa 10MB</span>
+          <span className="text-xs text-[#9a7655]">PDF/DOCX để hỏi AI · JPG/PNG chỉ lưu hồ sơ · Tối đa 10MB</span>
         </button>
       )}
 
