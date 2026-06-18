@@ -7,7 +7,8 @@ import { Prisma } from "../../generated/prisma/client";
 
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2";
-const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash";
+const GEMINI_CHAT_MODEL =
+  process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash-lite";
 const EMBEDDING_DIMENSIONS = 1536;
 const MAX_CHUNK_CHARS = 1200;
 const CHUNK_OVERLAP_CHARS = 180;
@@ -43,6 +44,16 @@ export function getRagErrorMessage(error: unknown) {
     message.includes("exceeded your current quota")
   ) {
     return "AI API key da het quota hoac chua bat billing";
+  }
+
+  if (
+    maybeCode.status === 503 ||
+    maybeCode.code === "UNAVAILABLE" ||
+    message.includes("unavailable") ||
+    message.includes("high demand") ||
+    message.includes("overloaded")
+  ) {
+    return "Gemini dang qua tai tam thoi. Vui long thu lai sau vai phut.";
   }
 
   if (

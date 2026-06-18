@@ -114,7 +114,7 @@ CLOUDINARY_CV_FOLDER=ats-pro/cv
 CLOUDINARY_AVATAR_FOLDER=ats-pro/avatars
 GEMINI_API_KEY=
 GEMINI_EMBEDDING_MODEL=gemini-embedding-2
-GEMINI_CHAT_MODEL=gemini-2.5-flash
+GEMINI_CHAT_MODEL=gemini-2.5-flash-lite
 ```
 
 Cloudinary variables are optional in local development. If they are not set, CVs
