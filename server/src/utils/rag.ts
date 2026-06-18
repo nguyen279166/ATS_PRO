@@ -1,12 +1,19 @@
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
 import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import { randomUUID } from "crypto";
 import prisma from "../prisma";
 import { Prisma } from "../../generated/prisma/client";
 
-const EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
-const CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
+const AI_PROVIDER = (process.env.AI_PROVIDER || "gemini").toLowerCase();
+const OPENAI_EMBEDDING_MODEL =
+  process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
+const OPENAI_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
+const GEMINI_EMBEDDING_MODEL =
+  process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2";
+const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash";
+const EMBEDDING_DIMENSIONS = 1536;
 const MAX_CHUNK_CHARS = 1200;
 const CHUNK_OVERLAP_CHARS = 180;
 
@@ -40,11 +47,15 @@ export function getRagErrorMessage(error: unknown) {
     message.includes("insufficient_quota") ||
     message.includes("exceeded your current quota")
   ) {
-    return "OpenAI API key da het quota hoac chua bat billing";
+    return "AI API key da het quota hoac chua bat billing";
   }
 
-  if (message.includes("incorrect api key") || message.includes("invalid api key")) {
-    return "OpenAI API key khong hop le";
+  if (
+    message.includes("incorrect api key") ||
+    message.includes("invalid api key") ||
+    message.includes("api key not valid")
+  ) {
+    return "AI API key khong hop le";
   }
 
   return error.message || "Khong the xu ly AI cho CV";
@@ -53,6 +64,19 @@ export function getRagErrorMessage(error: unknown) {
 function getOpenAiClient() {
   if (!process.env.OPENAI_API_KEY) return null;
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
+
+function getGeminiClient() {
+  if (!process.env.GEMINI_API_KEY) return null;
+  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+}
+
+function getConfiguredProvider() {
+  if (AI_PROVIDER === "openai") return getOpenAiClient() ? "openai" : null;
+  if (AI_PROVIDER === "gemini") return getGeminiClient() ? "gemini" : null;
+  if (getGeminiClient()) return "gemini";
+  if (getOpenAiClient()) return "openai";
+  return null;
 }
 
 function normalizeText(text: string) {
@@ -114,23 +138,97 @@ function vectorToSql(vector: number[]) {
 }
 
 async function createEmbedding(input: string) {
-  const client = getOpenAiClient();
-  if (!client) return null;
+  const provider = getConfiguredProvider();
+  if (provider === "gemini") {
+    const client = getGeminiClient();
+    if (!client) return null;
 
-  const response = await client.embeddings.create({
-    model: EMBEDDING_MODEL,
-    input,
-  });
+    const response = await client.models.embedContent({
+      model: GEMINI_EMBEDDING_MODEL,
+      contents: input,
+      config: {
+        outputDimensionality: EMBEDDING_DIMENSIONS,
+      },
+    });
 
-  return response.data[0]?.embedding || null;
+    return response.embeddings?.[0]?.values || null;
+  }
+
+  if (provider === "openai") {
+    const client = getOpenAiClient();
+    if (!client) return null;
+
+    const response = await client.embeddings.create({
+      model: OPENAI_EMBEDDING_MODEL,
+      input,
+    });
+
+    return response.data[0]?.embedding || null;
+  }
+
+  return null;
+}
+
+async function createChatAnswer(context: string, question: string) {
+  const provider = getConfiguredProvider();
+  const systemInstruction =
+    "You are an HR assistant. Answer only from the provided CV context. If the answer is not in the context, say you do not have enough information.";
+
+  if (provider === "gemini") {
+    const client = getGeminiClient();
+    if (!client) throw new Error("GEMINI_API_KEY is not configured");
+
+    const response = await client.models.generateContent({
+      model: GEMINI_CHAT_MODEL,
+      contents: `CV context:\n${context}\n\nQuestion: ${question}`,
+      config: {
+        temperature: 0.2,
+        systemInstruction,
+      },
+    });
+
+    return response.text?.trim() || "Khong the tao cau tra loi tu CV.";
+  }
+
+  if (provider === "openai") {
+    const client = getOpenAiClient();
+    if (!client) throw new Error("OPENAI_API_KEY is not configured");
+
+    const response = await client.chat.completions.create({
+      model: OPENAI_CHAT_MODEL,
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: systemInstruction,
+        },
+        {
+          role: "user",
+          content: `CV context:\n${context}\n\nQuestion: ${question}`,
+        },
+      ],
+    });
+
+    return (
+      response.choices[0]?.message?.content?.trim() ||
+      "Khong the tao cau tra loi tu CV."
+    );
+  }
+
+  throw new Error("GEMINI_API_KEY is not configured");
 }
 
 export async function indexCandidateCv(
   candidateId: string,
   file: Express.Multer.File,
 ) {
-  const client = getOpenAiClient();
-  if (!client) return { indexed: false, reason: "OPENAI_API_KEY is not configured" };
+  const provider = getConfiguredProvider();
+  if (!provider) {
+    return {
+      indexed: false,
+      reason: "GEMINI_API_KEY is not configured",
+    };
+  }
 
   const text = await extractCvText(file);
   const chunks = chunkText(text);
@@ -181,7 +279,6 @@ export async function askCandidateCv(
   candidateId: string,
   question: string,
 ): Promise<RagAnswer> {
-  const client = getOpenAiClient();
   const existingChunks = await prisma.$queryRaw<{ count: bigint }[]>`
     SELECT COUNT(*)::bigint AS count
     FROM "CandidateCvChunk"
@@ -196,8 +293,8 @@ export async function askCandidateCv(
     };
   }
 
-  if (!client) {
-    throw new Error("OPENAI_API_KEY is not configured");
+  if (!getConfiguredProvider()) {
+    throw new Error("GEMINI_API_KEY is not configured");
   }
 
   const questionEmbedding = await createEmbedding(question);
@@ -231,26 +328,8 @@ export async function askCandidateCv(
     .map((source, index) => `[Source ${index + 1}]\n${source.content}`)
     .join("\n\n");
 
-  const response = await client.chat.completions.create({
-    model: CHAT_MODEL,
-    temperature: 0.2,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are an HR assistant. Answer only from the provided CV context. If the answer is not in the context, say you do not have enough information.",
-      },
-      {
-        role: "user",
-        content: `CV context:\n${context}\n\nQuestion: ${question}`,
-      },
-    ],
-  });
-
   return {
-    answer:
-      response.choices[0]?.message?.content?.trim() ||
-      "Khong the tao cau tra loi tu CV.",
+    answer: await createChatAnswer(context, question),
     sources,
   };
 }

@@ -66,14 +66,14 @@ flowchart LR
   Vercel --> Render["Render\nExpress API"]
   Render --> Neon["Neon\nPostgreSQL"]
   Render --> Cloudinary["Cloudinary\nCVs + avatars"]
-  Render --> OpenAI["OpenAI\nCV embeddings + answers"]
+  Render --> Gemini["Gemini API\nCV embeddings + answers"]
   Render --> Gmail["Gmail SMTP\nPassword reset + notifications"]
 ```
 
 Frontend requests use `VITE_BASE_URL` to reach the Render API. The backend
 allows the deployed frontend through `CLIENT_URL` and stores relational data in
 PostgreSQL, while uploaded CVs and avatars are stored in Cloudinary. CV AI
-search uses OpenAI embeddings with PostgreSQL `pgvector`.
+search uses Gemini embeddings with PostgreSQL `pgvector`.
 
 ## Core Workflows
 
@@ -112,6 +112,10 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_CV_FOLDER=ats-pro/cv
 CLOUDINARY_AVATAR_FOLDER=ats-pro/avatars
+AI_PROVIDER=gemini
+GEMINI_API_KEY=
+GEMINI_EMBEDDING_MODEL=gemini-embedding-2
+GEMINI_CHAT_MODEL=gemini-2.5-flash
 OPENAI_API_KEY=
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPENAI_CHAT_MODEL=gpt-4o-mini
@@ -120,9 +124,10 @@ OPENAI_CHAT_MODEL=gpt-4o-mini
 Cloudinary variables are optional in local development. If they are not set, CVs
 and avatars are saved under `server/uploads`.
 
-OpenAI variables are optional unless you want to use the CV AI/RAG tab. Without
-`OPENAI_API_KEY`, CV uploads still work, but the backend skips CV indexing and
-the AI question endpoint cannot answer from CV content.
+Gemini variables are optional unless you want to use the CV AI/RAG tab. Without
+`GEMINI_API_KEY`, CV uploads still work, but the backend skips CV indexing and
+the AI question endpoint cannot answer from CV content. OpenAI variables are an
+optional fallback if `AI_PROVIDER=openai`.
 
 Do not commit real `.env` files. If real secrets were ever shared publicly,
 rotate the database password, JWT secret, and mail app password before demoing.
@@ -217,5 +222,5 @@ Suggested CV description:
 
 > ATS Pro - Full-stack recruitment management system using React, TypeScript,
 > Express, Prisma, PostgreSQL, JWT auth, RBAC, Kanban hiring pipeline,
-> Cloudinary CV storage, CV AI search with OpenAI embeddings and pgvector,
+> Cloudinary CV storage, CV AI search with Gemini embeddings and pgvector,
 > reports export, Docker, GitHub Actions CI, and Playwright E2E tests.
