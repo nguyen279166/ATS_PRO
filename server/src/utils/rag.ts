@@ -1,15 +1,10 @@
 import { PDFParse } from "pdf-parse";
 import mammoth from "mammoth";
-import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 import { randomUUID } from "crypto";
 import prisma from "../prisma";
 import { Prisma } from "../../generated/prisma/client";
 
-const AI_PROVIDER = (process.env.AI_PROVIDER || "gemini").toLowerCase();
-const OPENAI_EMBEDDING_MODEL =
-  process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
-const OPENAI_CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2";
 const GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash";
@@ -61,22 +56,9 @@ export function getRagErrorMessage(error: unknown) {
   return error.message || "Khong the xu ly AI cho CV";
 }
 
-function getOpenAiClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
-
 function getGeminiClient() {
   if (!process.env.GEMINI_API_KEY) return null;
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-}
-
-function getConfiguredProvider() {
-  if (AI_PROVIDER === "openai") return getOpenAiClient() ? "openai" : null;
-  if (AI_PROVIDER === "gemini") return getGeminiClient() ? "gemini" : null;
-  if (getGeminiClient()) return "gemini";
-  if (getOpenAiClient()) return "openai";
-  return null;
 }
 
 function normalizeText(text: string) {
@@ -138,92 +120,44 @@ function vectorToSql(vector: number[]) {
 }
 
 async function createEmbedding(input: string) {
-  const provider = getConfiguredProvider();
-  if (provider === "gemini") {
-    const client = getGeminiClient();
-    if (!client) return null;
+  const client = getGeminiClient();
+  if (!client) return null;
 
-    const response = await client.models.embedContent({
-      model: GEMINI_EMBEDDING_MODEL,
-      contents: input,
-      config: {
-        outputDimensionality: EMBEDDING_DIMENSIONS,
-      },
-    });
+  const response = await client.models.embedContent({
+    model: GEMINI_EMBEDDING_MODEL,
+    contents: input,
+    config: {
+      outputDimensionality: EMBEDDING_DIMENSIONS,
+    },
+  });
 
-    return response.embeddings?.[0]?.values || null;
-  }
-
-  if (provider === "openai") {
-    const client = getOpenAiClient();
-    if (!client) return null;
-
-    const response = await client.embeddings.create({
-      model: OPENAI_EMBEDDING_MODEL,
-      input,
-    });
-
-    return response.data[0]?.embedding || null;
-  }
-
-  return null;
+  return response.embeddings?.[0]?.values || null;
 }
 
 async function createChatAnswer(context: string, question: string) {
-  const provider = getConfiguredProvider();
+  const client = getGeminiClient();
+  if (!client) throw new Error("GEMINI_API_KEY is not configured");
+
   const systemInstruction =
     "You are an HR assistant. Answer only from the provided CV context. If the answer is not in the context, say you do not have enough information.";
 
-  if (provider === "gemini") {
-    const client = getGeminiClient();
-    if (!client) throw new Error("GEMINI_API_KEY is not configured");
-
-    const response = await client.models.generateContent({
-      model: GEMINI_CHAT_MODEL,
-      contents: `CV context:\n${context}\n\nQuestion: ${question}`,
-      config: {
-        temperature: 0.2,
-        systemInstruction,
-      },
-    });
-
-    return response.text?.trim() || "Khong the tao cau tra loi tu CV.";
-  }
-
-  if (provider === "openai") {
-    const client = getOpenAiClient();
-    if (!client) throw new Error("OPENAI_API_KEY is not configured");
-
-    const response = await client.chat.completions.create({
-      model: OPENAI_CHAT_MODEL,
+  const response = await client.models.generateContent({
+    model: GEMINI_CHAT_MODEL,
+    contents: `CV context:\n${context}\n\nQuestion: ${question}`,
+    config: {
       temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content: systemInstruction,
-        },
-        {
-          role: "user",
-          content: `CV context:\n${context}\n\nQuestion: ${question}`,
-        },
-      ],
-    });
+      systemInstruction,
+    },
+  });
 
-    return (
-      response.choices[0]?.message?.content?.trim() ||
-      "Khong the tao cau tra loi tu CV."
-    );
-  }
-
-  throw new Error("GEMINI_API_KEY is not configured");
+  return response.text?.trim() || "Khong the tao cau tra loi tu CV.";
 }
 
 export async function indexCandidateCv(
   candidateId: string,
   file: Express.Multer.File,
 ) {
-  const provider = getConfiguredProvider();
-  if (!provider) {
+  if (!getGeminiClient()) {
     return {
       indexed: false,
       reason: "GEMINI_API_KEY is not configured",
@@ -293,7 +227,7 @@ export async function askCandidateCv(
     };
   }
 
-  if (!getConfiguredProvider()) {
+  if (!getGeminiClient()) {
     throw new Error("GEMINI_API_KEY is not configured");
   }
 

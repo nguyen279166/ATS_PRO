@@ -112,13 +112,9 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_CV_FOLDER=ats-pro/cv
 CLOUDINARY_AVATAR_FOLDER=ats-pro/avatars
-AI_PROVIDER=gemini
 GEMINI_API_KEY=
 GEMINI_EMBEDDING_MODEL=gemini-embedding-2
 GEMINI_CHAT_MODEL=gemini-2.5-flash
-OPENAI_API_KEY=
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-OPENAI_CHAT_MODEL=gpt-4o-mini
 ```
 
 Cloudinary variables are optional in local development. If they are not set, CVs
@@ -126,8 +122,7 @@ and avatars are saved under `server/uploads`.
 
 Gemini variables are optional unless you want to use the CV AI/RAG tab. Without
 `GEMINI_API_KEY`, CV uploads still work, but the backend skips CV indexing and
-the AI question endpoint cannot answer from CV content. OpenAI variables are an
-optional fallback if `AI_PROVIDER=openai`.
+the AI question endpoint cannot answer from CV content.
 
 Do not commit real `.env` files. If real secrets were ever shared publicly,
 rotate the database password, JWT secret, and mail app password before demoing.
