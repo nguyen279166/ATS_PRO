@@ -27,6 +27,29 @@ type EmbeddedChunk = {
   embedding: number[];
 };
 
+export function getRagErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) return "Khong the xu ly AI cho CV";
+
+  const message = error.message.toLowerCase();
+  const maybeCode = (error as { code?: string; status?: number; type?: string });
+
+  if (
+    maybeCode.status === 429 ||
+    maybeCode.code === "insufficient_quota" ||
+    maybeCode.type === "insufficient_quota" ||
+    message.includes("insufficient_quota") ||
+    message.includes("exceeded your current quota")
+  ) {
+    return "OpenAI API key da het quota hoac chua bat billing";
+  }
+
+  if (message.includes("incorrect api key") || message.includes("invalid api key")) {
+    return "OpenAI API key khong hop le";
+  }
+
+  return error.message || "Khong the xu ly AI cho CV";
+}
+
 function getOpenAiClient() {
   if (!process.env.OPENAI_API_KEY) return null;
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -159,6 +182,20 @@ export async function askCandidateCv(
   question: string,
 ): Promise<RagAnswer> {
   const client = getOpenAiClient();
+  const existingChunks = await prisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*)::bigint AS count
+    FROM "CandidateCvChunk"
+    WHERE "candidateId" = ${candidateId}
+  `;
+
+  if (Number(existingChunks[0]?.count || 0) === 0) {
+    return {
+      answer:
+        "Chua co noi dung CV duoc index cho ung vien nay. Hay upload lai CV dang PDF/DOCX roi thu hoi AI sau khi upload hoan tat.",
+      sources: [],
+    };
+  }
+
   if (!client) {
     throw new Error("OPENAI_API_KEY is not configured");
   }
