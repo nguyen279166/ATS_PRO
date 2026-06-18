@@ -3,6 +3,7 @@ import mammoth from "mammoth";
 import OpenAI from "openai";
 import { randomUUID } from "crypto";
 import prisma from "../prisma";
+import { Prisma } from "../../generated/prisma/client";
 
 const EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
 const CHAT_MODEL = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
@@ -130,19 +131,18 @@ export async function indexCandidateCv(
       DELETE FROM "CandidateCvChunk" WHERE "candidateId" = ${candidateId}
     `;
 
-    for (const chunk of embeddedChunks) {
-      await tx.$executeRawUnsafe(
-        `
-          INSERT INTO "CandidateCvChunk" ("id", "candidateId", "content", "chunkIndex", "embedding")
-          VALUES ($1, $2, $3, $4, $5::vector)
-        `,
-        randomUUID(),
-        candidateId,
-        chunk.content,
-        chunk.chunkIndex,
-        vectorToSql(chunk.embedding),
-      );
-    }
+    if (embeddedChunks.length === 0) return;
+
+    const rows = embeddedChunks.map((chunk) =>
+      Prisma.sql`(${randomUUID()}, ${candidateId}, ${chunk.content}, ${chunk.chunkIndex}, ${vectorToSql(chunk.embedding)}::vector)`,
+    );
+
+    await tx.$executeRaw(
+      Prisma.sql`
+        INSERT INTO "CandidateCvChunk" ("id", "candidateId", "content", "chunkIndex", "embedding")
+        VALUES ${Prisma.join(rows)}
+      `,
+    );
   });
 
   return { indexed: embeddedChunks.length > 0, chunks: embeddedChunks.length };
@@ -168,19 +168,19 @@ export async function askCandidateCv(
     throw new Error("Could not create question embedding");
   }
 
-  const sources = await prisma.$queryRawUnsafe<RagSource[]>(
-    `
+  const questionVector = vectorToSql(questionEmbedding);
+
+  const sources = await prisma.$queryRaw<RagSource[]>(
+    Prisma.sql`
       SELECT
         "chunkIndex",
         "content",
-        1 - ("embedding" <=> $2::vector) AS "score"
+        1 - ("embedding" <=> ${questionVector}::vector) AS "score"
       FROM "CandidateCvChunk"
-      WHERE "candidateId" = $1
-      ORDER BY "embedding" <=> $2::vector
+      WHERE "candidateId" = ${candidateId}
+      ORDER BY "embedding" <=> ${questionVector}::vector
       LIMIT 5
     `,
-    candidateId,
-    vectorToSql(questionEmbedding),
   );
 
   if (sources.length === 0) {
