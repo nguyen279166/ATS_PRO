@@ -7,8 +7,14 @@ import { Prisma } from "../../generated/prisma/client";
 
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2";
-const GEMINI_CHAT_MODEL =
-  process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash-lite";
+const GEMINI_CHAT_MODELS = (
+  process.env.GEMINI_CHAT_MODELS ||
+  process.env.GEMINI_CHAT_MODEL ||
+  "gemini-2.5-flash-lite,gemini-2.5-flash"
+)
+  .split(",")
+  .map((model) => model.trim())
+  .filter(Boolean);
 const RAG_PROVIDER = (process.env.RAG_PROVIDER || "ollama").toLowerCase();
 const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL || "http://localhost:11434";
@@ -48,6 +54,26 @@ type OllamaChatResponse = {
   response?: string;
 };
 
+function isRetryableAiError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+
+  const message = error.message.toLowerCase();
+  const maybeCode = error as { code?: string; status?: number; type?: string };
+
+  return (
+    maybeCode.status === 429 ||
+    maybeCode.status === 503 ||
+    maybeCode.code === "insufficient_quota" ||
+    maybeCode.code === "UNAVAILABLE" ||
+    maybeCode.type === "insufficient_quota" ||
+    message.includes("insufficient_quota") ||
+    message.includes("exceeded your current quota") ||
+    message.includes("unavailable") ||
+    message.includes("high demand") ||
+    message.includes("overloaded")
+  );
+}
+
 export function getRagErrorMessage(error: unknown) {
   if (!(error instanceof Error)) return "Khong the xu ly AI cho CV";
 
@@ -61,7 +87,7 @@ export function getRagErrorMessage(error: unknown) {
     message.includes("insufficient_quota") ||
     message.includes("exceeded your current quota")
   ) {
-    return "AI API key da het quota hoac chua bat billing";
+    return "AI API key da het quota hoac chua bat billing. Neu dung Gemini, hay doi sang model con quota trong GEMINI_CHAT_MODELS.";
   }
 
   if (
@@ -219,7 +245,15 @@ async function createChatAnswer(
   question: string,
 ) {
   const systemInstruction =
-    "You are an HR assistant. Answer only from the provided CV context and job description. If there is not enough information, say that clearly. When asked about fit, compare candidate evidence against the job requirements. Reply in the same language as the user's question; if the question is Vietnamese, reply in Vietnamese.";
+    [
+      "You are an HR assistant for an ATS product.",
+      "Answer only from the provided CV context and job description.",
+      "If there is not enough information, say that clearly.",
+      "When asked about fit, compare candidate evidence against the job requirements.",
+      "Do not invent missing skills. Only list a gap if the job description explicitly requires it and the CV context does not show it.",
+      "Use a concise structured format when judging fit: Mức độ phù hợp, Bằng chứng, Điểm còn thiếu, Gợi ý phỏng vấn.",
+      "Reply in the same language as the user's question; if the question is Vietnamese, reply in Vietnamese.",
+    ].join(" ");
 
   const prompt = `Job context:\n${jobContext || "No job description provided."}\n\nCV context:\n${cvContext}\n\nQuestion: ${question}`;
 
@@ -246,16 +280,28 @@ async function createChatAnswer(
   const client = getGeminiClient();
   if (!client) throw new Error("GEMINI_API_KEY is not configured");
 
-  const response = await client.models.generateContent({
-    model: GEMINI_CHAT_MODEL,
-    contents: prompt,
-    config: {
-      temperature: 0.2,
-      systemInstruction,
-    },
-  });
+  let lastError: unknown;
+  for (const model of GEMINI_CHAT_MODELS) {
+    try {
+      const response = await client.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          temperature: 0.2,
+          systemInstruction,
+        },
+      });
 
-  return response.text?.trim() || "Khong the tao cau tra loi tu CV.";
+      return response.text?.trim() || "Khong the tao cau tra loi tu CV.";
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableAiError(error)) break;
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Khong the tao cau tra loi tu CV.");
 }
 
 export async function indexCandidateCv(

@@ -119,7 +119,7 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 OLLAMA_CHAT_MODEL=llama3.2:3b
 GEMINI_API_KEY=
 GEMINI_EMBEDDING_MODEL=gemini-embedding-2
-GEMINI_CHAT_MODEL=gemini-2.5-flash-lite
+GEMINI_CHAT_MODELS=gemini-2.5-flash-lite,gemini-2.5-flash
 ```
 
 Cloudinary variables are optional in local development. If they are not set, CVs
@@ -132,10 +132,11 @@ ollama pull nomic-embed-text
 ollama pull llama3.2:3b
 ```
 
-Ollama runs on your own machine, so it is best for local demos. Hosted backend
-services such as Render cannot reach `localhost:11434` on your laptop. For a
-hosted demo, either set `RAG_PROVIDER=gemini` with `GEMINI_API_KEY`, or demo the
-AI feature locally.
+Ollama runs on your own machine, so it is best for local development and demos.
+Hosted backend services such as Render cannot reach `localhost:11434` on your
+laptop. For a hosted demo, set `RAG_PROVIDER=gemini` with `GEMINI_API_KEY`.
+`GEMINI_CHAT_MODELS` accepts a comma-separated fallback list, so the backend can
+try another free Gemini model if the first one is out of quota or overloaded.
 
 Do not commit real `.env` files. If real secrets were ever shared publicly,
 rotate the database password, JWT secret, and mail app password before demoing.
