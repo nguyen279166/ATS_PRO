@@ -67,13 +67,14 @@ flowchart LR
   Render --> Neon["Neon\nPostgreSQL"]
   Render --> Cloudinary["Cloudinary\nCVs + avatars"]
   Render --> Gemini["Gemini API\nCV embeddings + answers"]
+  Local["Local dev"] --> Ollama["Ollama\nlocal CV AI"]
   Render --> Gmail["Gmail SMTP\nPassword reset + notifications"]
 ```
 
 Frontend requests use `VITE_BASE_URL` to reach the Render API. The backend
 allows the deployed frontend through `CLIENT_URL` and stores relational data in
 PostgreSQL, while uploaded CVs and avatars are stored in Cloudinary. CV AI
-search uses Gemini embeddings with PostgreSQL `pgvector`.
+search uses local Ollama or Gemini embeddings with PostgreSQL `pgvector`.
 
 ## Core Workflows
 
@@ -112,6 +113,10 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_CV_FOLDER=ats-pro/cv
 CLOUDINARY_AVATAR_FOLDER=ats-pro/avatars
+RAG_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+OLLAMA_CHAT_MODEL=llama3.2:3b
 GEMINI_API_KEY=
 GEMINI_EMBEDDING_MODEL=gemini-embedding-2
 GEMINI_CHAT_MODEL=gemini-2.5-flash-lite
@@ -120,9 +125,17 @@ GEMINI_CHAT_MODEL=gemini-2.5-flash-lite
 Cloudinary variables are optional in local development. If they are not set, CVs
 and avatars are saved under `server/uploads`.
 
-Gemini variables are optional unless you want to use the CV AI/RAG tab. Without
-`GEMINI_API_KEY`, CV uploads still work, but the backend skips CV indexing and
-the AI question endpoint cannot answer from CV content.
+For free local CV AI, install Ollama and run:
+
+```bash
+ollama pull nomic-embed-text
+ollama pull llama3.2:3b
+```
+
+Ollama runs on your own machine, so it is best for local demos. Hosted backend
+services such as Render cannot reach `localhost:11434` on your laptop. For a
+hosted demo, either set `RAG_PROVIDER=gemini` with `GEMINI_API_KEY`, or demo the
+AI feature locally.
 
 Do not commit real `.env` files. If real secrets were ever shared publicly,
 rotate the database password, JWT secret, and mail app password before demoing.

@@ -21,6 +21,7 @@ type Props = {
 
 const suggestedQuestions = [
   "Tóm tắt CV ứng viên này",
+  "Ứng viên này có phù hợp với công việc này không?",
   "Ứng viên có kinh nghiệm React không?",
   "Kỹ năng backend nổi bật là gì?",
 ];

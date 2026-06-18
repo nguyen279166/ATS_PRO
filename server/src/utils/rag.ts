@@ -9,6 +9,12 @@ const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2";
 const GEMINI_CHAT_MODEL =
   process.env.GEMINI_CHAT_MODEL || "gemini-2.5-flash-lite";
+const RAG_PROVIDER = (process.env.RAG_PROVIDER || "ollama").toLowerCase();
+const OLLAMA_BASE_URL =
+  process.env.OLLAMA_BASE_URL || "http://localhost:11434";
+const OLLAMA_EMBEDDING_MODEL =
+  process.env.OLLAMA_EMBEDDING_MODEL || "nomic-embed-text";
+const OLLAMA_CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL || "llama3.2:3b";
 const EMBEDDING_DIMENSIONS = 1536;
 const MAX_CHUNK_CHARS = 1200;
 const CHUNK_OVERLAP_CHARS = 180;
@@ -28,6 +34,18 @@ type EmbeddedChunk = {
   content: string;
   chunkIndex: number;
   embedding: number[];
+};
+
+type OllamaEmbeddingResponse = {
+  embedding?: number[];
+  embeddings?: number[][];
+};
+
+type OllamaChatResponse = {
+  message?: {
+    content?: string;
+  };
+  response?: string;
 };
 
 export function getRagErrorMessage(error: unknown) {
@@ -64,12 +82,43 @@ export function getRagErrorMessage(error: unknown) {
     return "AI API key khong hop le";
   }
 
+  if (
+    message.includes("fetch failed") ||
+    message.includes("econnrefused") ||
+    message.includes("ollama")
+  ) {
+    return "Ollama chua chay hoac chua co model. Hay mo Ollama va pull model can thiet.";
+  }
+
   return error.message || "Khong the xu ly AI cho CV";
 }
 
 function getGeminiClient() {
   if (!process.env.GEMINI_API_KEY) return null;
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+}
+
+function shouldUseOllama() {
+  return RAG_PROVIDER !== "gemini";
+}
+
+function getOllamaUrl(path: string) {
+  return `${OLLAMA_BASE_URL.replace(/\/$/, "")}${path}`;
+}
+
+async function postOllama<T>(path: string, body: unknown) {
+  const response = await fetch(getOllamaUrl(path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Ollama request failed (${response.status}): ${text}`);
+  }
+
+  return (await response.json()) as T;
 }
 
 function normalizeText(text: string) {
@@ -130,7 +179,25 @@ function vectorToSql(vector: number[]) {
   return `[${vector.join(",")}]`;
 }
 
+function fitEmbeddingDimensions(vector: number[]) {
+  if (vector.length === EMBEDDING_DIMENSIONS) return vector;
+  if (vector.length > EMBEDDING_DIMENSIONS) {
+    return vector.slice(0, EMBEDDING_DIMENSIONS);
+  }
+
+  return [...vector, ...Array(EMBEDDING_DIMENSIONS - vector.length).fill(0)];
+}
+
 async function createEmbedding(input: string) {
+  if (shouldUseOllama()) {
+    const response = await postOllama<OllamaEmbeddingResponse>("/api/embeddings", {
+      model: OLLAMA_EMBEDDING_MODEL,
+      prompt: input,
+    });
+    const embedding = response.embedding || response.embeddings?.[0] || null;
+    return embedding ? fitEmbeddingDimensions(embedding) : null;
+  }
+
   const client = getGeminiClient();
   if (!client) return null;
 
@@ -142,19 +209,46 @@ async function createEmbedding(input: string) {
     },
   });
 
-  return response.embeddings?.[0]?.values || null;
+  const embedding = response.embeddings?.[0]?.values || null;
+  return embedding ? fitEmbeddingDimensions(embedding) : null;
 }
 
-async function createChatAnswer(context: string, question: string) {
+async function createChatAnswer(
+  cvContext: string,
+  jobContext: string,
+  question: string,
+) {
+  const systemInstruction =
+    "You are an HR assistant. Answer only from the provided CV context and job description. If there is not enough information, say that clearly. When asked about fit, compare candidate evidence against the job requirements. Reply in the same language as the user's question; if the question is Vietnamese, reply in Vietnamese.";
+
+  const prompt = `Job context:\n${jobContext || "No job description provided."}\n\nCV context:\n${cvContext}\n\nQuestion: ${question}`;
+
+  if (shouldUseOllama()) {
+    const response = await postOllama<OllamaChatResponse>("/api/chat", {
+      model: OLLAMA_CHAT_MODEL,
+      stream: false,
+      messages: [
+        { role: "system", content: systemInstruction },
+        { role: "user", content: prompt },
+      ],
+      options: {
+        temperature: 0.2,
+      },
+    });
+
+    return (
+      response.message?.content?.trim() ||
+      response.response?.trim() ||
+      "Khong the tao cau tra loi tu CV."
+    );
+  }
+
   const client = getGeminiClient();
   if (!client) throw new Error("GEMINI_API_KEY is not configured");
 
-  const systemInstruction =
-    "You are an HR assistant. Answer only from the provided CV context. If the answer is not in the context, say you do not have enough information.";
-
   const response = await client.models.generateContent({
     model: GEMINI_CHAT_MODEL,
-    contents: `CV context:\n${context}\n\nQuestion: ${question}`,
+    contents: prompt,
     config: {
       temperature: 0.2,
       systemInstruction,
@@ -168,7 +262,7 @@ export async function indexCandidateCv(
   candidateId: string,
   file: Express.Multer.File,
 ) {
-  if (!getGeminiClient()) {
+  if (!shouldUseOllama() && !getGeminiClient()) {
     return {
       indexed: false,
       reason: "GEMINI_API_KEY is not configured",
@@ -224,6 +318,30 @@ export async function askCandidateCv(
   candidateId: string,
   question: string,
 ): Promise<RagAnswer> {
+  const candidate = await prisma.candidate.findUnique({
+    where: { id: candidateId },
+    select: {
+      name: true,
+      job: {
+        select: {
+          title: true,
+          department: true,
+          location: true,
+          description: true,
+        },
+      },
+    },
+  });
+
+  const jobContext = candidate?.job
+    ? [
+        `Title: ${candidate.job.title}`,
+        `Department: ${candidate.job.department}`,
+        `Location: ${candidate.job.location}`,
+        `Description: ${candidate.job.description || "No description"}`,
+      ].join("\n")
+    : "";
+
   const existingChunks = await prisma.$queryRaw<{ count: bigint }[]>`
     SELECT COUNT(*)::bigint AS count
     FROM "CandidateCvChunk"
@@ -238,11 +356,13 @@ export async function askCandidateCv(
     };
   }
 
-  if (!getGeminiClient()) {
+  if (!shouldUseOllama() && !getGeminiClient()) {
     throw new Error("GEMINI_API_KEY is not configured");
   }
 
-  const questionEmbedding = await createEmbedding(question);
+  const questionEmbedding = await createEmbedding(
+    `${question}\n\nJob context:\n${jobContext}`,
+  );
   if (!questionEmbedding) {
     throw new Error("Could not create question embedding");
   }
@@ -269,12 +389,12 @@ export async function askCandidateCv(
     };
   }
 
-  const context = sources
+  const cvContext = sources
     .map((source, index) => `[Source ${index + 1}]\n${source.content}`)
     .join("\n\n");
 
   return {
-    answer: await createChatAnswer(context, question),
+    answer: await createChatAnswer(cvContext, jobContext, question),
     sources,
   };
 }
