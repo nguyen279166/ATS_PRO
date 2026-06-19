@@ -7,11 +7,16 @@ type RagSource = {
   chunkIndex: number;
   content: string;
   score: number;
+  keywordScore?: number;
+  hybridScore?: number;
+  matchedKeywords?: string[];
 };
 
 type AskResponse = {
   answer: string;
   sources: RagSource[];
+  retrievalWarning?: string;
+  retrievalMode?: "job" | "question";
 };
 
 type Props = {
@@ -29,19 +34,30 @@ const suggestedQuestions = [
 
 const answerSectionLabels = [
   "Mức độ phù hợp",
+  "Điểm phù hợp",
   "Bằng chứng",
   "Điểm còn thiếu",
+  "Điểm cộng",
   "Gợi ý phỏng vấn",
   "Tóm tắt",
   "Kết luận",
 ];
 
 function parseAnswerSections(answer: string) {
+  let normalizedAnswer = answer;
+  for (const label of answerSectionLabels) {
+    normalizedAnswer = normalizedAnswer
+      .replaceAll(`**${label}:**`, `\n${label}:`)
+      .replaceAll(`**${label}**:`, `\n${label}:`)
+      .replaceAll(`### ${label}`, `\n${label}:`)
+      .replaceAll(`## ${label}`, `\n${label}:`);
+  }
+
   const sections: { title: string; body: string }[] = [];
   let current: { title: string; body: string[] } | null = null;
 
-  for (const line of answer.split("\n")) {
-    const trimmed = line.trim();
+  for (const line of normalizedAnswer.split("\n")) {
+    const trimmed = cleanMarkdown(line).replace(/^[-*•]\s*/, "");
     const matchedLabel = answerSectionLabels.find((label) =>
       trimmed.toLowerCase().startsWith(`${label.toLowerCase()}:`),
     );
@@ -61,9 +77,9 @@ function parseAnswerSections(answer: string) {
     }
 
     if (current) {
-      current.body.push(line);
+      current.body.push(cleanMarkdown(line));
     } else if (trimmed) {
-      current = { title: "Trả lời", body: [line] };
+      current = { title: "Trả lời", body: [cleanMarkdown(line)] };
     }
   }
 
@@ -74,7 +90,54 @@ function parseAnswerSections(answer: string) {
     });
   }
 
-  return sections.length > 0 ? sections : [{ title: "Trả lời", body: answer }];
+  return sections.length > 0
+    ? sections
+    : [{ title: "Trả lời", body: cleanMarkdown(answer) }];
+}
+
+function cleanMarkdown(value: string) {
+  return value
+    .replace(/^\s{0,3}#{1,6}\s*/, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .trim();
+}
+
+function AnswerBody({ body }: { body: string }) {
+  const lines = body
+    .split("\n")
+    .map((line) => cleanMarkdown(line))
+    .filter(Boolean);
+
+  return (
+    <div className="space-y-1.5">
+      {lines.map((line, index) => {
+        const bullet = line.match(/^[-*•]\s+(.+)/);
+        const numbered = line.match(/^\d+[.)]\s+(.+)/);
+        const content = bullet?.[1] || numbered?.[1] || line;
+
+        if (bullet || numbered) {
+          return (
+            <div
+              key={`${content}-${index}`}
+              className="flex items-start gap-2 text-sm leading-5 text-[#3a302a]"
+            >
+              <span className="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-[#c2652a]" />
+              <span>{content}</span>
+            </div>
+          );
+        }
+
+        return (
+          <p key={`${content}-${index}`} className="text-sm leading-5 text-[#3a302a]">
+            {content}
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function CandidateAskAi({
@@ -181,41 +244,32 @@ export default function CandidateAskAi({
 
       {result ? (
         <div className="space-y-4">
-          <div className="space-y-3 rounded-lg border border-[#d8c8b5] bg-[#fff7eb] p-4">
-            {parseAnswerSections(result.answer).map((section) => (
-              <section key={section.title} className="space-y-1">
-                <h4 className="text-xs font-black uppercase tracking-wide text-[#8a4518]">
-                  {section.title}
+          {result.retrievalWarning && (
+            <div className="rounded-lg border border-[#d9b27c] bg-[#fff4df] px-3 py-2 text-xs font-semibold text-[#7a4d26]">
+              {result.retrievalWarning}
+            </div>
+          )}
+          <div className="space-y-4 rounded-lg border border-[#d8c8b5] bg-[#fff7eb] p-4">
+            {parseAnswerSections(result.answer).map((section, index) => (
+              <section
+                key={`${section.title}-${index}`}
+                className="border-l-2 border-[#d4a36f] pl-3"
+              >
+                <h4 className="mb-1.5 text-xs font-black uppercase text-[#8a4518]">
+                  {section.title === "Điểm phù hợp"
+                    ? "Điểm phù hợp tổng thể"
+                    : section.title}
                 </h4>
-                <p className="whitespace-pre-wrap text-sm leading-6 text-[#3a302a]">
-                  {section.body}
-                </p>
+                {section.title === "Điểm phù hợp" ? (
+                  <p className="text-2xl font-black text-[#c2652a]">
+                    {section.body}
+                  </p>
+                ) : (
+                  <AnswerBody body={section.body} />
+                )}
               </section>
             ))}
           </div>
-
-          {result.sources.length > 0 && (
-            <div>
-              <h4 className="mb-2 text-xs font-black uppercase text-[#8a4518]">
-                Nguồn trích từ CV
-              </h4>
-              <div className="space-y-2">
-                {result.sources.map((source) => (
-                  <details
-                    key={source.chunkIndex}
-                    className="rounded-lg border border-[#d8c8b5] bg-[#fffaf2] p-3"
-                  >
-                    <summary className="cursor-pointer text-xs font-bold text-[#7a4d26]">
-                      Chunk {source.chunkIndex + 1} · độ khớp {Math.round(source.score * 100)}%
-                    </summary>
-                    <p className="mt-2 line-clamp-6 text-xs leading-5 text-[#7d6f62]">
-                      {source.content}
-                    </p>
-                  </details>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-[#d8c8b5] bg-[#fff7eb]/70 p-5 text-center text-sm text-[#9a7655]">

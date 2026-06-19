@@ -15,7 +15,13 @@ const GEMINI_CHAT_MODELS = (
   .split(",")
   .map((model) => model.trim())
   .filter(Boolean);
-const RAG_PROVIDER = (process.env.RAG_PROVIDER || "auto").toLowerCase();
+const RAG_PROVIDER = (process.env.RAG_PROVIDER || "ollama").toLowerCase();
+const RAG_EMBEDDING_PROVIDER = (
+  process.env.RAG_EMBEDDING_PROVIDER || RAG_PROVIDER
+).toLowerCase();
+const RAG_CHAT_PROVIDER = (
+  process.env.RAG_CHAT_PROVIDER || RAG_PROVIDER
+).toLowerCase();
 const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const OLLAMA_EMBEDDING_MODEL =
@@ -28,8 +34,12 @@ const MAX_CHUNK_CHARS = 1200;
 const CHUNK_OVERLAP_CHARS = 180;
 const MIN_EXTRACTED_TEXT_CHARS = 40;
 const TOP_K_CHUNKS = 8;
+const MAX_CANDIDATE_CHUNKS = 100;
 const MIN_CHUNK_SCORE = 0.42;
-const WEAK_RETRIEVAL_SCORE = 0.5;
+const MIN_KEYWORD_VECTOR_SCORE = 0.25;
+const WEAK_HYBRID_SCORE = 0.45;
+const VECTOR_SCORE_WEIGHT = 0.8;
+const KEYWORD_SCORE_WEIGHT = 0.2;
 const EMBEDDING_BATCH_SIZE = 3;
 const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png"]);
 const OCR_PROMPT =
@@ -42,11 +52,16 @@ type RagSource = {
   chunkIndex: number;
   content: string;
   score: number;
+  keywordScore?: number;
+  hybridScore?: number;
+  matchedKeywords?: string[];
 };
 
 type RagAnswer = {
   answer: string;
   sources: RagSource[];
+  retrievalWarning?: string;
+  retrievalMode?: "job" | "question";
 };
 
 type EmbeddedChunk = {
@@ -152,10 +167,18 @@ function getGeminiClient() {
 
 type RagProvider = "ollama" | "gemini";
 
-function getProviderOrder(): RagProvider[] {
-  if (RAG_PROVIDER === "gemini") return ["gemini", "ollama"];
-  if (RAG_PROVIDER === "ollama") return ["ollama", "gemini"];
+function getProviderOrder(provider: string): RagProvider[] {
+  if (provider === "gemini") return ["gemini"];
+  if (provider === "ollama") return ["ollama"];
   return ["ollama", "gemini"];
+}
+
+function getEmbeddingProviderOrder() {
+  return getProviderOrder(RAG_EMBEDDING_PROVIDER);
+}
+
+function getChatProviderOrder() {
+  return getProviderOrder(RAG_CHAT_PROVIDER);
 }
 
 function hasGeminiProvider() {
@@ -163,7 +186,7 @@ function hasGeminiProvider() {
 }
 
 function hasAnyConfiguredProvider() {
-  return getProviderOrder().some((provider) => {
+  return getEmbeddingProviderOrder().some((provider) => {
     if (provider === "gemini") return hasGeminiProvider();
     return true;
   });
@@ -231,7 +254,10 @@ export async function getRagHealth() {
 
   return {
     provider: RAG_PROVIDER,
-    providerOrder: getProviderOrder(),
+    embeddingProvider: RAG_EMBEDDING_PROVIDER,
+    embeddingProviderOrder: getEmbeddingProviderOrder(),
+    chatProvider: RAG_CHAT_PROVIDER,
+    chatProviderOrder: getChatProviderOrder(),
     embeddingDimensions: EMBEDDING_DIMENSIONS,
     ollama: {
       baseUrl: OLLAMA_BASE_URL,
@@ -250,6 +276,97 @@ export async function getRagHealth() {
 
 function normalizeText(text: string) {
   return text.replace(/\s+/g, " ").trim();
+}
+
+const SEARCH_STOP_WORDS = new Set([
+  "ai",
+  "anh",
+  "ban",
+  "bat",
+  "biet",
+  "co",
+  "con",
+  "cong",
+  "cua",
+  "cv",
+  "day",
+  "duoc",
+  "gi",
+  "hay",
+  "hop",
+  "khong",
+  "kinh",
+  "ky",
+  "la",
+  "lam",
+  "mot",
+  "nang",
+  "nay",
+  "nhung",
+  "noi",
+  "phu",
+  "nghiem",
+  "the",
+  "thi",
+  "tin",
+  "tom",
+  "tot",
+  "trong",
+  "tat",
+  "ung",
+  "vien",
+  "viec",
+  "ve",
+  "voi",
+  "what",
+  "which",
+  "candidate",
+  "experience",
+  "skills",
+]);
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function extractSearchKeywords(question: string) {
+  const normalized = normalizeSearchText(question);
+  const tokens = normalized.match(/[a-z0-9][a-z0-9.+#-]*/g) || [];
+
+  return [...new Set(tokens)].filter(
+    (token) =>
+      token.length >= 2 &&
+      !/^\d+$/.test(token) &&
+      !SEARCH_STOP_WORDS.has(token),
+  );
+}
+
+function scoreKeywordMatches(content: string, keywords: string[]) {
+  if (keywords.length === 0) {
+    return { keywordScore: 0, matchedKeywords: [] as string[] };
+  }
+
+  const normalizedContent = normalizeSearchText(content);
+  const contentTokens = normalizedContent.match(/[a-z0-9][a-z0-9.+#-]*/g) || [];
+  const exactTokens = new Set(contentTokens);
+  const compactTokens = new Set(
+    contentTokens.map((token) => token.replace(/[._\-/]/g, "")),
+  );
+  const matchedKeywords = keywords.filter((keyword) => {
+    const compactKeyword = keyword.replace(/[._\-/]/g, "");
+    return (
+      exactTokens.has(keyword) ||
+      (compactKeyword.length >= 2 && compactTokens.has(compactKeyword))
+    );
+  });
+
+  return {
+    keywordScore: matchedKeywords.length / keywords.length,
+    matchedKeywords,
+  };
 }
 
 function getFileExtension(fileName: string) {
@@ -520,7 +637,7 @@ async function createGeminiEmbedding(input: string): Promise<EmbeddingResult | n
 async function createEmbedding(input: string) {
   let lastError: unknown;
 
-  for (const provider of getProviderOrder()) {
+  for (const provider of getEmbeddingProviderOrder()) {
     try {
       if (provider === "gemini") {
         if (!hasGeminiProvider()) continue;
@@ -548,7 +665,34 @@ async function createChatAnswer(
   jobContext: string,
   question: string,
   includeJobContext: boolean,
+  skipFactExtraction = false,
 ) {
+  if (
+    includeJobContext &&
+    !skipFactExtraction &&
+    getChatProviderOrder()[0] === "ollama"
+  ) {
+    const candidateFacts = await createChatAnswer(
+      cvContext,
+      "",
+      [
+        "Trích xuất tối đa 10 sự thật cụ thể về ứng viên từ CV.",
+        "Mỗi dòng dùng dạng: - Sự thật | Bằng chứng: câu trích nguyên văn từ CV.",
+        "Không suy luận, không thêm yêu cầu công việc, không nhắc kỹ năng không có trong CV.",
+      ].join(" "),
+      false,
+      true,
+    );
+
+    return createChatAnswer(
+      `Candidate facts extracted only from CV:\n${candidateFacts}`,
+      jobContext,
+      question,
+      true,
+      true,
+    );
+  }
+
   const baseRules = [
     "You are an HR assistant for an ATS product.",
     "CV context is the ONLY source of facts about the candidate.",
@@ -558,6 +702,8 @@ async function createChatAnswer(
     "For yes/no skill questions, scan CV context literally first. If the skill keyword appears in CV context, answer yes and cite that phrase.",
     "Do not say 'CV không đề cập' when the exact queried skill or phrase appears in CV context.",
     "When citing evidence, quote a short exact phrase from CV context in quotation marks.",
+    "Use plain text only. Do not use Markdown markers such as **, __, #, or backticks.",
+    "Keep the answer concise, preferably under 180 words.",
     "Reply in the same language as the user's question; if Vietnamese, reply in Vietnamese.",
   ];
 
@@ -566,7 +712,17 @@ async function createChatAnswer(
         "Compare CV evidence against job requirements separately.",
         "Bằng chứng must come only from CV context, never from job description.",
         "Điểm còn thiếu must be job requirements absent from CV context.",
-        "Use format: Mức độ phù hợp, Bằng chứng, Điểm còn thiếu, Gợi ý phỏng vấn.",
+        "Treat a missing exact tool as a gap, not as proof that a related capability is absent. For example, experience with another ORM is transferable evidence, while Prisma can still be listed as unverified.",
+        "Use Cao when nearly all core requirements have direct evidence; use Trung bình when the core stack matches but some requirements or experience duration are unverified; use Thấp only when most core requirements lack evidence.",
+        "Do not rate Thấp when the CV directly demonstrates several core responsibilities and technologies from the job.",
+        "Before answering, check for contradictions: anything cited in Bằng chứng must never also appear in Điểm còn thiếu.",
+        "Never put a requirement in Điểm còn thiếu when the same line admits that the CV mentions it.",
+        "For partially covered requirements, list only the uncovered parts. For example, JWT or role-based access control is API security evidence; only rate limiting or data validation may remain unverified.",
+        "Mức độ phù hợp must begin with exactly one rating: Cao, Trung bình, or Thấp, followed by one short explanation.",
+        "Điểm phù hợp must be one integer from 0 to 10 in the format x/10 and must agree with the rating: Cao is 8-10, Trung bình is 5-7, and Thấp is 0-4.",
+        "Every item in Bằng chứng must include a short exact quote from the candidate facts.",
+        "Do not add extra sections such as Điểm cộng.",
+        "Put each section on a new line using exactly these labels: Mức độ phù hợp:, Điểm phù hợp:, Bằng chứng:, Điểm còn thiếu:, Gợi ý phỏng vấn:.",
       ]
     : [
         "Ignore any job description completely.",
@@ -629,7 +785,7 @@ async function createChatAnswer(
   };
 
   let lastError: unknown;
-  for (const provider of getProviderOrder()) {
+  for (const provider of getChatProviderOrder()) {
     try {
       if (provider === "gemini") {
         if (!hasGeminiProvider()) continue;
@@ -773,6 +929,11 @@ export async function askCandidateCv(
         `Description: ${candidate.job.description || "No description"}`,
       ].join("\n")
     : "";
+  const includeJobContext = isJobFitQuestion(question);
+  const retrievalMode = includeJobContext ? "job" : "question";
+  const retrievalInput = includeJobContext
+    ? `${question}\n\nJob requirements:\n${jobContext}`
+    : question;
 
   const existingChunks = await prisma.$queryRaw<{ count: bigint }[]>`
     SELECT COUNT(*)::bigint AS count
@@ -792,14 +953,14 @@ export async function askCandidateCv(
     throw new Error("No AI provider is configured");
   }
 
-  const questionEmbedding = await createEmbedding(question);
+  const questionEmbedding = await createEmbedding(retrievalInput);
   if (!questionEmbedding) {
     throw new Error("Could not create question embedding");
   }
 
   const questionVector = vectorToSql(questionEmbedding.vector);
 
-  const rawSources = await prisma.$queryRaw<RagSource[]>(
+  const vectorSources = await prisma.$queryRaw<RagSource[]>(
     Prisma.sql`
       SELECT
         "chunkIndex",
@@ -810,11 +971,11 @@ export async function askCandidateCv(
         AND "embeddingProvider" = ${questionEmbedding.provider}
         AND "embeddingModel" = ${questionEmbedding.model}
       ORDER BY "embedding" <=> ${questionVector}::vector
-      LIMIT ${TOP_K_CHUNKS}
+      LIMIT ${MAX_CANDIDATE_CHUNKS}
     `,
   );
 
-  if (rawSources.length === 0) {
+  if (vectorSources.length === 0) {
     const indexedProviders = await prisma.$queryRaw<
       { embeddingProvider: string; embeddingModel: string; count: bigint }[]
     >`
@@ -840,15 +1001,43 @@ export async function askCandidateCv(
     };
   }
 
-  const sources = rawSources.filter((source) => source.score >= MIN_CHUNK_SCORE);
-  const bestScore = rawSources[0]?.score ?? 0;
-  const includeJobContext = isJobFitQuestion(question);
+  const searchKeywords = extractSearchKeywords(retrievalInput);
+  const rankedSources = vectorSources
+    .map((source) => {
+      const { keywordScore, matchedKeywords } = scoreKeywordMatches(
+        source.content,
+        searchKeywords,
+      );
+      const hybridScore =
+        searchKeywords.length === 0
+          ? source.score
+          : source.score * VECTOR_SCORE_WEIGHT +
+            keywordScore * KEYWORD_SCORE_WEIGHT;
 
+      return {
+        ...source,
+        keywordScore,
+        hybridScore,
+        matchedKeywords,
+      };
+    })
+    .sort((a, b) => b.hybridScore - a.hybridScore);
+
+  const sources = rankedSources
+    .filter(
+      (source) =>
+        source.score >= MIN_CHUNK_SCORE ||
+        ((source.matchedKeywords?.length || 0) > 0 &&
+          source.score >= MIN_KEYWORD_VECTOR_SCORE),
+    )
+    .slice(0, TOP_K_CHUNKS);
+  const bestScore = rankedSources[0]?.hybridScore ?? 0;
   if (sources.length === 0) {
     return {
       answer:
         "CV da duoc index nhung cau hoi chua khop du doan nao. Hay hoi cu the hon ve kinh nghiem, ky nang, hoc van hoac du an trong CV.",
-      sources: rawSources.slice(0, 3),
+      sources: rankedSources.slice(0, 3),
+      retrievalMode,
     };
   }
 
@@ -856,15 +1045,20 @@ export async function askCandidateCv(
     .map((source, index) => `[Source ${index + 1} | chunk ${source.chunkIndex + 1}]\n${source.content}`)
     .join("\n\n");
 
-  const weakRetrievalNote =
-    bestScore < WEAK_RETRIEVAL_SCORE
-      ? "Luu y: do khop chunk thap, cau tra loi co the thieu chinh xac. Hay mo 'Nguon trich tu CV' de doi chieu.\n\n"
-      : "";
+  const retrievalWarning =
+    bestScore < WEAK_HYBRID_SCORE
+      ? "Độ khớp nguồn CV thấp; hãy mở phần nguồn trích để đối chiếu."
+      : undefined;
 
   return {
-    answer:
-      weakRetrievalNote +
-      (await createChatAnswer(cvContext, jobContext, question, includeJobContext)),
+    answer: await createChatAnswer(
+      cvContext,
+      jobContext,
+      question,
+      includeJobContext,
+    ),
     sources,
+    retrievalWarning,
+    retrievalMode,
   };
 }

@@ -113,7 +113,9 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_CV_FOLDER=ats-pro/cv
 CLOUDINARY_AVATAR_FOLDER=ats-pro/avatars
-RAG_PROVIDER=auto
+RAG_PROVIDER=ollama
+RAG_EMBEDDING_PROVIDER=ollama
+RAG_CHAT_PROVIDER=gemini
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 OLLAMA_CHAT_MODEL=llama3.2:3b
@@ -132,10 +134,14 @@ ollama pull nomic-embed-text
 ollama pull llama3.2:3b
 ```
 
-With `RAG_PROVIDER=auto`, the backend tries local Ollama first and then Gemini if
-`GEMINI_API_KEY` is configured. Ollama runs on your own machine, so it is best
-for local development and demos. Hosted backend services such as Render cannot
-reach `localhost:11434` on your laptop, so set `RAG_PROVIDER=gemini` on Render.
+`RAG_PROVIDER=ollama` and `RAG_PROVIDER=gemini` are strict and never silently
+switch providers. Use `RAG_PROVIDER=auto` only when Ollama-to-Gemini fallback is
+intentional. Ollama runs on your own machine, so it is best for local development
+and demos. Hosted backend services such as Render cannot reach `localhost:11434`
+on your laptop, so set `RAG_PROVIDER=gemini` on Render.
+`RAG_EMBEDDING_PROVIDER` and `RAG_CHAT_PROVIDER` optionally override the shared
+provider. A useful local setup is Ollama embeddings with Gemini chat; changing
+only the chat provider never requires re-indexing the CV.
 `GEMINI_CHAT_MODELS` accepts a comma-separated fallback list, so the backend can
 try another free Gemini chat model if the first one is out of quota or
 overloaded.

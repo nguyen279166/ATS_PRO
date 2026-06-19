@@ -1,7 +1,16 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Upload, FileText, Trash2, Download, Loader2, Sparkles } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  Trash2,
+  Download,
+  Loader2,
+  Sparkles,
+  Eye,
+  X,
+} from "lucide-react";
 import { apiClient, isApiError } from "../api/client";
 import { resolveMediaUrl } from "../utils/media";
 
@@ -30,6 +39,7 @@ type CvUploadResponse = {
 };
 
 type CvIndexStatus = CvUploadResponse["cvIndex"] | null;
+type CvPreview = { url: string; kind: "pdf" | "image" };
 
 export default function CandidateCV({
   candidateId,
@@ -46,12 +56,20 @@ export default function CandidateCV({
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [reindexing, setReindexing] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [preview, setPreview] = useState<CvPreview | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setCvUrl(initialCvUrl ?? null);
     setCvFileName(initialCvFileName ?? null);
   }, [candidateId, initialCvUrl, initialCvFileName]);
+
+  useEffect(() => {
+    return () => {
+      if (preview?.url) URL.revokeObjectURL(preview.url);
+    };
+  }, [preview]);
 
   const detectFileExtension = async (blob: Blob, contentType?: string) => {
     const fromUrl = cvUrl?.match(/\.(pdf|docx?|jpe?g|png)(?=($|[?#]))/i)?.[1];
@@ -216,6 +234,34 @@ export default function CandidateCV({
     }
   };
 
+  const handlePreview = async () => {
+    const href = resolveMediaUrl(cvUrl);
+    if (!href) return;
+
+    setPreviewing(true);
+    try {
+      const response = await axios.get<Blob>(href, { responseType: "blob" });
+      const ext = await detectFileExtension(
+        response.data,
+        response.headers["content-type"],
+      );
+
+      if (ext !== "pdf" && !["jpg", "jpeg", "png"].includes(ext)) {
+        toast.info("Preview hỗ trợ PDF, JPG và PNG. DOC/DOCX cần tải xuống để xem.");
+        return;
+      }
+
+      setPreview({
+        url: URL.createObjectURL(response.data),
+        kind: ext === "pdf" ? "pdf" : "image",
+      });
+    } catch {
+      toast.error("Không tải được bản preview CV");
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
   const fileName = cvFileName || cvUrl?.split("/").pop() || "CV";
 
   return (
@@ -235,6 +281,19 @@ export default function CandidateCV({
             <p className="text-xs text-[#9a7655]">PDF/DOCX · JPG/PNG (AI OCR qua Gemini)</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handlePreview}
+              className="rounded-lg p-2 text-[#8a4518] transition-colors hover:bg-[#f4dfbd]"
+              title="Xem trước"
+              disabled={previewing}
+            >
+              {previewing ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Eye size={16} />
+              )}
+            </button>
             {/* Download */}
             <button
               type="button"
@@ -331,6 +390,51 @@ export default function CandidateCV({
         className="hidden"
         onChange={handleUpload}
       />
+
+      {preview && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onClick={() => setPreview(null)}
+        >
+          <div
+            className="flex h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-[#fffaf2] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#d8c8b5] px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-[#3a302a]">
+                  {fileName}
+                </p>
+                <p className="text-xs text-[#9a7655]">Bản xem trước CV</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                className="rounded-lg p-2 text-[#7d6f62] hover:bg-[#f4dfbd] hover:text-[#3a302a]"
+                title="Đóng"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex min-h-0 flex-1 items-center justify-center bg-[#e8ded0] p-3">
+              {preview.kind === "pdf" ? (
+                <iframe
+                  src={preview.url}
+                  title={`CV ${candidateName}`}
+                  className="h-full w-full rounded bg-white"
+                />
+              ) : (
+                <img
+                  src={preview.url}
+                  alt={`CV ${candidateName}`}
+                  className="max-h-full max-w-full rounded object-contain shadow-lg"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
