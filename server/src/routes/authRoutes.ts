@@ -52,13 +52,19 @@ router.post("/register", validateBody(registerSchema), async (req, res) => {
         fullName,
         email,
         password: hashedPassword, // Lưu mật khẩu ĐÃ MÃ HOÁ
+        role: "hr", // Public registration must never grant Admin privileges.
       },
     });
 
     // 4. Trả về (KHÔNG trả password ra ngoài!)
     res.status(201).json({
       message: "Đăng ký thành công",
-      user: { id: user.id, email: user.email, fullName: user.fullName },
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      },
     });
   } catch {
     res.status(500).json({ error: "Lỗi server khi đăng ký" });

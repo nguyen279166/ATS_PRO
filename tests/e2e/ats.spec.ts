@@ -56,6 +56,8 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
         fullName: "E2E HR User",
         email: HR_TEST_EMAIL,
         password: HR_TEST_PASSWORD,
+        // The API must ignore attempts to self-assign Admin during public signup.
+        role: "admin",
       },
     });
 

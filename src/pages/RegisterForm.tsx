@@ -177,6 +177,27 @@ const RegisterForm = () => {
           </div>
 
           <div>
+            <label className='mb-1.5 block text-sm font-bold'>
+              Vai trò tài khoản
+            </label>
+            <div className='sahara-input flex min-h-11 items-center justify-between gap-3 px-3 py-2 text-sm'>
+              <span className='flex items-center gap-2 font-bold'>
+                <ShieldCheck
+                  size={17}
+                  className='text-[var(--sahara-primary)]'
+                />
+                HR / Nhân sự
+              </span>
+              <span className='rounded-md bg-[var(--sahara-surface-high)] px-2 py-1 text-[11px] font-bold text-[var(--sahara-primary)]'>
+                Mặc định
+              </span>
+            </div>
+            <p className='mt-1 text-xs text-[var(--sahara-muted)]'>
+              Quyền Admin chỉ được cấp bởi quản trị viên hệ thống.
+            </p>
+          </div>
+
+          <div>
             <label className='mb-1.5 block text-sm font-bold'>Mật khẩu</label>
             <div className='relative'>
               <ShieldCheck
