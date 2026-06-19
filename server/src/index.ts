@@ -21,24 +21,10 @@ const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-function isAllowedDevOrigin(origin: string) {
-  try {
-    const url = new URL(origin);
-    return ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
-  } catch {
-    return false;
-  }
-}
-
 app.use(
   cors({
     origin(origin, callback) {
-      if (
-        !origin ||
-        allowedOrigins.length === 0 ||
-        allowedOrigins.includes(origin) ||
-        isAllowedDevOrigin(origin)
-      ) {
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
         callback(null, true);
         return;
       }
@@ -48,13 +34,6 @@ app.use(
   }),
 );
 app.use(express.json());
-app.get("/", (req, res) => {
-  res.json({
-    name: "ATS PRO API",
-    status: "OK",
-    health: "/api/health",
-  });
-});
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Route kiểm tra server
