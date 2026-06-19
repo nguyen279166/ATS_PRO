@@ -1,5 +1,4 @@
 .git
-.agent
 .vscode
 node_modules
 dist

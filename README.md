@@ -20,10 +20,14 @@ idle period can take about 50 seconds while the service wakes up.
   Cloudinary/local fallback storage, notes, interviews, and Kanban status
   updates.
 - Admin-only Excel/PDF export endpoints.
+- AI-assisted CV review for PDF, DOCX, PNG, and JPG files with OCR fallback,
+  PostgreSQL `pgvector` retrieval, cited evidence, and an overall job-fit score.
+- Separate embedding and chat providers: local Ollama can keep indexing free,
+  while Gemini can provide stronger generated answers.
 - End-to-end coverage with Playwright.
 - Production-style environment configuration through `.env` files.
 
-## Screenshots
+## Screenshots (Dark Mode)
 
 ### Public Careers Page
 
@@ -84,6 +88,19 @@ search uses local Ollama or Gemini embeddings with PostgreSQL `pgvector`.
   schedule interviews, and upload/download CVs.
 - Admin users can export candidate reports to Excel/PDF and access protected
   management actions.
+- HR users can preview a CV in the browser and ask grounded questions about its
+  skills, experience, and fit against the job description. Retrieval chunks stay
+  internal; the UI presents the overall score, evidence, gaps, and interview
+  suggestions.
+
+## Demo Walkthrough
+
+1. Open the public careers page and apply to an open role with a CV.
+2. Register or sign in as an HR user, then open a job's Kanban board.
+3. Move candidates through the hiring pipeline and open a candidate profile.
+4. Preview the CV, add notes or an interview, and use the AI tab to compare the
+   CV with the job description.
+5. Sign in as an Admin to demonstrate protected export and delete actions.
 
 ## Environment
 
@@ -207,6 +224,15 @@ E2E tests require the backend and frontend to be running:
 ```bash
 npm run test:e2e
 ```
+
+Regenerate all README screenshots from the local app in dark mode:
+
+```bash
+npm run docs:screenshots
+```
+
+The screenshot command uses `admin@ats.com` / `Password123` by default. Override
+`SCREENSHOT_EMAIL` and `SCREENSHOT_PASSWORD` when using another local seed user.
 
 GitHub Actions runs lint and production builds for both frontend and backend on
 push and pull request.

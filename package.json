@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "docs:screenshots": "node scripts/capture-readme-screenshots.mjs",
     "check": "npm run lint && npm run build"
   },
   "dependencies": {
