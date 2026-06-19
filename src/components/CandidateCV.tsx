@@ -26,6 +26,8 @@ type CvUploadResponse = {
   };
 };
 
+type CvIndexStatus = CvUploadResponse["cvIndex"] | null;
+
 export default function CandidateCV({
   candidateId,
   candidateName,
@@ -37,6 +39,7 @@ export default function CandidateCV({
   const [cvFileName, setCvFileName] = useState<string | null>(
     initialCvFileName ?? null,
   );
+  const [cvIndexStatus, setCvIndexStatus] = useState<CvIndexStatus>(null);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,12 +124,15 @@ export default function CandidateCV({
         cvFileName: nextFileName,
       });
       if (res.data.cvIndex?.indexed) {
+        setCvIndexStatus(res.data.cvIndex);
         toast.success(`Upload CV và index AI thành công (${res.data.cvIndex.chunks} đoạn)`);
       } else if (res.data.cvIndex?.reason) {
+        setCvIndexStatus(res.data.cvIndex);
         toast.warning(
           `Upload CV thành công, nhưng AI chưa đọc được file này: ${res.data.cvIndex.reason}`,
         );
       } else {
+        setCvIndexStatus(null);
         toast.success("Upload CV thành công!");
       }
     } catch (err: unknown) {
@@ -148,6 +154,7 @@ export default function CandidateCV({
       await apiClient.delete(`/api/candidates/${candidateId}/cv`);
       setCvUrl(null);
       setCvFileName(null);
+      setCvIndexStatus(null);
       onCvChange?.({ cvUrl: null, cvFileName: null });
       toast.success("Đã xóa CV!");
     } catch {
@@ -245,6 +252,19 @@ export default function CandidateCV({
           </span>
           <span className="text-xs text-[#9a7655]">PDF/DOCX để hỏi AI · JPG/PNG chỉ lưu hồ sơ · Tối đa 10MB</span>
         </button>
+      )}
+
+      {cvUrl && cvIndexStatus?.indexed && (
+        <div className="mt-3 rounded-lg border border-[#b9c79f] bg-[#f2f6df] px-3 py-2 text-xs font-semibold text-[#53612d]">
+          AI đã index CV này ({cvIndexStatus.chunks || 0} đoạn). Bạn có thể sang tab AI để hỏi.
+        </div>
+      )}
+
+      {cvUrl && cvIndexStatus && !cvIndexStatus.indexed && (
+        <div className="mt-3 rounded-lg border border-[#d7a184] bg-[#fff0e8] px-3 py-2 text-xs font-semibold text-[#8c3c3c]">
+          CV đã lưu, nhưng AI chưa index được: {cvIndexStatus.reason || "không tạo được embedding"}.
+          Hãy dùng PDF/DOCX có text thật, không phải ảnh scan.
+        </div>
       )}
 
       {/* Hidden file input */}

@@ -15,7 +15,7 @@ const GEMINI_CHAT_MODELS = (
   .split(",")
   .map((model) => model.trim())
   .filter(Boolean);
-const RAG_PROVIDER = (process.env.RAG_PROVIDER || "ollama").toLowerCase();
+const RAG_PROVIDER = (process.env.RAG_PROVIDER || "auto").toLowerCase();
 const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const OLLAMA_EMBEDDING_MODEL =
@@ -124,8 +124,23 @@ function getGeminiClient() {
   return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 }
 
-function shouldUseOllama() {
-  return RAG_PROVIDER !== "gemini";
+type RagProvider = "ollama" | "gemini";
+
+function getProviderOrder(): RagProvider[] {
+  if (RAG_PROVIDER === "gemini") return ["gemini", "ollama"];
+  if (RAG_PROVIDER === "ollama") return ["ollama", "gemini"];
+  return ["ollama", "gemini"];
+}
+
+function hasGeminiProvider() {
+  return Boolean(getGeminiClient());
+}
+
+function hasAnyConfiguredProvider() {
+  return getProviderOrder().some((provider) => {
+    if (provider === "gemini") return hasGeminiProvider();
+    return true;
+  });
 }
 
 function getOllamaUrl(path: string) {
@@ -214,19 +229,18 @@ function fitEmbeddingDimensions(vector: number[]) {
   return [...vector, ...Array(EMBEDDING_DIMENSIONS - vector.length).fill(0)];
 }
 
-async function createEmbedding(input: string) {
-  if (shouldUseOllama()) {
-    const response = await postOllama<OllamaEmbeddingResponse>("/api/embeddings", {
-      model: OLLAMA_EMBEDDING_MODEL,
-      prompt: input,
-    });
-    const embedding = response.embedding || response.embeddings?.[0] || null;
-    return embedding ? fitEmbeddingDimensions(embedding) : null;
-  }
+async function createOllamaEmbedding(input: string) {
+  const response = await postOllama<OllamaEmbeddingResponse>("/api/embeddings", {
+    model: OLLAMA_EMBEDDING_MODEL,
+    prompt: input,
+  });
+  const embedding = response.embedding || response.embeddings?.[0] || null;
+  return embedding ? fitEmbeddingDimensions(embedding) : null;
+}
 
+async function createGeminiEmbedding(input: string) {
   const client = getGeminiClient();
-  if (!client) return null;
-
+  if (!client) throw new Error("GEMINI_API_KEY is not configured");
   const response = await client.models.embedContent({
     model: GEMINI_EMBEDDING_MODEL,
     contents: input,
@@ -237,6 +251,26 @@ async function createEmbedding(input: string) {
 
   const embedding = response.embeddings?.[0]?.values || null;
   return embedding ? fitEmbeddingDimensions(embedding) : null;
+}
+
+async function createEmbedding(input: string) {
+  let lastError: unknown;
+
+  for (const provider of getProviderOrder()) {
+    try {
+      if (provider === "gemini") {
+        if (!hasGeminiProvider()) continue;
+        return await createGeminiEmbedding(input);
+      }
+
+      return await createOllamaEmbedding(input);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError) throw lastError;
+  return null;
 }
 
 async function createChatAnswer(
@@ -257,7 +291,7 @@ async function createChatAnswer(
 
   const prompt = `Job context:\n${jobContext || "No job description provided."}\n\nCV context:\n${cvContext}\n\nQuestion: ${question}`;
 
-  if (shouldUseOllama()) {
+  const createOllamaChatAnswer = async () => {
     const response = await postOllama<OllamaChatResponse>("/api/chat", {
       model: OLLAMA_CHAT_MODEL,
       stream: false,
@@ -275,27 +309,47 @@ async function createChatAnswer(
       response.response?.trim() ||
       "Khong the tao cau tra loi tu CV."
     );
-  }
+  };
 
-  const client = getGeminiClient();
-  if (!client) throw new Error("GEMINI_API_KEY is not configured");
+  const createGeminiChatAnswer = async () => {
+    const client = getGeminiClient();
+    if (!client) throw new Error("GEMINI_API_KEY is not configured");
+
+    let lastGeminiError: unknown;
+    for (const model of GEMINI_CHAT_MODELS) {
+      try {
+        const response = await client.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+            temperature: 0.2,
+            systemInstruction,
+          },
+        });
+
+        return response.text?.trim() || "Khong the tao cau tra loi tu CV.";
+      } catch (error) {
+        lastGeminiError = error;
+        if (!isRetryableAiError(error)) break;
+      }
+    }
+
+    throw lastGeminiError instanceof Error
+      ? lastGeminiError
+      : new Error("Khong the tao cau tra loi tu CV.");
+  };
 
   let lastError: unknown;
-  for (const model of GEMINI_CHAT_MODELS) {
+  for (const provider of getProviderOrder()) {
     try {
-      const response = await client.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          temperature: 0.2,
-          systemInstruction,
-        },
-      });
+      if (provider === "gemini") {
+        if (!hasGeminiProvider()) continue;
+        return await createGeminiChatAnswer();
+      }
 
-      return response.text?.trim() || "Khong the tao cau tra loi tu CV.";
+      return await createOllamaChatAnswer();
     } catch (error) {
       lastError = error;
-      if (!isRetryableAiError(error)) break;
     }
   }
 
@@ -308,10 +362,10 @@ export async function indexCandidateCv(
   candidateId: string,
   file: Express.Multer.File,
 ) {
-  if (!shouldUseOllama() && !getGeminiClient()) {
+  if (!hasAnyConfiguredProvider()) {
     return {
       indexed: false,
-      reason: "GEMINI_API_KEY is not configured",
+      reason: "No AI provider is configured",
     };
   }
 
@@ -351,7 +405,15 @@ export async function indexCandidateCv(
     );
   });
 
-  return { indexed: embeddedChunks.length > 0, chunks: embeddedChunks.length };
+  if (embeddedChunks.length === 0) {
+    return {
+      indexed: false,
+      chunks: 0,
+      reason: "Could not create embeddings for this CV",
+    };
+  }
+
+  return { indexed: true, chunks: embeddedChunks.length };
 }
 
 export async function deleteCandidateCvIndex(candidateId: string) {
@@ -402,8 +464,8 @@ export async function askCandidateCv(
     };
   }
 
-  if (!shouldUseOllama() && !getGeminiClient()) {
-    throw new Error("GEMINI_API_KEY is not configured");
+  if (!hasAnyConfiguredProvider()) {
+    throw new Error("No AI provider is configured");
   }
 
   const questionEmbedding = await createEmbedding(

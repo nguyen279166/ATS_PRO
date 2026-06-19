@@ -113,7 +113,7 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 CLOUDINARY_CV_FOLDER=ats-pro/cv
 CLOUDINARY_AVATAR_FOLDER=ats-pro/avatars
-RAG_PROVIDER=ollama
+RAG_PROVIDER=auto
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 OLLAMA_CHAT_MODEL=llama3.2:3b
@@ -132,11 +132,13 @@ ollama pull nomic-embed-text
 ollama pull llama3.2:3b
 ```
 
-Ollama runs on your own machine, so it is best for local development and demos.
-Hosted backend services such as Render cannot reach `localhost:11434` on your
-laptop. For a hosted demo, set `RAG_PROVIDER=gemini` with `GEMINI_API_KEY`.
+With `RAG_PROVIDER=auto`, the backend tries local Ollama first and then Gemini if
+`GEMINI_API_KEY` is configured. Ollama runs on your own machine, so it is best
+for local development and demos. Hosted backend services such as Render cannot
+reach `localhost:11434` on your laptop, so set `RAG_PROVIDER=gemini` on Render.
 `GEMINI_CHAT_MODELS` accepts a comma-separated fallback list, so the backend can
-try another free Gemini model if the first one is out of quota or overloaded.
+try another free Gemini chat model if the first one is out of quota or
+overloaded.
 
 Do not commit real `.env` files. If real secrets were ever shared publicly,
 rotate the database password, JWT secret, and mail app password before demoing.
