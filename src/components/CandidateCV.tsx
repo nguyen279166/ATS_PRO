@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { Upload, FileText, Trash2, Download, Loader2 } from "lucide-react";
@@ -10,6 +10,10 @@ interface Props {
   candidateName: string;
   initialCvUrl?: string | null;
   initialCvFileName?: string | null;
+  onCvChange?: (updates: {
+    cvUrl: string | null;
+    cvFileName: string | null;
+  }) => void;
 }
 
 type CvUploadResponse = {
@@ -27,6 +31,7 @@ export default function CandidateCV({
   candidateName,
   initialCvUrl,
   initialCvFileName,
+  onCvChange,
 }: Props) {
   const [cvUrl, setCvUrl] = useState<string | null>(initialCvUrl ?? null);
   const [cvFileName, setCvFileName] = useState<string | null>(
@@ -35,6 +40,11 @@ export default function CandidateCV({
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setCvUrl(initialCvUrl ?? null);
+    setCvFileName(initialCvFileName ?? null);
+  }, [candidateId, initialCvUrl, initialCvFileName]);
 
   const detectFileExtension = async (blob: Blob, contentType?: string) => {
     const fromUrl = cvUrl?.match(/\.(pdf|docx?|jpe?g|png)(?=($|[?#]))/i)?.[1];
@@ -104,7 +114,12 @@ export default function CandidateCV({
         formData,
       );
       setCvUrl(res.data.cvUrl);
-      setCvFileName(res.data.cvFileName ?? file.name);
+      const nextFileName = res.data.cvFileName ?? file.name;
+      setCvFileName(nextFileName);
+      onCvChange?.({
+        cvUrl: res.data.cvUrl,
+        cvFileName: nextFileName,
+      });
       if (res.data.cvIndex?.indexed) {
         toast.success(`Upload CV và index AI thành công (${res.data.cvIndex.chunks} đoạn)`);
       } else if (res.data.cvIndex?.reason) {
@@ -133,6 +148,7 @@ export default function CandidateCV({
       await apiClient.delete(`/api/candidates/${candidateId}/cv`);
       setCvUrl(null);
       setCvFileName(null);
+      onCvChange?.({ cvUrl: null, cvFileName: null });
       toast.success("Đã xóa CV!");
     } catch {
       toast.error("Lỗi khi xóa CV");

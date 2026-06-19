@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bot, Loader2, Send, Sparkles } from "lucide-react";
 import { toast } from "react-toastify";
 import { apiClient, isApiError } from "../api/client";
@@ -17,6 +17,7 @@ type AskResponse = {
 type Props = {
   candidateId: string;
   candidateName: string;
+  resetKey?: string;
 };
 
 const suggestedQuestions = [
@@ -26,11 +27,21 @@ const suggestedQuestions = [
   "Kỹ năng backend nổi bật là gì?",
 ];
 
-export default function CandidateAskAi({ candidateId, candidateName }: Props) {
+export default function CandidateAskAi({
+  candidateId,
+  candidateName,
+  resetKey,
+}: Props) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AskResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setQuestion("");
+    setResult(null);
+    setErrorMessage(null);
+  }, [candidateId, resetKey]);
 
   const askAi = async (value = question) => {
     const trimmed = value.trim();
@@ -93,6 +104,12 @@ export default function CandidateAskAi({ candidateId, candidateName }: Props) {
         <textarea
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              askAi();
+            }
+          }}
           placeholder="Hỏi về kinh nghiệm, kỹ năng hoặc điểm mạnh trong CV..."
           rows={3}
           className="sahara-input flex-1 resize-none px-4 py-3 text-sm"

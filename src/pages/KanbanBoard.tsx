@@ -57,6 +57,26 @@ export default function KanbanBoard() {
   );
   const [activeTab, setActiveTab] = useState<(typeof candidatePanelTabs)[number]["key"]>("notes");
 
+  const updateSelectedCandidate = (
+    candidateId: string,
+    updates: Partial<Candidate>,
+  ) => {
+    setSelectedCandidate((prev) =>
+      prev?.id === candidateId ? { ...prev, ...updates } : prev,
+    );
+    updateCandidate(candidateId, updates);
+    setLocalCandidateState((prev) => {
+      const prevCandidates =
+        prev && prev.jobId === jobId ? prev.candidates : candidates;
+      return {
+        jobId,
+        candidates: prevCandidates.map((candidate) =>
+          candidate.id === candidateId ? { ...candidate, ...updates } : candidate,
+        ),
+      };
+    });
+  };
+
   // Dùng bảo kiếm: Chặn từ khoá lại, khi tay người gõ ngưng nghỉ đủ 500ms thì mới thả chạy
   const debouncedSearchTerm = useDebounce(searchTerm, 200);
   console.log("Giá trị debounce hiện tại:", debouncedSearchTerm);
@@ -364,26 +384,33 @@ export default function KanbanBoard() {
 
             {/* Tab Content */}
             <div className='p-5 flex-1 overflow-y-auto'>
-              {activeTab === "notes" ? (
+              <div className={activeTab === "notes" ? "block" : "hidden"}>
                 <CandidateNotes
                   candidateId={selectedCandidate.id}
                   candidateName={selectedCandidate.name}
                 />
-              ) : activeTab === "interviews" ? (
+              </div>
+              <div className={activeTab === "interviews" ? "block" : "hidden"}>
                 <CandidateInterviews candidateId={selectedCandidate.id} />
-              ) : activeTab === "cv" ? (
+              </div>
+              <div className={activeTab === "cv" ? "block" : "hidden"}>
                 <CandidateCV
                   candidateId={selectedCandidate.id}
                   candidateName={selectedCandidate.name}
                   initialCvUrl={selectedCandidate.cvUrl}
                   initialCvFileName={selectedCandidate.cvFileName}
+                  onCvChange={(updates) =>
+                    updateSelectedCandidate(selectedCandidate.id, updates)
+                  }
                 />
-              ) : (
+              </div>
+              <div className={activeTab === "ai" ? "block" : "hidden"}>
                 <CandidateAskAi
                   candidateId={selectedCandidate.id}
                   candidateName={selectedCandidate.name}
+                  resetKey={`${selectedCandidate.cvUrl || ""}:${selectedCandidate.cvFileName || ""}`}
                 />
-              )}
+              </div>
             </div>
           </div>
         </div>
