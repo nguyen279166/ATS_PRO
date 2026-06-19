@@ -15,6 +15,7 @@ import {
   deleteCandidateCvIndex,
   getRagErrorMessage,
   indexCandidateCv,
+  reindexCandidateCvFromUrl,
 } from "../utils/rag";
 
 // ── Email template dùng chung ─────────────────────────────────
@@ -268,6 +269,30 @@ router.post("/:id/cv", cvUpload.single("cv"), async (req: AuthRequest, res) => {
   }
 });
 
+// POST /api/candidates/:id/cv/reindex -> Index lai CV hien co cho AI
+router.post("/:id/cv/reindex", async (req: AuthRequest, res) => {
+  try {
+    const id = String(req.params.id);
+    const candidate = await prisma.candidate.findUnique({ where: { id } });
+    if (!candidate?.cvUrl) {
+      return res.status(404).json({ error: "Ung vien chua co CV" });
+    }
+
+    let cvIndex: Awaited<ReturnType<typeof reindexCandidateCvFromUrl>>;
+    try {
+      cvIndex = await reindexCandidateCvFromUrl(id);
+    } catch (error) {
+      console.error("Loi khi reindex CV:", error);
+      cvIndex = { indexed: false, reason: getRagErrorMessage(error) };
+    }
+
+    res.json({ ...candidate, cvIndex });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Loi server";
+    res.status(500).json({ error: msg });
+  }
+});
+
 // DELETE /api/candidates/:id/cv → Xóa CV
 router.delete("/:id/cv", async (req: AuthRequest, res) => {
   try {
@@ -281,7 +306,14 @@ router.delete("/:id/cv", async (req: AuthRequest, res) => {
 
     const updated = await prisma.candidate.update({
       where: { id },
-      data: { cvUrl: null, cvPublicId: null, cvFileName: null },
+      data: {
+        cvUrl: null,
+        cvPublicId: null,
+        cvFileName: null,
+        cvExtractedText: null,
+        cvExtractedAt: null,
+        cvExtractionProvider: null,
+      },
     });
     res.json(updated);
   } catch {

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Upload, FileText, Trash2, Download, Loader2 } from "lucide-react";
+import { Upload, FileText, Trash2, Download, Loader2, Sparkles } from "lucide-react";
 import { apiClient, isApiError } from "../api/client";
 import { resolveMediaUrl } from "../utils/media";
 
@@ -23,6 +23,9 @@ type CvUploadResponse = {
     indexed: boolean;
     chunks?: number;
     reason?: string;
+    extractionProvider?: string;
+    embeddingProvider?: string;
+    embeddingModel?: string;
   };
 };
 
@@ -42,6 +45,7 @@ export default function CandidateCV({
   const [cvIndexStatus, setCvIndexStatus] = useState<CvIndexStatus>(null);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reindexing, setReindexing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -147,6 +151,31 @@ export default function CandidateCV({
     }
   };
 
+  const handleReindex = async () => {
+    setReindexing(true);
+    try {
+      const res = await apiClient.post<CvUploadResponse>(
+        `/api/candidates/${candidateId}/cv/reindex`,
+      );
+      if (res.data.cvIndex?.indexed) {
+        setCvIndexStatus(res.data.cvIndex);
+        toast.success(`AI da index lai CV (${res.data.cvIndex.chunks} doan)`);
+      } else {
+        setCvIndexStatus(res.data.cvIndex ?? null);
+        toast.warning(
+          res.data.cvIndex?.reason || "Khong index duoc CV cho AI",
+        );
+      }
+    } catch (err: unknown) {
+      const message = isApiError(err)
+        ? err.response?.data?.error || "Khong index lai duoc CV"
+        : "Khong index lai duoc CV";
+      toast.error(message);
+    } finally {
+      setReindexing(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm("Xóa CV của ứng viên này?")) return;
     setDeleting(true);
@@ -203,7 +232,7 @@ export default function CandidateCV({
           </div>
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-bold text-[#3a302a]">{fileName}</p>
-            <p className="text-xs text-[#9a7655]">PDF / DOCX để dùng AI · JPG/PNG chỉ lưu hồ sơ</p>
+            <p className="text-xs text-[#9a7655]">PDF/DOCX · JPG/PNG (AI OCR qua Gemini)</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Download */}
@@ -250,20 +279,47 @@ export default function CandidateCV({
           <span className="text-sm font-semibold text-[#7d6f62] transition-colors group-hover:text-[#8a4518]">
             {uploading ? "Đang upload..." : `Upload CV cho ${candidateName}`}
           </span>
-          <span className="text-xs text-[#9a7655]">PDF/DOCX để hỏi AI · JPG/PNG chỉ lưu hồ sơ · Tối đa 10MB</span>
+          <span className="text-xs text-[#9a7655]">PDF, DOCX, JPG, PNG · AI doc CV qua Gemini OCR · Tối đa 10MB</span>
         </button>
       )}
 
       {cvUrl && cvIndexStatus?.indexed && (
         <div className="mt-3 rounded-lg border border-[#b9c79f] bg-[#f2f6df] px-3 py-2 text-xs font-semibold text-[#53612d]">
-          AI đã index CV này ({cvIndexStatus.chunks || 0} đoạn). Bạn có thể sang tab AI để hỏi.
+          AI đã index CV này ({cvIndexStatus.chunks || 0} đoạn)
+          {cvIndexStatus.embeddingProvider
+            ? ` bằng ${cvIndexStatus.embeddingProvider}/${cvIndexStatus.embeddingModel || "default"}`
+            : ""}
+          . Bạn có thể sang tab AI để hỏi.
         </div>
       )}
 
       {cvUrl && cvIndexStatus && !cvIndexStatus.indexed && (
         <div className="mt-3 rounded-lg border border-[#d7a184] bg-[#fff0e8] px-3 py-2 text-xs font-semibold text-[#8c3c3c]">
           CV đã lưu, nhưng AI chưa index được: {cvIndexStatus.reason || "không tạo được embedding"}.
-          Hãy dùng PDF/DOCX có text thật, không phải ảnh scan.
+          <button
+            type="button"
+            onClick={handleReindex}
+            disabled={reindexing}
+            className="ml-2 inline-flex items-center gap-1 rounded-md border border-[#d7a184] bg-white px-2 py-1 text-[11px] font-bold text-[#8a4518] hover:bg-[#fff7eb] disabled:opacity-60"
+          >
+            {reindexing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            Index lại AI
+          </button>
+        </div>
+      )}
+
+      {cvUrl && !cvIndexStatus && (
+        <div className="mt-3 flex items-center justify-between rounded-lg border border-[#d8c8b5] bg-[#fff7eb] px-3 py-2 text-xs font-semibold text-[#7d6f62]">
+          <span>Chua biet trang thai index AI cua CV nay.</span>
+          <button
+            type="button"
+            onClick={handleReindex}
+            disabled={reindexing}
+            className="inline-flex items-center gap-1 rounded-md border border-[#d8c8b5] bg-white px-2 py-1 text-[11px] font-bold text-[#8a4518] hover:bg-[#fffaf2] disabled:opacity-60"
+          >
+            {reindexing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+            Index AI
+          </button>
         </div>
       )}
 

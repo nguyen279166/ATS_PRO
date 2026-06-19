@@ -24,5 +24,8 @@ export interface Candidate {
   avatar?: string;
   cvUrl?: string | null;
   cvFileName?: string | null;
+  cvExtractedText?: string | null;
+  cvExtractedAt?: string | null;
+  cvExtractionProvider?: string | null;
   job?: Job;
 }

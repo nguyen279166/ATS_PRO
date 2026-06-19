@@ -13,6 +13,7 @@ import interviewRoutes from "./routes/interviewRoutes";
 import exportRoutes from "./routes/exportRoutes";
 import path from "path";
 import { initMailer } from "./utils/mailer";
+import { getRagHealth } from "./utils/rag";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -42,6 +43,10 @@ app.get("/api/health", (req, res) => {
 });
 
 // Gắn Route Job vào đường dẫn /api/jobs
+app.get("/api/rag/health", async (req, res) => {
+  res.status(200).json(await getRagHealth());
+});
+
 app.use("/api/public", publicRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/jobs", authMiddleware, jobRoutes);

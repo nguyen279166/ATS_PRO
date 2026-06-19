@@ -27,6 +27,56 @@ const suggestedQuestions = [
   "Kỹ năng backend nổi bật là gì?",
 ];
 
+const answerSectionLabels = [
+  "Mức độ phù hợp",
+  "Bằng chứng",
+  "Điểm còn thiếu",
+  "Gợi ý phỏng vấn",
+  "Tóm tắt",
+  "Kết luận",
+];
+
+function parseAnswerSections(answer: string) {
+  const sections: { title: string; body: string }[] = [];
+  let current: { title: string; body: string[] } | null = null;
+
+  for (const line of answer.split("\n")) {
+    const trimmed = line.trim();
+    const matchedLabel = answerSectionLabels.find((label) =>
+      trimmed.toLowerCase().startsWith(`${label.toLowerCase()}:`),
+    );
+
+    if (matchedLabel) {
+      if (current) {
+        sections.push({
+          title: current.title,
+          body: current.body.join("\n").trim(),
+        });
+      }
+      current = {
+        title: matchedLabel,
+        body: [trimmed.slice(matchedLabel.length + 1).trim()].filter(Boolean),
+      };
+      continue;
+    }
+
+    if (current) {
+      current.body.push(line);
+    } else if (trimmed) {
+      current = { title: "Trả lời", body: [line] };
+    }
+  }
+
+  if (current) {
+    sections.push({
+      title: current.title,
+      body: current.body.join("\n").trim(),
+    });
+  }
+
+  return sections.length > 0 ? sections : [{ title: "Trả lời", body: answer }];
+}
+
 export default function CandidateAskAi({
   candidateId,
   candidateName,
@@ -131,10 +181,17 @@ export default function CandidateAskAi({
 
       {result ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-[#d8c8b5] bg-[#fff7eb] p-4">
-            <p className="whitespace-pre-wrap text-sm leading-6 text-[#3a302a]">
-              {result.answer}
-            </p>
+          <div className="space-y-3 rounded-lg border border-[#d8c8b5] bg-[#fff7eb] p-4">
+            {parseAnswerSections(result.answer).map((section) => (
+              <section key={section.title} className="space-y-1">
+                <h4 className="text-xs font-black uppercase tracking-wide text-[#8a4518]">
+                  {section.title}
+                </h4>
+                <p className="whitespace-pre-wrap text-sm leading-6 text-[#3a302a]">
+                  {section.body}
+                </p>
+              </section>
+            ))}
           </div>
 
           {result.sources.length > 0 && (
@@ -162,7 +219,7 @@ export default function CandidateAskAi({
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-[#d8c8b5] bg-[#fff7eb]/70 p-5 text-center text-sm text-[#9a7655]">
-          Upload CV PDF/DOCX trước, đợi thông báo index AI thành công, sau đó hỏi AI để tìm thông tin trong hồ sơ.
+          Upload CV PDF/DOCX/PNG/JPG trước, đợi index AI thành công, sau đó hỏi về kinh nghiệm hoặc độ phù hợp với job.
         </div>
       )}
     </div>

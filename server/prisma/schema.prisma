@@ -50,6 +50,9 @@ model Candidate {
   cvUrl       String?
   cvPublicId  String?
   cvFileName  String?
+  cvExtractedText       String?   @db.Text
+  cvExtractedAt         DateTime?
+  cvExtractionProvider  String?
 
   jobId String
   job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
@@ -65,6 +68,8 @@ model CandidateCvChunk {
   content     String   @db.Text
   chunkIndex  Int
   embedding   Unsupported("vector(1536)")
+  embeddingProvider String @default("unknown")
+  embeddingModel    String @default("unknown")
   createdAt   DateTime @default(now())
 
   candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
