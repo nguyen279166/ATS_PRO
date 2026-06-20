@@ -1,6 +1,6 @@
 import { Router } from "express";
 import prisma from "../prisma";
-import { sendEmail } from "../utils/mailer";
+import { sendEmail, type EmailDeliveryResult } from "../utils/mailer";
 import type { AuthRequest } from "./authMiddleware";
 import { cvUpload, deleteCv, saveCv } from "../utils/cvStorage";
 import { validateBody } from "../middleware/validate";
@@ -135,7 +135,12 @@ router.put("/:id", validateBody(updateCandidateStatusSchema), async (req, res) =
       include: { job: true }, // Lấy kèm thông tin công việc để gửi email
     });
 
-    // Gửi email khi status thay đổi
+    let notification: {
+      attempted: boolean;
+      delivery?: EmailDeliveryResult;
+    } = { attempted: false };
+
+    // Gửi email khi status thay đổi và trạng thái có template thông báo.
     if (oldCandidate?.status !== status) {
       const tpl = buildEmailTemplate(
         status,
@@ -143,10 +148,19 @@ router.put("/:id", validateBody(updateCandidateStatusSchema), async (req, res) =
         updatedCandidate.job.title,
         updatedCandidate.job.department,
       );
-      if (tpl) sendEmail(updatedCandidate.email, tpl.subject, tpl.html);
+      if (tpl) {
+        notification = {
+          attempted: true,
+          delivery: await sendEmail(
+            updatedCandidate.email,
+            tpl.subject,
+            tpl.html,
+          ),
+        };
+      }
     }
 
-    res.json(updatedCandidate);
+    res.json({ candidate: updatedCandidate, notification });
   } catch (error) {
     console.error("Lỗi khi cập nhật trạng thái ứng viên:", error);
     res.status(500).json({ error: "Lỗi server khi cập nhật ứng viên" });
@@ -184,6 +198,10 @@ router.patch("/bulk", validateBody(bulkCandidateSchema), async (req: AuthRequest
 
     if (action === "updateStatus") {
       if (!status) return res.status(400).json({ error: "Cần truyền status" });
+      const candidatesBeforeUpdate = await prisma.candidate.findMany({
+        where: { id: { in: ids }, status: { not: status } },
+        include: { job: true },
+      });
       await prisma.candidate.updateMany({
         where: { id: { in: ids } },
         data: {
@@ -191,28 +209,33 @@ router.patch("/bulk", validateBody(bulkCandidateSchema), async (req: AuthRequest
         },
       });
 
-      // Gửi email cho từng ứng viên (fire-and-forget)
+      const deliveries: EmailDeliveryResult[] = [];
       if (
         status === "Interviewing" ||
         status === "Hired" ||
         status === "Rejected"
       ) {
-        const affectedCandidates = await prisma.candidate.findMany({
-          where: { id: { in: ids } },
-          include: { job: true },
-        });
-        for (const c of affectedCandidates) {
+        for (const c of candidatesBeforeUpdate) {
           const tpl = buildEmailTemplate(
             status,
             c.name,
             c.job.title,
             c.job.department,
           );
-          if (tpl) sendEmail(c.email, tpl.subject, tpl.html);
+          if (tpl) {
+            deliveries.push(await sendEmail(c.email, tpl.subject, tpl.html));
+          }
         }
       }
 
-      return res.json({ message: `Đã cập nhật ${ids.length} ứng viên` });
+      return res.json({
+        message: `Đã cập nhật ${ids.length} ứng viên`,
+        notification: {
+          attempted: deliveries.length,
+          sent: deliveries.filter((delivery) => delivery.sent).length,
+          failed: deliveries.filter((delivery) => !delivery.sent).length,
+        },
+      });
     }
 
     if (action === "delete") {

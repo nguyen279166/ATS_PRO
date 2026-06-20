@@ -12,7 +12,7 @@ import noteRoutes from "./routes/noteRoutes";
 import interviewRoutes from "./routes/interviewRoutes";
 import exportRoutes from "./routes/exportRoutes";
 import path from "path";
-import { initMailer } from "./utils/mailer";
+import { getMailerHealth, initMailer } from "./utils/mailer";
 import { getRagHealth } from "./utils/rag";
 
 const app = express();
@@ -39,7 +39,7 @@ app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 // Route kiểm tra server
 app.get("/api/health", (req, res) => {
-  res.status(200).json({ status: "OK"});
+  res.status(200).json({ status: "OK", mail: getMailerHealth() });
 });
 
 // Gắn Route Job vào đường dẫn /api/jobs

@@ -16,6 +16,18 @@ import { ArrowLeft } from "lucide-react";
 import { API_BASE_URL } from "../config/env";
 import Avatar from "../components/Avatar";
 import { formatDate } from "../utils/date";
+import { toast } from "react-toastify";
+
+type StatusUpdateResponse = {
+  candidate: Candidate;
+  notification: {
+    attempted: boolean;
+    delivery?: {
+      sent: boolean;
+      reason?: "not_configured" | "send_failed";
+    };
+  };
+};
 
 const candidatePanelTabs = [
   { key: "notes", label: "Ghi chú" },
@@ -94,6 +106,32 @@ export default function KanbanBoard() {
     { title: "Hired", status: "Hired" as const, accent: "border-t-[#6f7f5a]" },
     { title: "Rejected", status: "Rejected" as const, accent: "border-t-[#8c3c3c]" },
   ];
+
+  const persistCandidateStatus = async (
+    candidateId: string,
+    newStatus: CandidateStatus,
+  ) => {
+    const token = localStorage.getItem("token_lay_duoc");
+    const response = await axios.put<StatusUpdateResponse>(
+      `${API_BASE_URL}/api/candidates/${candidateId}`,
+      { status: newStatus },
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+
+    updateCandidate(candidateId, { status: newStatus });
+
+    const notification = response.data.notification;
+    if (notification?.delivery?.sent) {
+      toast.success(`Đã chuyển sang ${newStatus} và gửi email cho ứng viên`);
+    } else if (notification?.attempted) {
+      toast.warning(
+        "Trạng thái đã cập nhật nhưng email chưa gửi được. Kiểm tra cấu hình SMTP.",
+      );
+    } else {
+      toast.success(`Đã chuyển ứng viên sang ${newStatus}`);
+    }
+  };
+
   const handleDrop = async (e: React.DragEvent, newStatus: CandidateStatus) => {
     // Móc ID của ứng viên trong túi hành lý (được gói lúc DragStart)
     const candidateId = e.dataTransfer.getData("candidateId");
@@ -118,16 +156,11 @@ export default function KanbanBoard() {
 
     // BÁO CÁO LÊN BACKEND:
     try {
-      const token = localStorage.getItem("token_lay_duoc");
-      await axios.put(
-        `${API_BASE_URL}/api/candidates/${candidateId}`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      // Cập nhật global state để khi quay lại trang vẫn đúng
-      updateCandidate(candidateId, { status: newStatus });
+      await persistCandidateStatus(candidateId, newStatus);
     } catch (error) {
       console.error("Lỗi khi lưu trạng thái kéo thả:", error);
+      toast.error("Không thể cập nhật trạng thái ứng viên");
+      await refreshData(false);
     }
   };
   const handleAddCandidate = async (data: {
@@ -198,16 +231,11 @@ export default function KanbanBoard() {
 
     // BÁO CÁO LÊN BACKEND:
     try {
-      const token = localStorage.getItem("token_lay_duoc");
-      await axios.put(
-        `${API_BASE_URL}/api/candidates/${draggedId}`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      // Cập nhật global state để khi quay lại trang vẫn đúng
-      updateCandidate(draggedId, { status: newStatus });
+      await persistCandidateStatus(draggedId, newStatus);
     } catch (error) {
       console.error("Lỗi khi lưu trạng thái kéo thả (đè thẻ):", error);
+      toast.error("Không thể cập nhật trạng thái ứng viên");
+      await refreshData(false);
     }
   };
 
