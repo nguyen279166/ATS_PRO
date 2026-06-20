@@ -123,6 +123,9 @@ VITE_BASE_URL=http://localhost:3001
 DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
 JWT_SECRET=replace_with_a_long_random_secret
 BASE_URL=http://localhost:3001
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=ATS PRO <onboarding@resend.dev>
+# Optional local SMTP fallback:
 GMAIL_USER=
 GMAIL_APP_PASSWORD=
 CLOUDINARY_CLOUD_NAME=

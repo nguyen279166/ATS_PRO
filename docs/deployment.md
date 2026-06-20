@@ -23,6 +23,9 @@ PORT=3001
 BASE_URL=https://your-backend.example.com
 CLIENT_URL=https://your-frontend.example.com
 
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=ATS PRO <onboarding@resend.dev>
+# Optional local SMTP fallback:
 GMAIL_USER=
 GMAIL_APP_PASSWORD=
 

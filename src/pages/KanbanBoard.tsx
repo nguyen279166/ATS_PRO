@@ -125,7 +125,7 @@ export default function KanbanBoard() {
       toast.success(`Đã chuyển sang ${newStatus} và gửi email cho ứng viên`);
     } else if (notification?.attempted) {
       toast.warning(
-        "Trạng thái đã cập nhật nhưng email chưa gửi được. Kiểm tra cấu hình SMTP.",
+        "Trạng thái đã cập nhật nhưng email chưa gửi được. Kiểm tra cấu hình dịch vụ email.",
       );
     } else {
       toast.success(`Đã chuyển ứng viên sang ${newStatus}`);
