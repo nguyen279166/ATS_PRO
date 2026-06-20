@@ -3,6 +3,7 @@ import nodemailer from "nodemailer";
 let transporter: nodemailer.Transporter | null = null;
 let mailerConfigured = false;
 let mailerReady = false;
+let mailerErrorCode: string | null = null;
 
 export type EmailDeliveryResult = {
   sent: boolean;
@@ -12,6 +13,7 @@ export type EmailDeliveryResult = {
 export const getMailerHealth = () => ({
   configured: mailerConfigured,
   ready: mailerReady,
+  errorCode: mailerErrorCode,
 });
 
 export const initMailer = async () => {
@@ -19,6 +21,7 @@ export const initMailer = async () => {
   const pass = process.env.GMAIL_APP_PASSWORD;
   mailerConfigured = Boolean(user && pass && user !== "your_gmail@gmail.com");
   mailerReady = false;
+  mailerErrorCode = null;
 
   if (!mailerConfigured || !user || !pass) {
     console.warn("⚠️  Gmail chưa được cấu hình. Email sẽ không được gửi.");
@@ -38,6 +41,10 @@ export const initMailer = async () => {
     console.error("❌ Lỗi xác thực Gmail:", error);
     transporter = null;
     mailerReady = false;
+    mailerErrorCode =
+      error && typeof error === "object" && "code" in error
+        ? String(error.code)
+        : "UNKNOWN";
   }
 };
 

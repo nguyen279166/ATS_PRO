@@ -4,7 +4,6 @@ import {
   Users,
   UserCheck,
   Clock,
-  XCircle,
   TrendingUp,
   ChartPie,
   BarChart3,
@@ -150,6 +149,7 @@ export default function Dashboard() {
       color: "bg-[#c2652a]",
     },
     { label: "Đã tuyển", count: hiredCount, color: "bg-[#6f7f5a]" },
+    { label: "Đã từ chối", count: rejectedCount, color: "bg-[#8c3c3c]" },
   ];
   const pipelineMax = pipeline[0].count || 1;
 
@@ -359,16 +359,6 @@ export default function Dashboard() {
               </div>
             ))}
 
-            {/* Rejected riêng */}
-            <div className='pt-2 border-t border-[#d8c8b5]/70'>
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center gap-2 text-sm text-[#7d6f62]'>
-                  <XCircle size={14} className='text-[#8c3c3c]' />
-                  Đã từ chối
-                </div>
-                <span className='font-bold text-[#8c3c3c]'>{rejectedCount}</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
