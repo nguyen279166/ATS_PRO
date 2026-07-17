@@ -53,17 +53,27 @@ try {
   await page.locator('button[type="submit"]').click();
   await page.waitForURL(`${baseUrl}/`, { timeout: 15_000 });
   await settle();
-  await page.locator('text="Tin tuyển dụng"').first().waitFor({
-    state: "visible",
-    timeout: 30_000,
-  });
+  await page
+    .locator('section[aria-labelledby="dashboard-metrics-title"]')
+    .waitFor({
+      state: "visible",
+      timeout: 30_000,
+    });
   await page.screenshot({
     path: path.join(outputDir, "dashboard.png"),
     fullPage: true,
   });
 
-  await capture("/jobs", "jobs.png", 'text="Danh sách tin tuyển dụng"');
-  await capture("/candidates", "candidates.png", 'text="Hiển thị"');
+  await capture(
+    "/jobs",
+    "jobs.png",
+    'section[aria-labelledby="jobs-heading"]',
+  );
+  await capture(
+    "/candidates",
+    "candidates.png",
+    'main section[aria-busy="false"]',
+  );
 } finally {
   await browser.close();
 }

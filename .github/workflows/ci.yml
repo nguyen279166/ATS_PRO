@@ -12,13 +12,16 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
 
       - name: Install frontend dependencies
         run: npm ci
@@ -40,3 +43,10 @@ jobs:
       - name: Build server
         working-directory: server
         run: npm run build
+
+      - name: Test server
+        working-directory: server
+        run: npm test
+
+      - name: Build server Docker image
+        run: docker build server

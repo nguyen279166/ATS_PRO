@@ -24,7 +24,8 @@ idle period can take about 50 seconds while the service wakes up.
   PostgreSQL `pgvector` retrieval, cited evidence, and an overall job-fit score.
 - Separate embedding and chat providers: local Ollama can keep indexing free,
   while Gemini can provide stronger generated answers.
-- End-to-end coverage with Playwright.
+- Backend API coverage with Vitest and Supertest, plus end-to-end browser
+  coverage with Playwright.
 - Production-style environment configuration through `.env` files.
 
 ## Screenshots (Dark Mode)
@@ -48,9 +49,9 @@ idle period can take about 50 seconds while the service wakes up.
 - Frontend: React, TypeScript, Vite, Tailwind CSS, React Router, React Hook Form,
   Zod, Axios, Recharts, Lucide icons.
 - Backend: Node.js, Express, TypeScript, Prisma, PostgreSQL, JWT, Multer,
-  Cloudinary, Nodemailer, PDFKit, XLSX.
-- Testing and delivery: ESLint, TypeScript build checks, Playwright E2E,
-  GitHub Actions CI, Docker.
+  Cloudinary, Resend with Gmail SMTP fallback, PDFKit, XLSX.
+- Testing and delivery: ESLint, TypeScript build checks, Vitest, Supertest,
+  Playwright E2E, GitHub Actions CI, Docker.
 
 ## Project Structure
 
@@ -82,7 +83,8 @@ flowchart LR
   Render --> Cloudinary["Cloudinary\nCVs + avatars"]
   Render --> Gemini["Gemini API\nCV embeddings + answers"]
   Local["Local dev"] --> Ollama["Ollama\nlocal CV AI"]
-  Render --> Gmail["Gmail SMTP\nPassword reset + notifications"]
+  Render --> Resend["Resend HTTPS API\nPassword reset + notifications"]
+  Render -. "local fallback" .-> Gmail["Gmail SMTP"]
 ```
 
 Frontend requests use `VITE_BASE_URL` to reach the Render API. The backend
@@ -133,6 +135,7 @@ VITE_BASE_URL=http://localhost:3001
 DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
 JWT_SECRET=replace_with_a_long_random_secret
 BASE_URL=http://localhost:3001
+CLIENT_URL=http://localhost:5173
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=ATS PRO <onboarding@resend.dev>
 # Optional local SMTP fallback:
@@ -156,6 +159,11 @@ GEMINI_CHAT_MODELS=gemini-2.5-flash-lite,gemini-2.5-flash
 
 Cloudinary variables are optional in local development. If they are not set, CVs
 and avatars are saved under `server/uploads`.
+
+Resend is the preferred production email provider because it uses HTTPS. Gmail
+SMTP is an optional local fallback when `RESEND_API_KEY` is not configured.
+`CLIENT_URL` is the frontend origin allowed by backend CORS and is also used in
+password-reset links.
 
 For free local CV AI, install Ollama and run:
 
@@ -181,19 +189,29 @@ rotate the database password, JWT secret, and mail app password before demoing.
 
 ## Local Setup
 
-Install frontend dependencies:
+Install the exact frontend dependencies from the committed lockfile:
 
 ```bash
-npm install
+npm ci
 ```
 
-Install backend dependencies:
+Install the exact backend dependencies:
 
 ```bash
 cd server
-npm install
+npm ci
+```
+
+Generate the Prisma client and apply the committed database migrations:
+
+```bash
+npx prisma generate
+npx prisma migrate deploy
 cd ..
 ```
+
+Use `npx prisma migrate dev` instead of `migrate deploy` only when creating a
+new migration during development.
 
 Run the backend:
 
@@ -211,22 +229,38 @@ npm run dev
 Frontend runs on `http://localhost:5173`; backend defaults to
 `http://localhost:3001`.
 
+On a fresh database, open `http://localhost:5173/register` and create an HR
+account before using protected pages. The optional demo-data scripts require an
+existing user and should be run from `server/` after registration:
+
+```bash
+npx ts-node src/seed.ts
+npx ts-node src/seedCandidates.ts
+```
+
+The first script creates sample jobs owned by the earliest registered user; the
+second adds sample candidates to those jobs. Neither script creates a user or a
+hard-coded demo password.
+
 ### Optional CodeGraph MCP
 
-CodeGraph is an optional local development aid for exploring repository
-relationships through MCP. Its generated index is stored under `.codegraph/`
-and is ignored by Git. After installing or changing the CodeGraph MCP
-configuration, restart the MCP client so the server is discovered.
+[CodeGraph](https://github.com/colbymchenry/codegraph) is an optional local
+development aid for exploring repository relationships through MCP. On Windows,
+install and configure it interactively from PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/colbymchenry/codegraph/main/install.ps1 | iex
+cd path\to\ats-system
+codegraph init -i
+```
+
+Alternatively, run `npx @colbymchenry/codegraph`. Select Codex when prompted,
+then restart Codex so the MCP server is discovered. The generated `.codegraph/`
+index stays local and is ignored by Git.
 
 ## Quality Checks
 
-Frontend build:
-
-```bash
-npm run build
-```
-
-Lint and build:
+Frontend lint and production build:
 
 ```bash
 npm run check
@@ -252,17 +286,31 @@ E2E tests require the backend and frontend to be running:
 npm run test:e2e
 ```
 
+Verify the production backend container:
+
+```bash
+docker build server
+```
+
 Regenerate all README screenshots from the local app in dark mode:
 
 ```bash
 npm run docs:screenshots
 ```
 
-The screenshot command uses `admin@ats.com` / `Password123` by default. Override
-`SCREENSHOT_EMAIL` and `SCREENSHOT_PASSWORD` when using another local seed user.
+The screenshot script needs an existing local account; no account is created by
+the seed scripts. Its legacy defaults are `admin@ats.com` / `Password123`, but
+for a fresh clone set the credentials of the account you registered. PowerShell
+example:
 
-GitHub Actions runs lint and production builds for both frontend and backend on
-push and pull request.
+```powershell
+$env:SCREENSHOT_EMAIL="your-account@example.com"
+$env:SCREENSHOT_PASSWORD="your-password"
+npm run docs:screenshots
+```
+
+GitHub Actions runs frontend lint/build, backend build/tests, and a backend
+Docker build on every push and pull request.
 
 ## Docker
 
@@ -282,8 +330,8 @@ Compose reads backend environment variables from `server/.env`.
 - Backend can be deployed to Render, Railway, Fly.io, or another Node host.
 - PostgreSQL can be hosted on Neon, Supabase, Railway, or Render.
 - Set `VITE_BASE_URL` to the deployed backend URL.
-- Set backend CORS rules to allow the deployed frontend domain before sharing
-  the demo link.
+- Set backend `CLIENT_URL` to the deployed frontend origin before sharing the
+  demo link.
 - See [`docs/deployment.md`](docs/deployment.md) for the deployment checklist.
 
 ## Portfolio Pitch
@@ -293,4 +341,5 @@ Suggested CV description:
 > ATS Pro - Full-stack recruitment management system using React, TypeScript,
 > Express, Prisma, PostgreSQL, JWT auth, RBAC, Kanban hiring pipeline,
 > Cloudinary CV storage, CV AI search with Gemini embeddings and pgvector,
-> reports export, Docker, GitHub Actions CI, and Playwright E2E tests.
+> reports export, Docker, GitHub Actions CI, Vitest/Supertest API tests, and
+> Playwright E2E tests.
