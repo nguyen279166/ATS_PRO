@@ -9,5 +9,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "generated/**/*"]
+  "include": ["src/**/*", "generated/**/*"],
+  "exclude": ["src/**/*.test.ts", "dist", "node_modules"]
 }

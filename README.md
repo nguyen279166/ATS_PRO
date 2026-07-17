@@ -55,12 +55,22 @@ idle period can take about 50 seconds while the service wakes up.
 ## Project Structure
 
 ```text
-src/              Frontend source
-server/src/       Express API source
-server/prisma/    Prisma schema and migrations
-tests/e2e/        Playwright E2E tests
-public/           Static assets
+src/pages/              Frontend route-level page composition
+src/features/           Feature-scoped UI, hooks, types, and API helpers
+src/components/         Shared frontend components
+server/src/app.ts       Express app assembly, middleware, and route mounting
+server/src/routes/      Thin HTTP route and middleware wiring
+server/src/modules/     Domain controllers, services, and side-effect helpers
+server/src/index.ts     Backend process entry point
+server/prisma/          Prisma schema and migrations
+tests/e2e/              Playwright E2E tests
+public/                 Static assets
 ```
+
+Frontend pages stay focused on composition while feature behavior lives under
+`src/features`. Backend HTTP wiring is assembled in `server/src/app.ts` and
+`server/src/routes`; each domain under `server/src/modules` separates request
+handling from business logic and side effects.
 
 ## Production Architecture
 
@@ -201,6 +211,13 @@ npm run dev
 Frontend runs on `http://localhost:5173`; backend defaults to
 `http://localhost:3001`.
 
+### Optional CodeGraph MCP
+
+CodeGraph is an optional local development aid for exploring repository
+relationships through MCP. Its generated index is stored under `.codegraph/`
+and is ignored by Git. After installing or changing the CodeGraph MCP
+configuration, restart the MCP client so the server is discovered.
+
 ## Quality Checks
 
 Frontend build:
@@ -215,11 +232,18 @@ Lint and build:
 npm run check
 ```
 
-Backend build:
+Backend build and tests:
 
 ```bash
 cd server
-npm run build
+npm run check
+```
+
+Run only the backend tests:
+
+```bash
+cd server
+npm test
 ```
 
 E2E tests require the backend and frontend to be running:

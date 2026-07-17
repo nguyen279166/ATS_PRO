@@ -1,12 +1,19 @@
 import { useState } from "react";
-import { apiClient, isApiError } from "../api/client";
-import { useData } from "../hooks/DataProvider";
-import { useAuth } from "../hooks/useAuth";
-import { Calendar, MapPin, Building, Plus, Edit2, Trash2 } from "lucide-react";
+import {
+  Briefcase,
+  Building,
+  Calendar,
+  Edit2,
+  MapPin,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "react-toastify";
+import { apiClient, isApiError } from "../api/client";
 import AddJobModal from "../components/AddJobModal";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { useAuth } from "../hooks/useAuth";
+import { useData } from "../hooks/DataProvider";
 import type { Job } from "../types";
 import { formatDate } from "../utils/date";
 
@@ -16,14 +23,6 @@ export default function JobList() {
   const [showModal, setShowModal] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
-  if (loading) {
-    return (
-      <div className='flex items-center justify-center h-[60vh]'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
-      </div>
-    );
-  }
-
   const handleSaveJob = async (data: {
     title: string;
     department: string;
@@ -32,27 +31,29 @@ export default function JobList() {
   }) => {
     try {
       if (selectedJob) {
-        await apiClient.put(
-          `/api/jobs/${selectedJob.id}`,
-          data,
-        );
+        await apiClient.put(`/api/jobs/${selectedJob.id}`, data);
         toast.success("Cập nhật tin tuyển dụng thành công!");
       } else {
         await apiClient.post("/api/jobs", data);
         toast.success("Đăng tin tuyển dụng thành công!");
       }
-      await refreshData();
     } catch (error: unknown) {
       console.error("Lỗi khi lưu job:", error);
-      if (isApiError(error)) {
-        toast.error(
-          error.response?.data?.error ||
-            "Lỗi khi lưu Job. Mở console để xem chi tiết!",
-        );
-      } else {
-        toast.error("Lỗi khi lưu Job. Mở console để xem chi tiết!");
-      }
+      toast.error(
+        isApiError(error)
+          ? error.response?.data?.error || "Không thể lưu tin tuyển dụng."
+          : "Không thể lưu tin tuyển dụng.",
+      );
+      return false;
     }
+
+    try {
+      await refreshData();
+    } catch (error) {
+      console.error("Không thể tải lại danh sách tin tuyển dụng:", error);
+      toast.warning("Đã lưu tin nhưng chưa thể tải lại danh sách.");
+    }
+    return true;
   };
 
   const openAddModal = () => {
@@ -67,18 +68,27 @@ export default function JobList() {
       !window.confirm(
         "Bạn có chắc chắn muốn xóa tin tuyển dụng này? Tất cả ứng viên thuộc tin này cũng sẽ bị xóa!",
       )
-    )
+    ) {
       return;
+    }
+
     try {
       await apiClient.delete(`/api/jobs/${jobId}`);
-      toast.success("Xóa Job thành công!");
-      await refreshData();
+      toast.success("Xóa tin tuyển dụng thành công!");
     } catch (error: unknown) {
-      if (isApiError(error)) {
-        toast.error(error.response?.data?.error || "Lỗi khi xóa Job");
-      } else {
-        toast.error("Lỗi khi xóa Job");
-      }
+      toast.error(
+        isApiError(error)
+          ? error.response?.data?.error || "Không thể xóa tin tuyển dụng."
+          : "Không thể xóa tin tuyển dụng.",
+      );
+      return;
+    }
+
+    try {
+      await refreshData();
+    } catch (error) {
+      console.error("Không thể tải lại danh sách sau khi xóa:", error);
+      toast.warning("Đã xóa tin nhưng chưa thể tải lại danh sách.");
     }
   };
 
@@ -89,83 +99,134 @@ export default function JobList() {
     setShowModal(true);
   };
 
+  if (loading) {
+    return (
+      <div
+        className='flex min-h-[40vh] items-center justify-center'
+        role='status'
+        aria-live='polite'
+      >
+        <div className='flex items-center gap-3 text-sm font-semibold text-[var(--color-text-muted)]'>
+          <span className='h-6 w-6 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-primary)]' />
+          Đang tải tin tuyển dụng…
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <ToastContainer position='bottom-right' />
-      <div className='flex justify-between items-center mb-6'>
-        <h2 className='text-2xl font-black text-[#3a302a]'>
-          Danh sách tin tuyển dụng
-        </h2>
+    <section aria-labelledby='jobs-heading'>
+      <div className='mb-6 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center'>
+        <div>
+          <h2
+            id='jobs-heading'
+            className='text-xl font-bold text-[var(--color-text)] sm:text-2xl'
+          >
+            Vị trí đang tuyển
+          </h2>
+          <p className='mt-1 text-sm text-[var(--color-text-muted)]'>
+            {jobs.length} tin tuyển dụng trong không gian làm việc
+          </p>
+        </div>
         <button
+          type='button'
           onClick={openAddModal}
-          className='sahara-button px-5 py-2.5 cursor-pointer'
+          className='sahara-button w-full cursor-pointer px-5 py-2.5 sm:w-auto'
         >
-          <Plus size={18} /> Tạo tin mới
+          <Plus size={18} aria-hidden='true' /> Tạo tin mới
         </button>
       </div>
 
-      <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'>
-        {jobs.map((job) => (
-          <div
-            key={job.id}
-            className='sahara-card p-5 hover:-translate-y-1 transition-all cursor-pointer group text-[#3a302a]'
+      {jobs.length === 0 ? (
+        <div className='sahara-card flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center'>
+          <span className='mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--color-surface-strong)] text-[var(--color-primary)]'>
+            <Briefcase size={24} aria-hidden='true' />
+          </span>
+          <h3 className='text-lg font-bold text-[var(--color-text)]'>
+            Chưa có tin tuyển dụng
+          </h3>
+          <p className='mt-2 max-w-md text-sm text-[var(--color-text-muted)]'>
+            Tạo vị trí đầu tiên để bắt đầu tiếp nhận và theo dõi ứng viên.
+          </p>
+          <button
+            type='button'
+            onClick={openAddModal}
+            className='sahara-button mt-5 px-5 py-2.5'
           >
-            <div className='flex items-start gap-3 mb-4'>
-              <div className='flex min-w-0 flex-1 items-start gap-2'>
-                <h3 className='min-h-12 min-w-0 flex-1 pr-2 font-black text-base leading-snug text-[#3a302a] group-hover:text-[#8a4518] transition-colors'>
-                  {job.title}
-                </h3>
-                <button
-                  onClick={(e) => openEditModal(e, job)}
-                  className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#9a7655] hover:text-[#8a4518] hover:bg-[#f4dfbd] transition-colors'
-                  title='Chỉnh sửa'
-                >
-                  <Edit2 size={14} />
-                </button>
-                {isAdmin && (
+            <Plus size={18} aria-hidden='true' /> Tạo tin đầu tiên
+          </button>
+        </div>
+      ) : (
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3'>
+          {jobs.map((job) => (
+            <article
+              key={job.id}
+              className='sahara-card flex min-h-full flex-col p-5 text-[var(--color-text)]'
+            >
+              <div className='mb-4 flex items-start gap-3'>
+                <div className='flex min-w-0 flex-1 items-start gap-1'>
+                  <h3 className='min-h-12 min-w-0 flex-1 pr-2 text-base font-extrabold leading-snug'>
+                    {job.title}
+                  </h3>
                   <button
-                    onClick={(e) => handleDeleteJob(e, job.id)}
-                    className='flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#9a7655] hover:text-[#8c3c3c] hover:bg-[#f2ded4] transition-colors'
-                    title='Xóa (chỉ Admin)'
+                    type='button'
+                    onClick={(e) => openEditModal(e, job)}
+                    className='sahara-icon-button shrink-0'
+                    aria-label={`Chỉnh sửa tin ${job.title}`}
                   >
-                    <Trash2 size={14} />
+                    <Edit2 size={16} aria-hidden='true' />
                   </button>
-                )}
+                  {isAdmin && (
+                    <button
+                      type='button'
+                      onClick={(e) => handleDeleteJob(e, job.id)}
+                      className='sahara-icon-button shrink-0 hover:!bg-[var(--color-surface-strong)] hover:!text-[var(--color-danger)]'
+                      aria-label={`Xóa tin ${job.title}`}
+                    >
+                      <Trash2 size={16} aria-hidden='true' />
+                    </button>
+                  )}
+                </div>
+                <span
+                  className={`mt-1 shrink-0 ${
+                    job.status === "Open"
+                      ? "sahara-status sahara-status-hired"
+                      : "sahara-status sahara-status-applied"
+                  }`}
+                >
+                  {job.status === "Open" ? "Đang mở" : "Đã đóng"}
+                </span>
               </div>
-              <span
-                className={`mt-0.5 shrink-0 ${
-                  job.status === "Open"
-                    ? "sahara-status sahara-status-hired"
-                    : "sahara-status sahara-status-applied"
-                }`}
+
+              <dl className='mb-6 space-y-3 text-sm text-[var(--color-text-muted)]'>
+                <div className='flex items-center gap-2'>
+                  <Building size={16} className='text-[var(--color-primary)]' aria-hidden='true' />
+                  <dt className='sr-only'>Phòng ban</dt>
+                  <dd>{job.department}</dd>
+                </div>
+                <div className='flex items-center gap-2'>
+                  <MapPin size={16} className='text-[var(--color-primary)]' aria-hidden='true' />
+                  <dt className='sr-only'>Địa điểm</dt>
+                  <dd>{job.location}</dd>
+                </div>
+                <div className='flex items-center gap-2'>
+                  <Calendar size={16} className='text-[var(--color-primary)]' aria-hidden='true' />
+                  <dt className='sr-only'>Ngày đăng</dt>
+                  <dd>Đăng ngày: {formatDate(job.createdAt)}</dd>
+                </div>
+              </dl>
+
+              <Link
+                to={`/jobs/${job.id}`}
+                className='sahara-button-secondary mt-auto min-h-11 w-full px-4 py-2.5'
+                aria-label={`Mở pipeline ứng viên cho ${job.title}`}
               >
-                {job.status}
-              </span>
-            </div>
-
-            <div className='space-y-3 text-[#7d6f62] text-sm mb-6'>
-              <div className='flex items-center gap-2'>
-                <Building size={16} className='text-[#b88954]' />{" "}
-                <span>{job.department}</span>
-              </div>
-              <div className='flex items-center gap-2'>
-                <MapPin size={16} className='text-[#b88954]' />{" "}
-                <span>{job.location}</span>
-              </div>
-              <div className='flex items-center gap-2'>
-                <Calendar size={16} className='text-[#b88954]' />{" "}
-                <span>Đăng ngày: {formatDate(job.createdAt)}</span>
-              </div>
-            </div>
-
-            <Link to={`/jobs/${job.id}`} className='block mt-4'>
-              <button className='sahara-button-secondary w-full py-2.5'>
-                Mở Kanban Board
-              </button>
-            </Link>
-          </div>
-        ))}
-      </div>
+                Mở pipeline ứng viên
+              </Link>
+            </article>
+          ))}
+        </div>
+      )}
 
       {showModal && (
         <AddJobModal
@@ -174,6 +235,6 @@ export default function JobList() {
           initialData={selectedJob ?? undefined}
         />
       )}
-    </div>
+    </section>
   );
 }

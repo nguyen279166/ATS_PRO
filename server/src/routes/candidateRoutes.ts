@@ -1,368 +1,44 @@
 import { Router } from "express";
-import prisma from "../prisma";
-import { sendEmail, type EmailDeliveryResult } from "../utils/mailer";
-import type { AuthRequest } from "./authMiddleware";
-import { cvUpload, deleteCv, saveCv } from "../utils/cvStorage";
 import { validateBody } from "../middleware/validate";
+import candidateController from "../modules/candidates/candidate.controller";
+import { cvUpload } from "../utils/cvStorage";
 import {
   askCandidateCvSchema,
   bulkCandidateSchema,
   candidateBodySchema,
   updateCandidateStatusSchema,
 } from "../validation/schemas";
-import {
-  askCandidateCv,
-  deleteCandidateCvIndex,
-  getRagErrorMessage,
-  indexCandidateCv,
-  reindexCandidateCvFromUrl,
-} from "../utils/rag";
-
-// ── Email template dùng chung ─────────────────────────────────
-const buildEmailTemplate = (
-  status: string,
-  name: string,
-  jobTitle: string,
-  dept: string,
-): { subject: string; html: string } | null => {
-  const footer = `<br/><p style="color:#64748b;font-size:13px">Trân trọng,<br/><strong>Bộ phận Tuyển dụng – ATSPRO</strong></p>`;
-
-  const templates: Record<string, { subject: string; html: string }> = {
-    Interviewing: {
-      subject: `📅 Thư mời phỏng vấn – ${jobTitle}`,
-      html: `<h2 style="color:#1e40af">📅 Thư mời phỏng vấn</h2>
-             <p>Chào <strong>${name}</strong>,</p>
-             <p>Chúng tôi đã xem xét hồ sơ của bạn cho vị trí <strong>${jobTitle}</strong> tại phòng <strong>${dept}</strong> và rất vui mừng được mời bạn tham gia vòng phỏng vấn.</p>
-             <p>Bộ phận nhân sự sẽ sớm liên hệ để sắp xếp lịch phỏng vấn cụ thể. Vui lòng chuẩn bị sẵn hồ sơ và các giấy tờ cần thiết.</p>
-             ${footer}`,
-    },
-    Hired: {
-      subject: `🎉 Chúc mừng! Bạn đã trúng tuyển vị trí ${jobTitle}`,
-      html: `<h2 style="color:#065f46">🎉 Chúc mừng trúng tuyển!</h2>
-             <p>Chào <strong>${name}</strong>,</p>
-             <p>Chúng tôi rất vui mừng thông báo bạn đã chính thức <strong>trúng tuyển</strong> vị trí <strong>${jobTitle}</strong> tại phòng <strong>${dept}</strong>.</p>
-             <p>Bộ phận nhân sự sẽ liên hệ với bạn trong thời gian sớm nhất để trao đổi về offer và lịch nhận việc.</p>
-             ${footer}`,
-    },
-    Rejected: {
-      subject: `Thư cảm ơn – Vị trí ${jobTitle}`,
-      html: `<h2 style="color:#374151">Thư cảm ơn</h2>
-             <p>Chào <strong>${name}</strong>,</p>
-             <p>Cảm ơn bạn đã dành thời gian ứng tuyển vị trí <strong>${jobTitle}</strong> tại phòng <strong>${dept}</strong>.</p>
-             <p>Sau quá trình xem xét kỹ lưỡng, chúng tôi đã tìm được ứng viên phù hợp hơn với nhu cầu hiện tại. Chúng tôi sẽ lưu hồ sơ của bạn và liên hệ khi có cơ hội phù hợp.</p>
-             <p>Chúc bạn nhiều thành công!</p>
-             ${footer}`,
-    },
-  };
-
-  return templates[status] ?? null;
-};
 
 const router = Router();
-router.get("/", async (req: AuthRequest, res) => {
-  try {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(1000, parseInt(req.query.limit as string) || 10);
-    const skip = (page - 1) * limit;
 
-    // Advanced filters
-    const status = req.query.status as string | undefined; // "Applied" | "Interviewing" | ...
-    const jobId = req.query.jobId as string | undefined; // UUID của job
-    const dateFrom = req.query.dateFrom as string | undefined; // "2024-01-01"
-    const dateTo = req.query.dateTo as string | undefined; // "2024-12-31"
-
-    // Build Prisma where clause động
-    const where: Record<string, unknown> = {};
-    if (status) where.status = status;
-    if (jobId) where.jobId = jobId;
-    if (dateFrom || dateTo) {
-      where.appliedDate = {
-        ...(dateFrom && { gte: new Date(dateFrom) }),
-        ...(dateTo && {
-          lte: new Date(new Date(dateTo).setHours(23, 59, 59, 999)),
-        }),
-      };
-    }
-
-    const [candidates, total] = await Promise.all([
-      prisma.candidate.findMany({
-        where,
-        include: { job: true },
-        orderBy: { appliedDate: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.candidate.count({ where }), // count cũng filter để totalPages đúng
-    ]);
-
-    res.json({
-      data: candidates,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch {
-    res.status(500).json({ error: "Lỗi server khi lấy danh sách ứng viên" });
-  }
-});
-
-router.post("/", validateBody(candidateBodySchema), async (req, res) => {
-  try {
-    const { name, email, jobId, status } = req.body;
-    const candidate = await prisma.candidate.create({
-      data: { name, email, jobId, status: status || "Applied" },
-    });
-    res.status(201).json(candidate);
-  } catch {
-    res.status(500).json({ error: "Lỗi server khi tạo ứng viên" });
-  }
-});
-
-router.put("/:id", validateBody(updateCandidateStatusSchema), async (req, res) => {
-  try {
-    const id = req.params.id as string;
-    const { status } = req.body;
-
-    // Tìm candidate cũ để biết nó có thực sự thay đổi trạng thái không
-    const oldCandidate = await prisma.candidate.findUnique({ where: { id } });
-
-    const updatedCandidate = await prisma.candidate.update({
-      where: { id },
-      data: { status },
-      include: { job: true }, // Lấy kèm thông tin công việc để gửi email
-    });
-
-    let notification: {
-      attempted: boolean;
-      delivery?: EmailDeliveryResult;
-    } = { attempted: false };
-
-    // Gửi email khi status thay đổi và trạng thái có template thông báo.
-    if (oldCandidate?.status !== status) {
-      const tpl = buildEmailTemplate(
-        status,
-        updatedCandidate.name,
-        updatedCandidate.job.title,
-        updatedCandidate.job.department,
-      );
-      if (tpl) {
-        notification = {
-          attempted: true,
-          delivery: await sendEmail(
-            updatedCandidate.email,
-            tpl.subject,
-            tpl.html,
-          ),
-        };
-      }
-    }
-
-    res.json({ candidate: updatedCandidate, notification });
-  } catch (error) {
-    console.error("Lỗi khi cập nhật trạng thái ứng viên:", error);
-    res.status(500).json({ error: "Lỗi server khi cập nhật ứng viên" });
-  }
-});
-
-// DELETE /api/candidates/:id → Xóa Candidate
-router.delete("/:id", async (req: AuthRequest, res) => {
-  try {
-    const id = req.params.id as string;
-    const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate)
-      return res.status(404).json({ error: "KhĂ´ng tĂ¬m tháº¥y á»©ng viĂªn" });
-
-    await deleteCv(candidate.cvUrl, candidate.cvPublicId);
-    await prisma.candidate.delete({ where: { id } });
-    res.json({ message: "Xóa ứng viên thành công" });
-  } catch (error) {
-    console.error("Lỗi khi xóa ứng viên:", error);
-    res.status(500).json({ error: "Lỗi server khi xóa ứng viên" });
-  }
-});
-// PATCH /api/candidates/bulk → Bulk update status hoặc bulk delete
-router.patch("/bulk", validateBody(bulkCandidateSchema), async (req: AuthRequest, res) => {
-  try {
-    const { ids, action, status } = req.body as {
-      ids: string[];
-      action: "updateStatus" | "delete";
-      status?: string;
-    };
-
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ error: "Cần truyền danh sách ids" });
-    }
-
-    if (action === "updateStatus") {
-      if (!status) return res.status(400).json({ error: "Cần truyền status" });
-      const candidatesBeforeUpdate = await prisma.candidate.findMany({
-        where: { id: { in: ids }, status: { not: status } },
-        include: { job: true },
-      });
-      await prisma.candidate.updateMany({
-        where: { id: { in: ids } },
-        data: {
-          status: status as "Applied" | "Interviewing" | "Hired" | "Rejected",
-        },
-      });
-
-      const deliveries: EmailDeliveryResult[] = [];
-      if (
-        status === "Interviewing" ||
-        status === "Hired" ||
-        status === "Rejected"
-      ) {
-        for (const c of candidatesBeforeUpdate) {
-          const tpl = buildEmailTemplate(
-            status,
-            c.name,
-            c.job.title,
-            c.job.department,
-          );
-          if (tpl) {
-            deliveries.push(await sendEmail(c.email, tpl.subject, tpl.html));
-          }
-        }
-      }
-
-      return res.json({
-        message: `Đã cập nhật ${ids.length} ứng viên`,
-        notification: {
-          attempted: deliveries.length,
-          sent: deliveries.filter((delivery) => delivery.sent).length,
-          failed: deliveries.filter((delivery) => !delivery.sent).length,
-        },
-      });
-    }
-
-    if (action === "delete") {
-      const candidatesToDelete = await prisma.candidate.findMany({
-        where: { id: { in: ids } },
-        select: { cvUrl: true, cvPublicId: true },
-      });
-      await Promise.all(
-        candidatesToDelete.map((candidate) =>
-          deleteCv(candidate.cvUrl, candidate.cvPublicId),
-        ),
-      );
-      await prisma.candidate.deleteMany({ where: { id: { in: ids } } });
-      return res.json({ message: `Đã xóa ${ids.length} ứng viên` });
-    }
-
-    res.status(400).json({ error: "action không hợp lệ" });
-  } catch (error) {
-    console.error("Lỗi bulk action:", error);
-    res.status(500).json({ error: "Lỗi server khi thực hiện bulk action" });
-  }
-});
-// POST /api/candidates/:id/cv → Upload CV
-router.post("/:id/cv", cvUpload.single("cv"), async (req: AuthRequest, res) => {
-  try {
-    const id = String(req.params.id);
-    if (!req.file)
-      return res.status(400).json({ error: "Không có file được upload" });
-
-    const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate)
-      return res.status(404).json({ error: "Không tìm thấy ứng viên" });
-
-    // Xóa file CV cũ nếu có
-    await deleteCv(candidate.cvUrl, candidate.cvPublicId);
-    const storedCv = await saveCv(req.file, candidate.name);
-    const updated = await prisma.candidate.update({
-      where: { id },
-      data: storedCv,
-    });
-
-    let cvIndex: Awaited<ReturnType<typeof indexCandidateCv>>;
-    try {
-      cvIndex = await indexCandidateCv(id, req.file);
-    } catch (error) {
-      console.error("Loi khi index CV:", error);
-      cvIndex = { indexed: false, reason: getRagErrorMessage(error) };
-    }
-
-    res.json({ ...updated, cvIndex });
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Lỗi server";
-    res.status(500).json({ error: msg });
-  }
-});
-
-// POST /api/candidates/:id/cv/reindex -> Index lai CV hien co cho AI
-router.post("/:id/cv/reindex", async (req: AuthRequest, res) => {
-  try {
-    const id = String(req.params.id);
-    const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate?.cvUrl) {
-      return res.status(404).json({ error: "Ung vien chua co CV" });
-    }
-
-    let cvIndex: Awaited<ReturnType<typeof reindexCandidateCvFromUrl>>;
-    try {
-      cvIndex = await reindexCandidateCvFromUrl(id);
-    } catch (error) {
-      console.error("Loi khi reindex CV:", error);
-      cvIndex = { indexed: false, reason: getRagErrorMessage(error) };
-    }
-
-    res.json({ ...candidate, cvIndex });
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Loi server";
-    res.status(500).json({ error: msg });
-  }
-});
-
-// DELETE /api/candidates/:id/cv → Xóa CV
-router.delete("/:id/cv", async (req: AuthRequest, res) => {
-  try {
-    const id = String(req.params.id);
-    const candidate = await prisma.candidate.findUnique({ where: { id } });
-    if (!candidate || !candidate.cvUrl)
-      return res.status(404).json({ error: "Không có CV" });
-
-    await deleteCv(candidate.cvUrl, candidate.cvPublicId);
-    await deleteCandidateCvIndex(id);
-
-    const updated = await prisma.candidate.update({
-      where: { id },
-      data: {
-        cvUrl: null,
-        cvPublicId: null,
-        cvFileName: null,
-        cvExtractedText: null,
-        cvExtractedAt: null,
-        cvExtractionProvider: null,
-      },
-    });
-    res.json(updated);
-  } catch {
-    res.status(500).json({ error: "Lỗi khi xóa CV" });
-  }
-});
-
-// POST /api/candidates/:id/ask -> Hoi AI ve noi dung CV
+router.get("/", candidateController.list);
+router.post(
+  "/",
+  validateBody(candidateBodySchema),
+  candidateController.create,
+);
+router.put(
+  "/:id",
+  validateBody(updateCandidateStatusSchema),
+  candidateController.updateStatus,
+);
+router.delete("/:id", candidateController.delete);
+router.patch(
+  "/bulk",
+  validateBody(bulkCandidateSchema),
+  candidateController.bulk,
+);
+router.post(
+  "/:id/cv",
+  cvUpload.single("cv"),
+  candidateController.uploadCv,
+);
+router.post("/:id/cv/reindex", candidateController.reindexCv);
+router.delete("/:id/cv", candidateController.deleteCv);
 router.post(
   "/:id/ask",
   validateBody(askCandidateCvSchema),
-  async (req: AuthRequest, res) => {
-    try {
-      const id = String(req.params.id);
-      const candidate = await prisma.candidate.findUnique({ where: { id } });
-      if (!candidate) {
-        return res.status(404).json({ error: "Khong tim thay ung vien" });
-      }
-
-      const result = await askCandidateCv(id, req.body.question);
-      res.json(result);
-    } catch (error: unknown) {
-      const message = getRagErrorMessage(error);
-      res.status(400).json({ error: message });
-    }
-  },
+  candidateController.askCv,
 );
 
 export default router;

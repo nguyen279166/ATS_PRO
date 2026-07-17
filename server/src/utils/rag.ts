@@ -116,7 +116,7 @@ function isRetryableAiError(error: unknown) {
 }
 
 export function getRagErrorMessage(error: unknown) {
-  if (!(error instanceof Error)) return "Khong the xu ly AI cho CV";
+  if (!(error instanceof Error)) return "Không thể xử lý AI cho CV";
 
   const message = error.message.toLowerCase();
   const maybeCode = (error as { code?: string; status?: number; type?: string });
@@ -157,7 +157,7 @@ export function getRagErrorMessage(error: unknown) {
     return "Ollama chua chay hoac chua co model. Hay mo Ollama va pull model can thiet.";
   }
 
-  return error.message || "Khong the xu ly AI cho CV";
+  return error.message || "Không thể xử lý AI cho CV";
 }
 
 function getGeminiClient() {
@@ -398,7 +398,7 @@ function getExtractionFailureReason(ext: string) {
     return "File .doc cu chua duoc ho tro. Hay luu lai .docx hoac PDF.";
   }
 
-  return "Khong trich xuat duoc text tu CV";
+  return "Không trích xuất được nội dung từ CV";
 }
 
 async function extractTextWithGemini(buffer: Buffer, mimeType: string) {
@@ -483,7 +483,7 @@ export async function fetchCvFileFromUrl(
 
   const response = await fetch(fetchUrl);
   if (!response.ok) {
-    throw new Error(`Khong tai duoc CV (${response.status})`);
+    throw new Error(`Không tải được CV (${response.status})`);
   }
 
   const buffer = Buffer.from(await response.arrayBuffer());
@@ -518,7 +518,7 @@ export async function reindexCandidateCvFromUrl(candidateId: string) {
   });
 
   if (!candidate?.cvUrl) {
-    return { indexed: false, reason: "Ung vien chua co CV" };
+    return { indexed: false, reason: "Ứng viên chưa có CV" };
   }
 
   if (candidate.cvExtractedText?.trim()) {
@@ -752,7 +752,7 @@ async function createChatAnswer(
     return (
       response.message?.content?.trim() ||
       response.response?.trim() ||
-      "Khong the tao cau tra loi tu CV."
+      "Không thể tạo câu trả lời từ CV."
     );
   };
 
@@ -772,7 +772,7 @@ async function createChatAnswer(
           },
         });
 
-        return response.text?.trim() || "Khong the tao cau tra loi tu CV.";
+        return response.text?.trim() || "Không thể tạo câu trả lời từ CV.";
       } catch (error) {
         lastGeminiError = error;
         if (!isRetryableAiError(error)) break;
@@ -781,7 +781,7 @@ async function createChatAnswer(
 
     throw lastGeminiError instanceof Error
       ? lastGeminiError
-      : new Error("Khong the tao cau tra loi tu CV.");
+      : new Error("Không thể tạo câu trả lời từ CV.");
   };
 
   let lastError: unknown;
@@ -800,7 +800,7 @@ async function createChatAnswer(
 
   throw lastError instanceof Error
     ? lastError
-    : new Error("Khong the tao cau tra loi tu CV.");
+    : new Error("Không thể tạo câu trả lời từ CV.");
 }
 
 export async function indexCandidateCv(
@@ -855,7 +855,7 @@ async function indexCandidateCvText(
     await prisma.$executeRaw`
       DELETE FROM "CandidateCvChunk" WHERE "candidateId" = ${candidateId}
     `;
-    return { indexed: false, reason: "Khong co text CV de index" };
+    return { indexed: false, reason: "Không có nội dung CV để lập chỉ mục" };
   }
 
   const embeddedChunks = await embedChunksInBatches(chunks);

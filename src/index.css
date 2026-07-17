@@ -4,53 +4,78 @@
 
 @layer base {
   :root {
-    --sahara-bg: #faf5ee;
-    --sahara-surface: #fffaf2;
-    --sahara-surface-low: #f6efe4;
-    --sahara-surface-high: #efe2cc;
-    --sahara-sidebar: #c49a70;
-    --sahara-sidebar-dark: #a8784f;
-    --sahara-primary: #c2652a;
-    --sahara-primary-dark: #8a4518;
-    --sahara-secondary: #6f7f5a;
-    --sahara-border: #d8c8b5;
-    --sahara-text: #3a302a;
-    --sahara-muted: #7d6f62;
-    --sahara-shadow: 0 12px 32px rgba(95, 63, 33, 0.12);
+    --color-background: #f3f4f6;
+    --color-surface: #ffffff;
+    --color-surface-subtle: #eef0f3;
+    --color-surface-strong: #e2e5e9;
+    --color-text: #17181a;
+    --color-text-muted: #62666d;
+    --color-border: #dfe2e7;
+    --color-primary: #c74616;
+    --color-primary-hover: #9f3510;
+    --color-secondary: #168565;
+    --color-danger: #bd3038;
+    --color-focus: #e26732;
+    --color-sidebar: #191a1d;
+    --color-sidebar-deep: #0f1012;
+    --color-sidebar-active: #ffffff;
+    --color-sidebar-text: #f4f5f7;
+    --color-sidebar-muted: #a8adb6;
+    --color-sidebar-accent: #ffb55f;
+    --color-sidebar-logo: #ffb55f;
+    --color-sidebar-logo-text: #2a1609;
+    --color-brand-plate: #ffffff;
+    --color-on-primary: #ffffff;
+    --sahara-bg: var(--color-background);
+    --sahara-surface: var(--color-surface);
+    --sahara-surface-low: var(--color-surface-subtle);
+    --sahara-surface-high: var(--color-surface-strong);
+    --sahara-sidebar: var(--color-sidebar);
+    --sahara-sidebar-dark: var(--color-sidebar-deep);
+    --sahara-primary: var(--color-primary);
+    --sahara-primary-dark: var(--color-primary-hover);
+    --sahara-secondary: var(--color-secondary);
+    --sahara-border: var(--color-border);
+    --sahara-text: var(--color-text);
+    --sahara-muted: var(--color-text-muted);
+    --sahara-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 24px rgba(16, 24, 40, 0.06);
+    --shadow-raised: 0 24px 60px rgba(15, 16, 18, 0.18);
+    --z-popover: 100;
+    color-scheme: light;
   }
 
   .dark {
-    --sahara-bg: #181413;
-    --sahara-surface: #28211d;
-    --sahara-surface-low: #211b18;
-    --sahara-surface-high: #3b3029;
-    --sahara-sidebar: #4f372b;
-    --sahara-sidebar-dark: #2d211d;
-    --sahara-primary: #d1783b;
-    --sahara-primary-dark: #a85d2a;
-    --sahara-secondary: #94a36d;
-    --sahara-border: #6c5748;
-    --sahara-text: #f6ead8;
-    --sahara-muted: #c8b6a0;
-    --sahara-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+    --color-background: #101216;
+    --color-surface: #181b21;
+    --color-surface-subtle: #20242b;
+    --color-surface-strong: #2b3039;
+    --color-text: #f5f6f8;
+    --color-text-muted: #aab0ba;
+    --color-border: #353b45;
+    --color-primary: #f0773f;
+    --color-primary-hover: #ff8a52;
+    --color-secondary: #57c6a2;
+    --color-danger: #f0747b;
+    --color-focus: #ff9a68;
+    --color-sidebar: #141518;
+    --color-sidebar-deep: #0b0c0e;
+    --color-sidebar-active: #f7f7f8;
+    --color-on-primary: #261006;
+    --sahara-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+    --shadow-raised: 0 22px 56px rgba(0, 0, 0, 0.42);
     color-scheme: dark;
   }
 
   body {
     margin: 0;
     background:
-      radial-gradient(circle at 20% 0%, rgba(226, 177, 105, 0.24), transparent 32rem),
-      linear-gradient(135deg, #fbf4e6 0%, #f5e2bf 52%, #fbf4e8 100%);
+      radial-gradient(circle at 76% -8%, rgba(255, 181, 95, 0.12), transparent 26rem),
+      var(--color-background);
     color: var(--sahara-text);
-    font-family:
-      Manrope,
-      Inter,
-      ui-sans-serif,
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      sans-serif;
+    font-family: "Segoe UI Variable", "Segoe UI", ui-sans-serif, system-ui,
+      -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
     transition:
       background-color 200ms ease,
       color 200ms ease;
@@ -58,8 +83,17 @@
 
   .dark body {
     background:
-      radial-gradient(circle at 20% 0%, rgba(209, 120, 59, 0.16), transparent 30rem),
-      linear-gradient(135deg, #171311 0%, #241b17 48%, #141110 100%);
+      radial-gradient(circle at 76% -8%, rgba(240, 119, 63, 0.1), transparent 28rem),
+      var(--color-background);
+  }
+
+  *:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-primary) 26%, transparent);
   }
 }
 
@@ -67,73 +101,89 @@
   .sahara-app-shell {
     min-height: 100vh;
     background:
-      radial-gradient(circle at 85% 10%, rgba(255, 255, 255, 0.38), transparent 20rem),
-      linear-gradient(135deg, #fbf1dc 0%, #edd2a6 48%, #fbf4e8 100%);
+      radial-gradient(circle at 92% 0%, rgba(255, 181, 95, 0.13), transparent 24rem),
+      linear-gradient(180deg, #f8f8f9 0%, var(--color-background) 32rem);
     color: var(--sahara-text);
   }
 
   .sahara-sidebar {
     background: linear-gradient(180deg, var(--sahara-sidebar) 0%, var(--sahara-sidebar-dark) 100%);
-    color: #fff8ed;
-    border-right: 1px solid rgba(104, 63, 30, 0.18);
-    box-shadow: 8px 0 28px rgba(96, 64, 32, 0.12);
+    color: #f8f8f8;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 12px 0 36px rgba(15, 16, 18, 0.12);
+  }
+
+  .brand-mark-tile {
+    border: 1px solid rgba(21, 21, 24, 0.12);
+    background: var(--color-brand-plate);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 10px 24px rgba(0, 0, 0, 0.16);
   }
 
   .sahara-main {
     min-width: 0;
     background:
-      radial-gradient(circle at 75% 4%, rgba(255, 255, 255, 0.44), transparent 22rem),
-      linear-gradient(135deg, rgba(255, 250, 242, 0.82), rgba(246, 224, 185, 0.56));
+      radial-gradient(circle at 86% 1%, rgba(255, 181, 95, 0.1), transparent 24rem),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(243, 244, 246, 0.94));
   }
 
   .sahara-page-title {
     color: var(--sahara-text);
-    letter-spacing: 0;
+    font-family: Georgia, "Times New Roman", ui-serif, serif;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
   }
 
   .sahara-card {
-    background: rgba(255, 250, 242, 0.9);
-    border: 1px solid rgba(216, 200, 181, 0.84);
-    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-surface) 98%, transparent);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
     box-shadow: var(--sahara-shadow);
   }
 
   .sahara-card-soft {
-    background: rgba(246, 239, 228, 0.86);
-    border: 1px solid rgba(216, 200, 181, 0.72);
-    border-radius: 8px;
+    background: color-mix(in srgb, var(--color-surface-subtle) 82%, transparent);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
   }
 
   .sahara-button {
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 8px;
-    background: var(--sahara-primary);
-    color: white;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #d95724 0%, var(--sahara-primary) 60%, #a43610 100%);
+    color: var(--color-on-primary);
     font-weight: 700;
-    box-shadow: 0 8px 18px rgba(194, 101, 42, 0.2);
+    box-shadow: 0 10px 22px rgba(199, 70, 22, 0.22);
     transition:
-      transform 160ms ease,
-      background-color 160ms ease,
-      box-shadow 160ms ease;
+      filter 160ms ease,
+      box-shadow 160ms ease,
+      transform 160ms ease;
   }
 
   .sahara-button:hover {
-    background: var(--sahara-primary-dark);
-    box-shadow: 0 10px 22px rgba(138, 69, 24, 0.22);
+    filter: brightness(0.94) saturate(1.08);
+    box-shadow: 0 13px 26px rgba(159, 53, 16, 0.25);
     transform: translateY(-1px);
   }
 
+  .sahara-button:active {
+    transform: translateY(0) scale(0.985);
+  }
+
   .sahara-button-secondary {
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.45rem;
-    border-radius: 8px;
-    border: 1px solid rgba(176, 145, 112, 0.9);
-    background: rgba(255, 250, 242, 0.78);
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 84%, transparent);
     color: var(--sahara-text);
     font-weight: 700;
     transition:
@@ -142,14 +192,15 @@
   }
 
   .sahara-button-secondary:hover {
-    background: #fff7eb;
+    background: var(--color-surface-subtle);
     border-color: var(--sahara-primary);
   }
 
   .sahara-input {
-    border-radius: 8px;
-    border: 1px solid rgba(176, 145, 112, 0.7);
-    background: rgba(255, 250, 242, 0.9);
+    min-height: 44px;
+    border-radius: 12px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
     color: var(--sahara-text);
     outline: none;
     transition:
@@ -161,7 +212,7 @@
   .sahara-input:focus {
     border-color: var(--sahara-primary);
     box-shadow: 0 0 0 3px rgba(194, 101, 42, 0.15);
-    background: #fffaf2;
+    background: var(--color-surface);
   }
 
   .sahara-table {
@@ -171,17 +222,51 @@
   }
 
   .sahara-table th {
-    color: #8b775f;
+    color: var(--color-text-muted);
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0;
     text-transform: uppercase;
-    background: rgba(240, 226, 205, 0.7);
+    background: color-mix(in srgb, var(--color-surface-subtle) 86%, transparent);
   }
 
   .sahara-table td,
   .sahara-table th {
-    border-bottom: 1px solid rgba(216, 200, 181, 0.62);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sahara-icon-button {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: var(--color-text-muted);
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+
+  .sahara-icon-button:hover {
+    background: var(--color-surface-strong);
+    color: var(--color-text);
+  }
+
+  .skip-link {
+    position: fixed;
+    left: 1rem;
+    top: 1rem;
+    z-index: 1000;
+    transform: translateY(-180%);
+    border-radius: 8px;
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    padding: 0.75rem 1rem;
+    font-weight: 700;
+    transition: transform 160ms ease;
+  }
+
+  .skip-link:focus {
+    transform: translateY(0);
   }
 
   .candidates-table tbody tr:first-child td {
@@ -191,9 +276,9 @@
   .sahara-public-shell,
   .sahara-auth-shell {
     background:
-      radial-gradient(circle at 14% 6%, rgba(255, 250, 242, 0.76), transparent 24rem),
-      radial-gradient(circle at 86% 12%, rgba(111, 127, 90, 0.18), transparent 22rem),
-      linear-gradient(135deg, #fbf1dc 0%, #edd2a6 50%, #fbf4e8 100%);
+      radial-gradient(circle at 12% 4%, rgba(255, 181, 95, 0.2), transparent 25rem),
+      radial-gradient(circle at 90% 8%, rgba(22, 133, 101, 0.1), transparent 24rem),
+      linear-gradient(145deg, #f8f8f9 0%, #eef0f3 54%, #f8f8f9 100%);
     color: var(--sahara-text);
   }
 
@@ -213,35 +298,316 @@
   }
 
   .sahara-status-applied {
-    background: #efe4d0;
-    color: #6f4e2f;
-    border-color: #ddc8a8;
+    background: #e9edf3;
+    color: #4b5565;
+    border-color: #d3d9e2;
   }
 
   .sahara-status-interviewing {
-    background: #f4dfbd;
-    color: #7f4616;
-    border-color: #ddb778;
+    background: #fff0df;
+    color: #9f4516;
+    border-color: #ffd2a5;
   }
 
   .sahara-status-hired {
-    background: #e4eddc;
-    color: #587143;
-    border-color: #bdcdaa;
+    background: #ddf5ec;
+    color: #126b52;
+    border-color: #b8e7d7;
   }
 
   .sahara-status-rejected {
-    background: #f2ded4;
-    color: #9a452a;
-    border-color: #d8ad99;
+    background: #fce8ea;
+    color: #a22c35;
+    border-color: #f5c5ca;
+  }
+
+  .kanban-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at 84% 12%, rgba(255, 181, 95, 0.24), transparent 18rem),
+      linear-gradient(128deg, #151619 0%, #23252a 58%, #17181b 100%);
+    box-shadow: 0 24px 54px rgba(15, 16, 18, 0.18);
+  }
+
+  .kanban-hero::after {
+    position: absolute;
+    z-index: -1;
+    right: -4rem;
+    bottom: -7rem;
+    width: 19rem;
+    height: 19rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    content: "";
+    box-shadow:
+      0 0 0 2.5rem rgba(255, 255, 255, 0.025),
+      0 0 0 5rem rgba(255, 255, 255, 0.018);
+  }
+
+  .kanban-lane {
+    --lane-color: #718096;
+    --lane-soft: #eef1f5;
+    position: relative;
+    border: 1px solid var(--color-border);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--color-surface-subtle) 76%, transparent);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  }
+
+  .kanban-lane[data-status="Applied"] {
+    --lane-color: #718096;
+    --lane-soft: #eef1f5;
+  }
+
+  .kanban-lane[data-status="Interviewing"] {
+    --lane-color: #db6b2c;
+    --lane-soft: #fff0e4;
+  }
+
+  .kanban-lane[data-status="Hired"] {
+    --lane-color: #168565;
+    --lane-soft: #e4f5ef;
+  }
+
+  .kanban-lane[data-status="Rejected"] {
+    --lane-color: #bd4650;
+    --lane-soft: #f9e9eb;
+  }
+
+  .kanban-lane-header {
+    border-bottom: 1px solid color-mix(in srgb, var(--lane-color) 20%, var(--color-border));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--lane-soft) 78%, var(--color-surface)), transparent);
+  }
+
+  .kanban-candidate-card {
+    position: relative;
+    border: 1px solid color-mix(in srgb, var(--lane-color) 18%, var(--color-border));
+    border-radius: 16px;
+    background: var(--color-surface);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 18px rgba(16, 24, 40, 0.05);
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      transform 180ms ease;
+  }
+
+  .kanban-candidate-card::before {
+    position: absolute;
+    top: 0.8rem;
+    bottom: 0.8rem;
+    left: 0;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: var(--lane-color);
+    content: "";
+  }
+
+  .kanban-candidate-card:hover {
+    border-color: color-mix(in srgb, var(--lane-color) 46%, var(--color-border));
+    box-shadow: 0 15px 32px rgba(16, 24, 40, 0.12);
+    transform: translateY(-2px);
+  }
+
+  .kanban-stage-trigger {
+    display: flex;
+    min-height: 44px;
+    width: 100%;
+    min-width: 0;
+    align-items: center;
+    gap: 0.55rem;
+    border: 1px solid color-mix(in srgb, var(--lane-color) 26%, var(--color-border));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--lane-color) 8%, var(--color-surface));
+    color: var(--color-text);
+    cursor: pointer;
+    padding: 0.35rem 0.7rem 0.35rem 0.4rem;
+    transition:
+      border-color 160ms ease,
+      background-color 160ms ease,
+      box-shadow 160ms ease;
+  }
+
+  .kanban-stage-trigger:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--lane-color) 50%, var(--color-border));
+    background: color-mix(in srgb, var(--lane-color) 12%, var(--color-surface));
+  }
+
+  .kanban-stage-trigger[aria-expanded="true"] {
+    border-color: color-mix(in srgb, var(--lane-color) 62%, var(--color-border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--lane-color) 20%, transparent);
+  }
+
+  .kanban-stage-trigger:disabled {
+    cursor: wait;
+    opacity: 0.62;
+  }
+
+  .kanban-stage-trigger-icon {
+    display: inline-flex;
+    height: 30px;
+    width: 30px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--lane-color) 15%, var(--color-surface));
+    color: var(--lane-color);
+  }
+
+  .kanban-stage-saving {
+    display: inline-flex;
+    height: 44px;
+    width: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--lane-color) 24%, var(--color-border));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--lane-color) 8%, var(--color-surface));
+    color: var(--lane-color);
+  }
+
+  .kanban-stage-menu {
+    position: fixed;
+    z-index: var(--z-popover);
+    max-height: min(22rem, calc(100dvh - 1rem));
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-surface);
+    box-shadow: 0 18px 48px rgba(15, 16, 18, 0.18);
+    padding: 0.4rem;
+    color: var(--color-text);
+    transform-origin: top center;
+    animation: kanban-stage-menu-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .kanban-stage-menu[data-placement="top"] {
+    transform-origin: bottom center;
+    animation-name: kanban-stage-menu-in-from-top;
+  }
+
+  .kanban-stage-menu-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.35rem 0.55rem 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .kanban-stage-menu-heading span:last-child {
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .kanban-stage-option {
+    --option-color: #718096;
+    --option-soft: #eef1f5;
+    display: grid;
+    min-height: 52px;
+    width: 100%;
+    grid-template-columns: 32px minmax(0, 1fr) 24px;
+    align-items: center;
+    gap: 0.65rem;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    padding: 0.4rem 0.5rem;
+    color: var(--color-text);
+    cursor: pointer;
+    text-align: left;
+    transition:
+      background-color 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .kanban-stage-option[data-status="Applied"] {
+    --option-color: #718096;
+    --option-soft: #eef1f5;
+  }
+
+  .kanban-stage-option[data-status="Interviewing"] {
+    --option-color: #db6b2c;
+    --option-soft: #fff0e4;
+  }
+
+  .kanban-stage-option[data-status="Hired"] {
+    --option-color: #168565;
+    --option-soft: #e4f5ef;
+  }
+
+  .kanban-stage-option[data-status="Rejected"] {
+    --option-color: #bd4650;
+    --option-soft: #f9e9eb;
+  }
+
+  .kanban-stage-option:hover,
+  .kanban-stage-option[data-active="true"] {
+    background: color-mix(in srgb, var(--option-color) 10%, var(--color-surface-subtle));
+  }
+
+  .kanban-stage-option[data-selected="true"] {
+    background: color-mix(in srgb, var(--option-color) 13%, var(--color-surface));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--option-color) 26%, var(--color-border));
+  }
+
+  .kanban-stage-option-marker {
+    display: inline-flex;
+    height: 32px;
+    width: 32px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--option-color) 22%, var(--color-border));
+    border-radius: 9px;
+    background: var(--option-soft);
+  }
+
+  .kanban-stage-option-marker > span {
+    height: 8px;
+    width: 8px;
+    border-radius: 999px;
+    background: var(--option-color);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--option-color) 14%, transparent);
+  }
+}
+
+@keyframes kanban-stage-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes kanban-stage-menu-in-from-top {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
 @layer utilities {
   .dark .sahara-app-shell {
     background:
-      radial-gradient(circle at 80% 8%, rgba(209, 120, 59, 0.12), transparent 22rem),
-      linear-gradient(135deg, #171311 0%, #241b17 52%, #15110f 100%);
+      radial-gradient(circle at 88% 0%, rgba(240, 119, 63, 0.1), transparent 25rem),
+      linear-gradient(180deg, #13151a 0%, var(--color-background) 32rem);
     color: var(--sahara-text);
   }
 
@@ -253,19 +619,19 @@
 
   .dark .sahara-main {
     background:
-      radial-gradient(circle at 75% 4%, rgba(209, 120, 59, 0.1), transparent 24rem),
-      linear-gradient(135deg, rgba(32, 25, 22, 0.94), rgba(25, 20, 18, 0.96));
+      radial-gradient(circle at 82% 1%, rgba(240, 119, 63, 0.08), transparent 24rem),
+      linear-gradient(180deg, rgba(20, 22, 27, 0.98), rgba(16, 18, 22, 0.98));
   }
 
   .dark .sahara-card {
-    background: rgba(40, 33, 29, 0.92);
-    border-color: rgba(108, 87, 72, 0.82);
+    background: rgba(24, 27, 33, 0.94);
+    border-color: rgba(53, 59, 69, 0.9);
     box-shadow: var(--sahara-shadow);
   }
 
   .dark .sahara-card-soft {
-    background: rgba(33, 27, 24, 0.9);
-    border-color: rgba(108, 87, 72, 0.74);
+    background: rgba(27, 31, 38, 0.92);
+    border-color: rgba(53, 59, 69, 0.82);
   }
 
   .dark .sahara-button {
@@ -273,25 +639,25 @@
   }
 
   .dark .sahara-button-secondary {
-    background: rgba(44, 36, 31, 0.9);
-    border-color: rgba(145, 119, 92, 0.76);
+    background: rgba(30, 34, 41, 0.94);
+    border-color: rgba(76, 83, 96, 0.84);
     color: var(--sahara-text);
   }
 
   .dark .sahara-button-secondary:hover {
-    background: #3b3029;
+    background: #292e37;
     border-color: var(--sahara-primary);
   }
 
   .dark .sahara-input {
-    background: rgba(35, 29, 26, 0.96);
-    border-color: rgba(145, 119, 92, 0.74);
+    background: rgba(25, 28, 34, 0.98);
+    border-color: rgba(76, 83, 96, 0.82);
     color: var(--sahara-text);
   }
 
   .dark .sahara-input:focus {
-    background: rgba(44, 36, 31, 0.98);
-    box-shadow: 0 0 0 3px rgba(209, 120, 59, 0.18);
+    background: rgba(31, 35, 42, 0.98);
+    box-shadow: 0 0 0 3px rgba(240, 119, 63, 0.18);
   }
 
   .dark .sahara-input::placeholder {
@@ -311,9 +677,9 @@
   .dark .sahara-public-shell,
   .dark .sahara-auth-shell {
     background:
-      radial-gradient(circle at 14% 6%, rgba(209, 120, 59, 0.14), transparent 24rem),
-      radial-gradient(circle at 86% 12%, rgba(148, 163, 109, 0.12), transparent 22rem),
-      linear-gradient(135deg, #171311 0%, #241b17 50%, #141110 100%);
+      radial-gradient(circle at 14% 6%, rgba(240, 119, 63, 0.12), transparent 24rem),
+      radial-gradient(circle at 86% 12%, rgba(87, 198, 162, 0.08), transparent 22rem),
+      linear-gradient(145deg, #111318 0%, #171a20 50%, #101216 100%);
   }
 
   .dark .sahara-status-applied {
@@ -403,5 +769,72 @@
     background-color: #28211d !important;
     border-color: rgba(108, 87, 72, 0.82) !important;
     color: #f6ead8 !important;
+  }
+
+  .dark .kanban-lane {
+    background: rgba(27, 31, 38, 0.9);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  }
+
+  .dark .kanban-lane[data-status="Applied"] {
+    --lane-color: #9aa5b5;
+    --lane-soft: #232831;
+  }
+
+  .dark .kanban-lane[data-status="Interviewing"] {
+    --lane-color: #f08a50;
+    --lane-soft: #30251f;
+  }
+
+  .dark .kanban-lane[data-status="Hired"] {
+    --lane-color: #57c6a2;
+    --lane-soft: #1d2d29;
+  }
+
+  .dark .kanban-lane[data-status="Rejected"] {
+    --lane-color: #ef7b83;
+    --lane-soft: #302226;
+  }
+
+  .dark .kanban-candidate-card {
+    background: #1b1f26;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .kanban-stage-menu {
+    border-color: #353b45;
+    background: #1b1f26;
+    box-shadow: 0 22px 56px rgba(0, 0, 0, 0.48);
+  }
+
+  .dark .kanban-stage-option[data-status="Applied"] {
+    --option-color: #9aa5b5;
+    --option-soft: #232831;
+  }
+
+  .dark .kanban-stage-option[data-status="Interviewing"] {
+    --option-color: #f08a50;
+    --option-soft: #30251f;
+  }
+
+  .dark .kanban-stage-option[data-status="Hired"] {
+    --option-color: #57c6a2;
+    --option-soft: #1d2d29;
+  }
+
+  .dark .kanban-stage-option[data-status="Rejected"] {
+    --option-color: #ef7b83;
+    --option-soft: #302226;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
