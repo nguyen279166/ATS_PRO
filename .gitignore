@@ -37,3 +37,6 @@ server/uploads
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Local CodeGraph index
+/.codegraph/

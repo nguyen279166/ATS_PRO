@@ -1,8 +1,8 @@
-import { test, expect } from "@playwright/test";
-import { LoginPage } from "./pages/LoginPage";
-import { SidebarComponent } from "./pages/SidebarComponent";
-import { JobsPage } from "./pages/JobsPage";
-import { CandidatesPage } from "./pages/CandidatesPage";
+import { test } from "@playwright/test";
+import { LoginPage } from "./pages/LoginPage.ts";
+import { SidebarComponent } from "./pages/SidebarComponent.ts";
+import { JobsPage } from "./pages/JobsPage.ts";
+import { CandidatesPage } from "./pages/CandidatesPage.ts";
 
 test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
   const TEST_JOB_TITLE = "E2E Automated Tester Job " + Date.now();
@@ -10,7 +10,7 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
   const HR_TEST_PASSWORD = "Password123";
   const API_BASE_URL = process.env.VITE_BASE_URL || "http://localhost:3001";
 
-  test("Admin workflow: Login, Create Job, Verify Admin Roles & Export Buttons", async ({ page }) => {
+  test("Admin: đăng nhập, tạo tin và thấy quyền xuất báo cáo", async ({ page }) => {
     const loginPage = new LoginPage(page);
     const sidebar = new SidebarComponent(page);
     const jobsPage = new JobsPage(page);
@@ -24,20 +24,22 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
     await sidebar.verifyRole("admin");
 
     // 3. Navigate to Jobs Page and create a test job
-    await sidebar.clickMenu("Jobs");
+    await sidebar.clickMenu("Tin tuyển dụng");
     await page.waitForURL("**/jobs");
     await jobsPage.createJob(
       TEST_JOB_TITLE,
       "Engineering QA",
       "Hà Nội (Hybrid)",
-      "This is a test job created automatically by Playwright E2E suite."
+      "Tin tuyển dụng kiểm thử được tạo tự động bởi Playwright.",
     );
 
     // 4. Verify job appears in the listing
     await jobsPage.verifyJobExists(TEST_JOB_TITLE);
+    await jobsPage.verifyEditButtonVisible(TEST_JOB_TITLE);
+    await jobsPage.verifyDeleteButtonVisible(TEST_JOB_TITLE, true);
 
     // 5. Navigate to Candidates Page and verify Export buttons (Excel, PDF) are visible
-    await sidebar.clickMenu("Candidates");
+    await sidebar.clickMenu("Ứng viên");
     await page.waitForURL("**/candidates");
     await candidatesPage.verifyExportVisible(true);
 
@@ -46,10 +48,11 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
     await page.waitForURL("**/login");
   });
 
-  test("HR workflow: Login, Verify HR Role, Hidden Export & Delete restrictions", async ({ page, request }) => {
+  test("HR: ẩn quyền xuất báo cáo và xóa tin", async ({ page, request }) => {
     const loginPage = new LoginPage(page);
     const sidebar = new SidebarComponent(page);
     const candidatesPage = new CandidatesPage(page);
+    const jobsPage = new JobsPage(page);
 
     await request.post(`${API_BASE_URL}/api/auth/register`, {
       data: {
@@ -69,24 +72,22 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
     await sidebar.verifyRole("hr");
 
     // 3. Navigate to Candidates Page and verify Export buttons (Excel, PDF) are hidden
-    await sidebar.clickMenu("Candidates");
+    await sidebar.clickMenu("Ứng viên");
     await page.waitForURL("**/candidates");
     await candidatesPage.verifyExportVisible(false);
 
     // 4. Navigate to Jobs Page and verify Delete job action is restricted (not visible)
-    await sidebar.clickMenu("Jobs");
+    await sidebar.clickMenu("Tin tuyển dụng");
     await page.waitForURL("**/jobs");
-    // Verify any job card does not show delete button for HR
-    // We look for a delete button on job cards and assert it's absent
-    const deleteBtn = page.locator('button[title="Xóa (chỉ Admin)"]').first();
-    await expect(deleteBtn).not.toBeVisible();
+    await jobsPage.verifyJobExists(TEST_JOB_TITLE);
+    await jobsPage.verifyDeleteButtonVisible(TEST_JOB_TITLE, false);
 
     // 5. Logout
     await sidebar.logout();
     await page.waitForURL("**/login");
   });
 
-  test("Admin clean up: Login and delete the created job", async ({ page }) => {
+  test("Admin: dọn tin kiểm thử đã tạo", async ({ page }) => {
     const loginPage = new LoginPage(page);
     const sidebar = new SidebarComponent(page);
     const jobsPage = new JobsPage(page);
@@ -96,21 +97,17 @@ test.describe("ATS System End-to-End & Role-Based Access Control Tests", () => {
     await loginPage.login("admin@ats.com", "Password123");
 
     // 2. Navigate to Jobs page
-    await sidebar.clickMenu("Jobs");
+    await sidebar.clickMenu("Tin tuyển dụng");
     await page.waitForURL("**/jobs");
 
     // 3. We'll search for any test job cards and clean them up
-    const testJobTitlePattern = "E2E Automated Tester Job";
-    const jobCard = page
-      .locator(`.sahara-card:has(h3:has-text("${testJobTitlePattern}"))`)
-      .first();
-    
-    if (await jobCard.isVisible()) {
-      const jobTitle = await jobCard.locator("h3").innerText();
+    const jobTitle = await jobsPage.findFirstJobTitle(
+      /E2E Automated Tester Job/,
+    );
+
+    if (jobTitle) {
       await jobsPage.deleteJob(jobTitle);
-      
-      // Verify job card is gone
-      await expect(page.locator(`h3:has-text("${jobTitle}")`)).not.toBeVisible({ timeout: 5000 });
+      await jobsPage.verifyJobRemoved(jobTitle);
     }
 
     // 4. Logout

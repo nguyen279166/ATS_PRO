@@ -1,7 +1,24 @@
-import { useCallback, useMemo, useState, useEffect } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { CalendarPlus, MapPin, FileText, Trash2, CheckCircle, XCircle, Clock } from "lucide-react";
+import {
+  CalendarPlus,
+  CheckCircle,
+  Clock,
+  FileText,
+  Loader2,
+  MapPin,
+  RefreshCw,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { API_BASE_URL } from "../config/env";
 
 interface Interview {
@@ -14,57 +31,94 @@ interface Interview {
   creator: { fullName: string; avatar: string | null };
 }
 
-interface Props {
+interface CandidateInterviewsProps {
   candidateId: string;
 }
 
 const STATUS_CONFIG = {
-  Scheduled: { label: "Đã lên lịch", icon: Clock, color: "sahara-status sahara-status-interviewing" },
-  Done: { label: "Đã xong", icon: CheckCircle, color: "sahara-status sahara-status-hired" },
-  Cancelled: { label: "Đã huỷ", icon: XCircle, color: "sahara-status sahara-status-rejected" },
+  Scheduled: {
+    icon: Clock,
+    className: "sahara-status sahara-status-interviewing",
+  },
+  Done: {
+    icon: CheckCircle,
+    className: "sahara-status sahara-status-hired",
+  },
+  Cancelled: {
+    icon: XCircle,
+    className: "sahara-status sahara-status-rejected",
+  },
 };
 
-export default function CandidateInterviews({ candidateId }: Props) {
+const formatInterviewDate = (dateValue: string) =>
+  new Date(dateValue).toLocaleString("vi-VN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+export default function CandidateInterviews({
+  candidateId,
+}: CandidateInterviewsProps) {
+  const headingId = useId();
+  const formId = useId();
+  const scheduledAtId = useId();
+  const locationId = useId();
+  const notesId = useId();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-
-  // Form state
   const [scheduledAt, setScheduledAt] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const token = localStorage.getItem("token_lay_duoc");
-  const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+  const headers = useMemo(
+    () => ({ Authorization: "Bearer " + token }),
+    [token],
+  );
 
   const fetchInterviews = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/interviews/${candidateId}`, { headers });
-      setInterviews(res.data);
+      const response = await axios.get(
+        API_BASE_URL + "/api/interviews/" + candidateId,
+        { headers },
+      );
+      setInterviews(response.data);
     } catch {
-      toast.error("Lỗi khi tải lịch phỏng vấn");
+      const message = "Lỗi khi tải lịch phỏng vấn";
+      setLoadError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   }, [candidateId, headers]);
 
   useEffect(() => {
-    fetchInterviews();
+    void fetchInterviews();
   }, [fetchInterviews]);
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!scheduledAt) return;
+  const handleAdd = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!scheduledAt || submitting) return;
 
     setSubmitting(true);
     try {
-      const res = await axios.post(
-        `${API_BASE_URL}/api/interviews`,
+      const response = await axios.post(
+        API_BASE_URL + "/api/interviews",
         { candidateId, scheduledAt, location, notes },
-        { headers }
+        { headers },
       );
-      setInterviews([...interviews, res.data]);
+      setInterviews((current) => [...current, response.data]);
       setShowForm(false);
       setScheduledAt("");
       setLocation("");
@@ -78,184 +132,306 @@ export default function CandidateInterviews({ candidateId }: Props) {
   };
 
   const handleStatusChange = async (id: string, status: string) => {
+    if (updatingStatusId) return;
+
+    setUpdatingStatusId(id);
     try {
-      const res = await axios.put(`${API_BASE_URL}/api/interviews/${id}`, { status }, { headers });
-      setInterviews(interviews.map((iv) => (iv.id === id ? res.data : iv)));
+      const response = await axios.put(
+        API_BASE_URL + "/api/interviews/" + id,
+        { status },
+        { headers },
+      );
+      setInterviews((current) =>
+        current.map((interview) =>
+          interview.id === id ? response.data : interview,
+        ),
+      );
     } catch {
       toast.error("Lỗi khi cập nhật trạng thái");
+    } finally {
+      setUpdatingStatusId(null);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Xóa lịch phỏng vấn này?")) return;
+    if (deletingId || !window.confirm("Xóa lịch phỏng vấn này?")) return;
+
+    setDeletingId(id);
     try {
-      await axios.delete(`${API_BASE_URL}/api/interviews/${id}`, { headers });
-      setInterviews(interviews.filter((iv) => iv.id !== id));
+      await axios.delete(API_BASE_URL + "/api/interviews/" + id, { headers });
+      setInterviews((current) =>
+        current.filter((interview) => interview.id !== id),
+      );
       toast.success("Đã xóa lịch phỏng vấn");
     } catch {
       toast.error("Lỗi khi xóa lịch phỏng vấn");
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const formatDateTime = (dt: string) => {
-    const date = new Date(dt);
-    return date.toLocaleString("vi-VN", {
-      weekday: "short",
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
-    <div className="flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h4 className="font-black text-[#3a302a]">
+    <section className='flex flex-col gap-4' aria-labelledby={headingId}>
+      <div className='flex flex-wrap items-center justify-between gap-3'>
+        <h4 id={headingId} className='font-black text-[var(--color-text)]'>
           Lịch phỏng vấn ({interviews.length})
         </h4>
         <button
-          onClick={() => setShowForm(!showForm)}
-          className="sahara-button px-3 py-2 text-sm"
+          type='button'
+          onClick={() => setShowForm((current) => !current)}
+          className='sahara-button px-3 text-sm'
+          aria-expanded={showForm}
+          aria-controls={formId}
         >
-          <CalendarPlus size={15} />
-          Thêm lịch
+          <CalendarPlus size={17} aria-hidden='true' />
+          {showForm ? "Ẩn biểu mẫu" : "Thêm lịch"}
         </button>
       </div>
 
-      {/* Form thêm mới */}
       {showForm && (
         <form
+          id={formId}
           onSubmit={handleAdd}
-          className="sahara-card-soft flex flex-col gap-3 p-4"
+          className='sahara-card-soft flex flex-col gap-4 p-4'
         >
           <div>
-            <label className="mb-1 block text-xs font-bold text-[#7d6f62]">
-              Ngày giờ phỏng vấn *
+            <label
+              htmlFor={scheduledAtId}
+              className='mb-1.5 block text-sm font-bold text-[var(--color-text)]'
+            >
+              Ngày giờ phỏng vấn
+              <span className='text-[var(--color-danger)]'> *</span>
             </label>
             <input
-              type="datetime-local"
+              id={scheduledAtId}
+              type='datetime-local'
               value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
+              onChange={(event) => setScheduledAt(event.target.value)}
               required
-              className="sahara-input w-full px-3 py-2 text-sm"
+              autoFocus
+              className='sahara-input w-full px-3 py-2 text-base sm:text-sm'
             />
           </div>
+
           <div>
-            <label className="mb-1 block text-xs font-bold text-[#7d6f62]">
-              Địa điểm / Link Meet
+            <label
+              htmlFor={locationId}
+              className='mb-1.5 block text-sm font-bold text-[var(--color-text)]'
+            >
+              Địa điểm hoặc link cuộc họp
             </label>
             <input
-              type="text"
-              placeholder="VD: Phòng họp A3 hoặc https://meet.google.com/..."
+              id={locationId}
+              type='text'
+              placeholder='Ví dụ: Phòng họp A3 hoặc link Google Meet'
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="sahara-input w-full px-3 py-2 text-sm"
+              onChange={(event) => setLocation(event.target.value)}
+              className='sahara-input w-full px-3 py-2 text-base sm:text-sm'
             />
           </div>
+
           <div>
-            <label className="mb-1 block text-xs font-bold text-[#7d6f62]">
-              Ghi chú
+            <label
+              htmlFor={notesId}
+              className='mb-1.5 block text-sm font-bold text-[var(--color-text)]'
+            >
+              Ghi chú chuẩn bị
             </label>
             <textarea
-              placeholder="Nội dung cần chuẩn bị, câu hỏi..."
+              id={notesId}
+              placeholder='Nội dung cần chuẩn bị, câu hỏi...'
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="sahara-input w-full resize-none px-3 py-2 text-sm"
+              onChange={(event) => setNotes(event.target.value)}
+              rows={3}
+              className='sahara-input w-full resize-y px-3 py-2 text-base sm:text-sm'
             />
           </div>
-          <div className="flex gap-2 justify-end">
+
+          <div className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-end'>
             <button
-              type="button"
+              type='button'
               onClick={() => setShowForm(false)}
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-[#7d6f62] transition-colors hover:bg-[#f4dfbd]"
+              disabled={submitting}
+              className='sahara-button-secondary px-4 text-sm disabled:opacity-50'
             >
-              Huỷ
+              Hủy
             </button>
             <button
-              type="submit"
+              type='submit'
               disabled={submitting}
-              className="sahara-button px-4 py-2 text-sm disabled:opacity-60"
+              className='sahara-button px-4 text-sm disabled:cursor-not-allowed disabled:opacity-60'
             >
-              {submitting ? "Đang lưu..." : "Lưu lịch"}
+              {submitting && (
+                <Loader2
+                  size={17}
+                  className='animate-spin motion-reduce:animate-none'
+                  aria-hidden='true'
+                />
+              )}
+              {submitting ? "Đang lưu" : "Lưu lịch"}
             </button>
           </div>
         </form>
       )}
 
-      {/* Danh sách lịch PV */}
       {loading ? (
-        <div className="flex justify-center py-6">
-          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#c2652a]" />
+        <div
+          className='flex min-h-32 items-center justify-center text-[var(--color-primary)]'
+          role='status'
+        >
+          <Loader2
+            size={28}
+            className='animate-spin motion-reduce:animate-none'
+            aria-hidden='true'
+          />
+          <span className='sr-only'>Đang tải lịch phỏng vấn</span>
+        </div>
+      ) : loadError ? (
+        <div
+          className='flex min-h-32 flex-col items-center justify-center gap-3 rounded-lg border border-[var(--color-danger)] p-4 text-center'
+          role='alert'
+        >
+          <p className='text-sm font-semibold text-[var(--color-danger)]'>
+            {loadError}
+          </p>
+          <button
+            type='button'
+            onClick={() => void fetchInterviews()}
+            className='sahara-button-secondary px-4 text-sm'
+          >
+            <RefreshCw size={17} aria-hidden='true' />
+            Thử lại
+          </button>
         </div>
       ) : interviews.length === 0 ? (
-        <p className="py-6 text-center text-sm text-[#9a7655]">Chưa có lịch phỏng vấn nào</p>
+        <p
+          className='rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-surface-subtle)] px-4 py-8 text-center text-sm text-[var(--color-text-muted)]'
+          role='status'
+        >
+          Chưa có lịch phỏng vấn nào.
+        </p>
       ) : (
-        <div className="flex flex-col gap-3">
-          {interviews.map((iv) => {
-            const statusCfg = STATUS_CONFIG[iv.status];
-            const StatusIcon = statusCfg.icon;
+        <ul className='flex flex-col gap-3'>
+          {interviews.map((interview) => {
+            const statusConfig = STATUS_CONFIG[interview.status];
+            const StatusIcon = statusConfig.icon;
+            const updating = updatingStatusId === interview.id;
+            const deleting = deletingId === interview.id;
+            const statusId = "interview-status-" + interview.id;
+
             return (
-              <div
-                key={iv.id}
-                className="flex flex-col gap-2 rounded-lg border border-[#d8c8b5] bg-[#fff7eb] p-4 shadow-sm"
+              <li
+                key={interview.id}
+                className='rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-subtle)] p-4'
               >
-                {/* Row 1: thời gian + status + delete */}
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-bold text-[#3a302a]">
-                      {formatDateTime(iv.scheduledAt)}
-                    </p>
-                    {iv.location && (
-                      <div className="mt-0.5 flex items-center gap-1 text-xs text-[#7d6f62]">
-                        <MapPin size={12} />
-                        <span>{iv.location}</span>
+                <article className='flex flex-col gap-3'>
+                  <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+                    <div className='min-w-0'>
+                      <time
+                        dateTime={interview.scheduledAt}
+                        className='text-sm font-bold tabular-nums text-[var(--color-text)]'
+                      >
+                        {formatInterviewDate(interview.scheduledAt)}
+                      </time>
+                      {interview.location && (
+                        <div className='mt-1 flex items-start gap-1.5 text-xs text-[var(--color-text-muted)]'>
+                          <MapPin
+                            size={14}
+                            className='mt-0.5 shrink-0'
+                            aria-hidden='true'
+                          />
+                          <span className='break-all'>{interview.location}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className='flex items-end gap-2 sm:shrink-0'>
+                      <div className='min-w-0 flex-1 sm:w-36'>
+                        <label
+                          htmlFor={statusId}
+                          className='mb-1 block text-xs font-bold text-[var(--color-text-muted)]'
+                        >
+                          Trạng thái
+                        </label>
+                        <select
+                          id={statusId}
+                          value={interview.status}
+                          onChange={(event) =>
+                            void handleStatusChange(
+                              interview.id,
+                              event.target.value,
+                            )
+                          }
+                          disabled={updatingStatusId !== null || deletingId !== null}
+                          className={
+                            statusConfig.className +
+                            " min-h-11 w-full cursor-pointer px-3 disabled:cursor-not-allowed disabled:opacity-50"
+                          }
+                        >
+                          <option value='Scheduled'>Đã lên lịch</option>
+                          <option value='Done'>Đã xong</option>
+                          <option value='Cancelled'>Đã hủy</option>
+                        </select>
                       </div>
+                      <button
+                        type='button'
+                        onClick={() => void handleDelete(interview.id)}
+                        disabled={deletingId !== null || updatingStatusId !== null}
+                        className='sahara-icon-button shrink-0 text-[var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-50'
+                        aria-label='Xóa lịch phỏng vấn'
+                      >
+                        {deleting ? (
+                          <Loader2
+                            size={17}
+                            className='animate-spin motion-reduce:animate-none'
+                            aria-hidden='true'
+                          />
+                        ) : (
+                          <Trash2 size={17} aria-hidden='true' />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {interview.notes && (
+                    <div className='flex items-start gap-2 text-sm text-[var(--color-text-muted)]'>
+                      <FileText
+                        size={15}
+                        className='mt-0.5 shrink-0'
+                        aria-hidden='true'
+                      />
+                      <span className='whitespace-pre-wrap break-words'>
+                        {interview.notes}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className='flex items-center gap-2 border-t border-[var(--color-border)] pt-2'>
+                    {updating ? (
+                      <Loader2
+                        size={14}
+                        className='animate-spin text-[var(--color-primary)] motion-reduce:animate-none'
+                        aria-hidden='true'
+                      />
+                    ) : (
+                      <StatusIcon
+                        size={14}
+                        className='text-[var(--color-text-muted)]'
+                        aria-hidden='true'
+                      />
                     )}
+                    <span className='text-xs text-[var(--color-text-muted)]'>
+                      {updating
+                        ? "Đang cập nhật trạng thái"
+                        : "Tạo bởi " + interview.creator.fullName}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* Dropdown đổi status */}
-                    <select
-                      value={iv.status}
-                      onChange={(e) => handleStatusChange(iv.id, e.target.value)}
-                      className={`cursor-pointer border-0 text-xs font-bold ${statusCfg.color}`}
-                    >
-                      <option value="Scheduled">Đã lên lịch</option>
-                      <option value="Done">Đã xong</option>
-                      <option value="Cancelled">Đã huỷ</option>
-                    </select>
-                    <button
-                      onClick={() => handleDelete(iv.id)}
-                      className="rounded-lg p-1 text-[#9a7655] transition-colors hover:bg-[#f2ded4] hover:text-[#8c3c3c]"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Row 2: ghi chú nếu có */}
-                {iv.notes && (
-                  <div className="flex items-start gap-1.5 text-xs text-[#7d6f62]">
-                    <FileText size={12} className="mt-0.5 shrink-0" />
-                    <span>{iv.notes}</span>
-                  </div>
-                )}
-
-                {/* Row 3: ai tạo */}
-                <div className="flex items-center gap-1.5 border-t border-[#d8c8b5]/70 pt-1">
-                  <StatusIcon size={12} className="text-[#9a7655]" />
-                  <span className="text-xs text-[#9a7655]">
-                    Tạo bởi {iv.creator.fullName}
-                  </span>
-                </div>
-              </div>
+                </article>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
-    </div>
+    </section>
   );
 }

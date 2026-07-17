@@ -1,98 +1,140 @@
-import { useState } from "react";
+import { useId, useRef, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import type { CandidateStatus } from "../types";
+import Dialog from "./ui/Dialog";
 
-// Định nghĩa "Hợp đồng" cho Modal: Component cha bắt buộc phải cung cấp 2 thứ này
 interface AddCandidateModalProps {
   jobId: string;
-  onClose: () => void; // Nút đóng: Cha truyền xuống lệnh tắt Modal
+  onClose: () => void;
   onAdd: (candidate: {
     name: string;
     email: string;
     status: CandidateStatus;
-  }) => void; // Khi Submit: Con gửi dữ liệu form ngược lên cho Cha xử lý
+  }) => void;
 }
 
 export default function AddCandidateModal({
-  //  jobId,
   onClose,
   onAdd,
 }: AddCandidateModalProps) {
-  // State cho từng ô input (Controlled Form: React nắm cổ mọi ô nhập liệu)
+  const titleId = useId();
+  const nameId = useId();
+  const emailId = useId();
+  const statusId = useId();
+  const errorId = useId();
+  const nameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<CandidateStatus>("Applied");
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.SubmitEvent) => {
-    e.preventDefault(); // Chặn trình duyệt reload trang (hành vi mặc định của <form>)
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
-    if (!name.trim() || !email.trim()) return; // Validate cơ bản: Không được gửi chuỗi trống
-    // Gọi callback gửi dữ liệu lên cho thằng Cha (KanbanBoard)
+    if (!name.trim() || !email.trim()) {
+      setFormError("Vui lòng nhập đầy đủ họ tên và email ứng viên.");
+      if (!name.trim()) {
+        nameRef.current?.focus();
+      } else {
+        emailRef.current?.focus();
+      }
+      return;
+    }
+
+    setFormError(null);
     onAdd({ name, email, status });
-    // Dọn sạch form sau khi Submit
     setName("");
     setEmail("");
-    onClose(); // Đóng popup
+    onClose();
   };
 
   return (
-    // Backdrop mờ đen phía sau
-    <div
-      className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'
-      onClick={onClose}
-    >
-      {/* Hộp thoại chính - stopPropagation để click bên trong không bị đóng */}
-      <div
-        className='sahara-card p-8 w-full max-w-md shadow-2xl text-[#3a302a]'
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className='flex justify-between items-center mb-6'>
-          <h3 className='text-xl font-black text-[#3a302a]'>
-            Thêm ứng viên mới
-          </h3>
+    <Dialog labelledBy={titleId} onClose={onClose} className='max-w-md'>
+      <div className='p-4 text-[var(--color-text)] sm:p-6'>
+        <div className='mb-6 flex items-start justify-between gap-4'>
+          <div>
+            <h2 id={titleId} className='text-xl font-black'>
+              Thêm ứng viên mới
+            </h2>
+            <p className='mt-1 text-sm text-[var(--color-text-muted)]'>
+              Nhập thông tin cơ bản để thêm ứng viên vào pipeline.
+            </p>
+          </div>
           <button
+            type='button'
             onClick={onClose}
-            className='text-[#9a7655] hover:text-[#3a302a] transition-colors cursor-pointer'
+            className='sahara-icon-button -mr-2 -mt-2 shrink-0'
+            aria-label='Đóng hộp thoại thêm ứng viên'
           >
-            <X size={20} />
+            <X size={20} aria-hidden='true' />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className='space-y-5'>
           <div>
-            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
+            <label
+              htmlFor={nameId}
+              className='mb-1.5 block text-sm font-bold text-[var(--color-text)]'
+            >
               Họ và tên
             </label>
             <input
+              ref={nameRef}
+              id={nameId}
+              data-dialog-autofocus
               type='text'
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (formError) setFormError(null);
+              }}
               placeholder='Nhập họ tên ứng viên...'
-              className='sahara-input w-full px-4 py-2.5'
+              autoComplete='name'
+              aria-invalid={Boolean(formError && !name.trim())}
+              aria-describedby={formError ? errorId : undefined}
+              className='sahara-input w-full px-4 py-2.5 text-base'
             />
           </div>
+
           <div>
-            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
+            <label
+              htmlFor={emailId}
+              className='mb-1.5 block text-sm font-bold text-[var(--color-text)]'
+            >
               Email
             </label>
             <input
+              ref={emailRef}
+              id={emailId}
               type='email'
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                if (formError) setFormError(null);
+              }}
               placeholder='email@example.com'
-              className='sahara-input w-full px-4 py-2.5'
+              autoComplete='email'
+              aria-invalid={Boolean(formError && !email.trim())}
+              aria-describedby={formError ? errorId : undefined}
+              className='sahara-input w-full px-4 py-2.5 text-base'
             />
           </div>
+
           <div>
-            <label className='block text-sm font-semibold text-[#5b4a3a] mb-1'>
+            <label
+              htmlFor={statusId}
+              className='mb-1.5 block text-sm font-bold text-[var(--color-text)]'
+            >
               Trạng thái ban đầu
             </label>
             <select
+              id={statusId}
               value={status}
-              onChange={(e) => setStatus(e.target.value as CandidateStatus)}
-              className='sahara-input w-full px-4 py-2.5'
+              onChange={(event) =>
+                setStatus(event.target.value as CandidateStatus)
+              }
+              className='sahara-input w-full px-4 py-2.5 text-base'
             >
               <option value='Applied'>Applied</option>
               <option value='Interviewing'>Interviewing</option>
@@ -101,14 +143,21 @@ export default function AddCandidateModal({
             </select>
           </div>
 
-          <button
-            type='submit'
-            className='sahara-button w-full py-3 mt-2'
-          >
+          {formError && (
+            <p
+              id={errorId}
+              className='rounded-lg border border-[var(--color-danger)] bg-[var(--color-surface-subtle)] p-3 text-sm font-semibold text-[var(--color-danger)]'
+              role='alert'
+            >
+              {formError}
+            </p>
+          )}
+
+          <button type='submit' className='sahara-button w-full px-4 py-3'>
             Thêm ứng viên
           </button>
         </form>
       </div>
-    </div>
+    </Dialog>
   );
 }

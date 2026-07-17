@@ -1,21 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
-  <title id="title">ATS PRO</title>
-  <desc id="desc">ATS PRO Sahara logo favicon</desc>
-  <defs>
-    <linearGradient id="bg" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4f372b" />
-      <stop offset="1" stop-color="#241915" />
-    </linearGradient>
-    <linearGradient id="mark" x1="21" y1="16" x2="43" y2="48" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#f4b266" />
-      <stop offset="1" stop-color="#d1783b" />
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="16" fill="url(#bg)" />
-  <rect x="5" y="5" width="54" height="54" rx="13" fill="none" stroke="#d8c8b5" stroke-opacity=".32" stroke-width="2" />
-  <path
-    fill="url(#mark)"
-    d="M20.6 46 29.1 18h6.2L43.8 46h-6.4l-1.5-5.6h-7.8L26.7 46h-6.1Zm9-11.2h4.8L32 25.5l-2.4 9.3Z"
-  />
-  <path fill="#fff7eb" fill-opacity=".78" d="M22 49h20v3H22z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="382 382 261 261">
+  <rect x="382" y="382" width="261" height="261" rx="58" fill="#ffffff"/>
+  <rect x="386" y="386" width="253" height="253" rx="54" fill="none" stroke="#d4d4d8" stroke-width="8"/>
+  <g transform="translate(0 1024) scale(.1 -.1)" fill="#151518">
+    <path d="M5027 6098c-14-29-63-138-109-243-47-104-204-451-348-770-144-319-294-650-332-735-39-85-81-179-94-207l-24-53h367l78 178c43 97 87 198 98 225l21 47h430l137 128c75 70 137 130 137 134 1 4-129 9-289 10l-289 3 156 353c86 193 159 352 162 352 5-1 135-292 564-1259 21-47 46-105 55-128l16-43h366c101 0 183 2 183 4s-21 50-46 107c-26 57-63 142-84 189-21 47-197 438-392 870-195 432-364 806-376 833l-21 47h-65c-35 0-71 3-80 6-11 4-22-8-39-48z"/>
+  </g>
 </svg>
