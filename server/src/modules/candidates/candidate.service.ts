@@ -291,7 +291,9 @@ export const createCandidateService = (
       console.error("Loi khi index CV:", error);
       cvIndex = {
         indexed: false,
-        reason: dependencies.getRagErrorMessage(error),
+        reason:
+          dependencies.getRagErrorMessage(error) ||
+          "Không thể xử lý AI cho CV",
       };
     }
 
@@ -311,7 +313,9 @@ export const createCandidateService = (
       console.error("Loi khi reindex CV:", error);
       cvIndex = {
         indexed: false,
-        reason: dependencies.getRagErrorMessage(error),
+        reason:
+          dependencies.getRagErrorMessage(error) ||
+          "Không thể xử lý AI cho CV",
       };
     }
 

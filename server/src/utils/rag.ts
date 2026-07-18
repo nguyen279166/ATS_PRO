@@ -116,7 +116,7 @@ function isRetryableAiError(error: unknown) {
 }
 
 export function getRagErrorMessage(error: unknown) {
-  if (!(error instanceof Error)) return "Không thể xử lý AI cho CV";
+  if (!(error instanceof Error)) return null;
 
   const message = error.message.toLowerCase();
   const maybeCode = (error as { code?: string; status?: number; type?: string });
@@ -157,7 +157,14 @@ export function getRagErrorMessage(error: unknown) {
     return "Ollama chua chay hoac chua co model. Hay mo Ollama va pull model can thiet.";
   }
 
-  return error.message || "Không thể xử lý AI cho CV";
+  if (
+    message.includes("no ai provider is configured") ||
+    message.includes("could not create question embedding")
+  ) {
+    return "Tính năng AI chưa được cấu hình hoặc chưa sẵn sàng";
+  }
+
+  return null;
 }
 
 function getGeminiClient() {

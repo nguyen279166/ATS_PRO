@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { API_BASE_URL } from "../../config/env";
@@ -40,6 +40,7 @@ export function useCandidateDirectory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -51,6 +52,7 @@ export function useCandidateDirectory() {
     useState<CandidateExportFormat | null>(null);
   const [deletingCandidateId, setDeletingCandidateId] =
     useState<string | null>(null);
+  const latestRequestIdRef = useRef(0);
 
   const token = localStorage.getItem("token_lay_duoc");
   const headers = useMemo(
@@ -62,9 +64,13 @@ export function useCandidateDirectory() {
     () => Object.values(filters).filter(Boolean).length,
     [filters],
   );
+  const hasActiveCriteria = Boolean(
+    debouncedSearchTerm || activeFilterCount,
+  );
 
   const fetchCandidates = useCallback(
-    async (page: number) => {
+    async (page: number, signal?: AbortSignal) => {
+      const requestId = ++latestRequestIdRef.current;
       setLoading(true);
       setError(null);
       try {
@@ -79,16 +85,36 @@ export function useCandidateDirectory() {
         });
         const response = await axios.get(
           API_BASE_URL + "/api/candidates?" + params,
-          { headers },
+          { headers, signal },
         );
+        if (requestId !== latestRequestIdRef.current || signal?.aborted) return;
+
+        const nextPagination = response.data
+          .pagination as CandidatePaginationInfo;
+        const lastAvailablePage = Math.max(1, nextPagination.totalPages);
+        if (page > lastAvailablePage) {
+          setCurrentPage(lastAvailablePage);
+          return;
+        }
+
         setCandidates(response.data.data);
-        setPagination(response.data.pagination);
-      } catch {
+        setPagination(nextPagination);
+      } catch (requestError: unknown) {
+        if (
+          requestId !== latestRequestIdRef.current ||
+          signal?.aborted ||
+          axios.isCancel(requestError)
+        ) {
+          return;
+        }
+
         const message = "Lỗi khi tải danh sách ứng viên";
         setError(message);
         toast.error(message);
       } finally {
-        setLoading(false);
+        if (requestId === latestRequestIdRef.current) {
+          setLoading(false);
+        }
       }
     },
     [
@@ -104,24 +130,18 @@ export function useCandidateDirectory() {
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       setDebouncedSearchTerm(searchTerm.trim());
+      setCurrentPage(1);
     }, 300);
 
     return () => window.clearTimeout(timeoutId);
   }, [searchTerm]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    filters.status,
-    filters.jobId,
-    filters.dateFrom,
-    filters.dateTo,
-    debouncedSearchTerm,
-  ]);
+    const controller = new AbortController();
+    void fetchCandidates(currentPage, controller.signal);
 
-  useEffect(() => {
-    void fetchCandidates(currentPage);
-  }, [currentPage, fetchCandidates]);
+    return () => controller.abort();
+  }, [currentPage, fetchCandidates, refreshVersion]);
 
   const allVisibleIds = useMemo(
     () => candidates.map((candidate) => candidate.id),
@@ -136,17 +156,21 @@ export function useCandidateDirectory() {
   const updateFilter = useCallback(
     (key: CandidateFilterKey, value: string) => {
       setFilters((current) => ({ ...current, [key]: value }));
+      setCurrentPage(1);
     },
     [],
   );
 
   const clearFilters = useCallback(() => {
     setFilters(INITIAL_FILTERS);
+    setCurrentPage(1);
   }, []);
 
   const clearSearchAndFilters = useCallback(() => {
     setSearchTerm("");
+    setDebouncedSearchTerm("");
     setFilters(INITIAL_FILTERS);
+    setCurrentPage(1);
   }, []);
 
   const handlePageChange = useCallback((page: number) => {
@@ -178,6 +202,10 @@ export function useCandidateDirectory() {
   }, []);
 
   const clearSelection = useCallback(() => setSelectedIds([]), []);
+  const requestRefresh = useCallback(
+    () => setRefreshVersion((version) => version + 1),
+    [],
+  );
 
   const handleBulkStatusUpdate = useCallback(
     async (status: CandidateStatus) => {
@@ -195,7 +223,7 @@ export function useCandidateDirectory() {
           "Đã cập nhật " + selectedCount + " ứng viên sang " + status,
         );
         setSelectedIds([]);
-        void fetchCandidates(currentPage);
+        requestRefresh();
       } catch {
         toast.error("Lỗi khi cập nhật hàng loạt");
       } finally {
@@ -203,10 +231,9 @@ export function useCandidateDirectory() {
       }
     },
     [
-      currentPage,
-      fetchCandidates,
       headers,
       pendingBulkAction,
+      requestRefresh,
       selectedIds,
     ],
   );
@@ -231,17 +258,16 @@ export function useCandidateDirectory() {
       );
       toast.success("Đã xóa " + selectedCount + " ứng viên");
       setSelectedIds([]);
-      void fetchCandidates(currentPage);
+      requestRefresh();
     } catch {
       toast.error("Lỗi khi xóa hàng loạt");
     } finally {
       setPendingBulkAction(null);
     }
   }, [
-    currentPage,
-    fetchCandidates,
     headers,
     pendingBulkAction,
+    requestRefresh,
     selectedIds,
   ]);
 
@@ -290,12 +316,7 @@ export function useCandidateDirectory() {
           { headers },
         );
         toast.success("Xóa ứng viên thành công!");
-        const isLastOnPage = candidates.length === 1 && currentPage > 1;
-        if (isLastOnPage) {
-          setCurrentPage((page) => page - 1);
-        } else {
-          void fetchCandidates(currentPage);
-        }
+        requestRefresh();
       } catch (requestError: unknown) {
         if (axios.isAxiosError(requestError)) {
           toast.error(
@@ -309,11 +330,9 @@ export function useCandidateDirectory() {
       }
     },
     [
-      candidates.length,
-      currentPage,
       deletingCandidateId,
-      fetchCandidates,
       headers,
+      requestRefresh,
     ],
   );
 
@@ -333,6 +352,7 @@ export function useCandidateDirectory() {
     filters,
     updateFilter,
     activeFilterCount,
+    hasActiveCriteria,
     clearFilters,
     clearSearchAndFilters,
     isAllSelected,
@@ -348,6 +368,6 @@ export function useCandidateDirectory() {
     handleBulkDelete,
     handleExport,
     handleDeleteCandidate,
-    retry: () => fetchCandidates(currentPage),
+    retry: requestRefresh,
   };
 }

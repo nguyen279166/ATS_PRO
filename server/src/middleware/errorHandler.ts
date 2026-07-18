@@ -23,6 +23,59 @@ const isMalformedJsonError = (error: unknown) =>
 const isUploadTypeError = (error: unknown): error is Error =>
   error instanceof Error && error.message.startsWith("Chỉ chấp nhận file");
 
+const getHttpRequestError = (error: unknown) => {
+  if (typeof error !== "object" || error === null) return null;
+
+  const candidate = error as {
+    expose?: unknown;
+    status?: unknown;
+    statusCode?: unknown;
+    type?: unknown;
+  };
+  const statusCode =
+    typeof candidate.status === "number"
+      ? candidate.status
+      : candidate.statusCode;
+
+  const bodyParserErrorTypes = new Set([
+    "charset.unsupported",
+    "encoding.unsupported",
+    "entity.parse.failed",
+    "entity.too.large",
+    "entity.verify.failed",
+    "request.aborted",
+    "request.size.invalid",
+    "stream.encoding.set",
+    "stream.not.readable",
+  ]);
+
+  if (
+    candidate.expose !== true ||
+    typeof candidate.type !== "string" ||
+    !bodyParserErrorTypes.has(candidate.type) ||
+    typeof statusCode !== "number" ||
+    !Number.isInteger(statusCode) ||
+    statusCode < 400 ||
+    statusCode >= 500
+  ) {
+    return null;
+  }
+
+  const messages: Record<number, string> = {
+    400: "Yêu cầu không hợp lệ",
+    401: "Yêu cầu chưa được xác thực",
+    403: "Yêu cầu không được phép",
+    404: "Không tìm thấy dữ liệu yêu cầu",
+    413: "Nội dung yêu cầu vượt quá dung lượng cho phép",
+    415: "Định dạng nội dung yêu cầu không được hỗ trợ",
+  };
+
+  return new ApiError(
+    statusCode,
+    messages[statusCode] || "Không thể xử lý yêu cầu",
+  );
+};
+
 const getPrismaError = (error: unknown) => {
   if (typeof error !== "object" || error === null || !("code" in error)) {
     return null;
@@ -78,6 +131,14 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
 
   if (isMalformedJsonError(error)) {
     res.status(400).json({ error: "JSON không hợp lệ" });
+    return;
+  }
+
+  const httpRequestError = getHttpRequestError(error);
+  if (httpRequestError) {
+    res
+      .status(httpRequestError.statusCode)
+      .json({ error: httpRequestError.message });
     return;
   }
 

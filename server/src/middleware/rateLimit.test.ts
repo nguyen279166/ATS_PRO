@@ -65,4 +65,41 @@ describe("API rate limiting", () => {
       (await request(app).get("/ai").set("x-test-user", "user-a")).status,
     ).toBe(429);
   });
+
+  it("isolates proxied clients by IP when one proxy hop is trusted", async () => {
+    const app = express();
+    app.set("trust proxy", 1);
+    app.get(
+      "/limited",
+      createApiRateLimiter({
+        identifier: "test-proxied-ip",
+        windowMs: 60_000,
+        limit: 1,
+        message: "Proxy quota exceeded",
+      }),
+      ok,
+    );
+
+    expect(
+      (
+        await request(app)
+          .get("/limited")
+          .set("X-Forwarded-For", "203.0.113.10")
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(app)
+          .get("/limited")
+          .set("X-Forwarded-For", "203.0.113.11")
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(app)
+          .get("/limited")
+          .set("X-Forwarded-For", "203.0.113.10")
+      ).status,
+    ).toBe(429);
+  });
 });

@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { ApiError } from "../../middleware/errorHandler";
 import { getValidatedRequest } from "../../middleware/validate";
 import {
   candidateService,
@@ -125,7 +126,7 @@ export const createCandidateController = (service: CandidateService) => ({
     }
   },
 
-  askCv: async (req: Request, res: Response) => {
+  askCv: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = String(req.params.id);
       const result = await service.askCandidateCv(id, req.body.question);
@@ -136,7 +137,13 @@ export const createCandidateController = (service: CandidateService) => ({
 
       res.json(result.result);
     } catch (error: unknown) {
-      res.status(400).json({ error: service.formatRagError(error) });
+      const message = service.formatRagError(error);
+      if (message) {
+        next(new ApiError(503, message));
+        return;
+      }
+
+      next(error);
     }
   },
 });

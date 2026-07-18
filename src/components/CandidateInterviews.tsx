@@ -226,6 +226,7 @@ export default function CandidateInterviews({
               placeholder='Ví dụ: Phòng họp A3 hoặc link Google Meet'
               value={location}
               onChange={(event) => setLocation(event.target.value)}
+              maxLength={300}
               className='sahara-input w-full px-3 py-2 text-base sm:text-sm'
             />
           </div>
@@ -243,6 +244,7 @@ export default function CandidateInterviews({
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={3}
+              maxLength={5000}
               className='sahara-input w-full resize-y px-3 py-2 text-base sm:text-sm'
             />
           </div>

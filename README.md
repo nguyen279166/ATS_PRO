@@ -170,9 +170,11 @@ SMTP is an optional local fallback when `RESEND_API_KEY` is not configured.
 `CLIENT_URL` is the frontend origin allowed by backend CORS and is also used in
 password-reset links.
 
-Leave `TRUST_PROXY` empty for direct local traffic. When the backend is behind a
-known reverse proxy, set it to the trusted hop count (for example `1`) so
-IP-based auth and public rate limits identify clients correctly.
+Leave `TRUST_PROXY` empty for direct local traffic. Render is detected through
+its built-in `RENDER=true` variable and automatically trusts one proxy hop. On
+another known reverse proxy, set `TRUST_PROXY` to its trusted hop count (for
+example `1`) so IP-based auth and public rate limits identify clients correctly.
+Do not use `TRUST_PROXY=true`, because that trusts arbitrary forwarded addresses.
 
 For free local CV AI, install Ollama and run:
 

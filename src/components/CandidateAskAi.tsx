@@ -271,6 +271,7 @@ export default function CandidateAskAi({
             }}
             placeholder='Hỏi về kinh nghiệm, kỹ năng hoặc điểm mạnh trong CV...'
             rows={3}
+            maxLength={500}
             aria-describedby={questionHelpId}
             aria-invalid={Boolean(errorMessage)}
             className='sahara-input min-h-28 flex-1 resize-y px-4 py-3 text-base sm:text-sm'

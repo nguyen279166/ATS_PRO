@@ -56,6 +56,14 @@ describe("server-side request validation", () => {
       .post("/api/interviews")
       .set("Authorization", authorization)
       .send({ candidateId: validId, scheduledAt: "not-a-date" });
+    const impossibleDate = await request(app)
+      .post("/api/interviews")
+      .set("Authorization", authorization)
+      .send({ candidateId: validId, scheduledAt: "2026-02-31T09:00" });
+    const ambiguousDate = await request(app)
+      .post("/api/interviews")
+      .set("Authorization", authorization)
+      .send({ candidateId: validId, scheduledAt: "1" });
 
     expect(note.status).toBe(400);
     expect(note.body.details).toEqual(
@@ -68,5 +76,11 @@ describe("server-side request validation", () => {
     expect(interview.body.details).toEqual([
       expect.objectContaining({ field: "body.scheduledAt" }),
     ]);
+    for (const response of [impossibleDate, ambiguousDate]) {
+      expect(response.status).toBe(400);
+      expect(response.body.details).toEqual([
+        expect.objectContaining({ field: "body.scheduledAt" }),
+      ]);
+    }
   });
 });

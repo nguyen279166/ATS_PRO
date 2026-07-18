@@ -24,11 +24,43 @@ const isoDateSchema = z
     );
   }, "Ngay khong hop le");
 
+const strictDateTimePattern =
+  /^([1-9]\d{3})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?(Z|[+-]\d{2}:\d{2})?$/;
+
+const isStrictDateTime = (value: string) => {
+  const match = strictDateTimePattern.exec(value);
+  if (!match) return false;
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText] =
+    match;
+  const [year, month, day, hour, minute, second] = [
+    yearText,
+    monthText,
+    dayText,
+    hourText,
+    minuteText,
+    secondText || "0",
+  ].map(Number);
+  const calendarValue = new Date(
+    Date.UTC(year, month - 1, day, hour, minute, second),
+  );
+
+  return (
+    calendarValue.getUTCFullYear() === year &&
+    calendarValue.getUTCMonth() === month - 1 &&
+    calendarValue.getUTCDate() === day &&
+    calendarValue.getUTCHours() === hour &&
+    calendarValue.getUTCMinutes() === minute &&
+    calendarValue.getUTCSeconds() === second &&
+    !Number.isNaN(Date.parse(value))
+  );
+};
+
 const dateTimeSchema = z
   .string()
   .trim()
   .max(64, "Ngay gio qua dai")
-  .refine((value) => !Number.isNaN(Date.parse(value)), "Ngay gio khong hop le");
+  .refine(isStrictDateTime, "Ngay gio khong hop le");
 
 export const idParamsSchema = z.object({
   id: z.uuid("ID khong hop le"),
