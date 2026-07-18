@@ -12,6 +12,11 @@ import exportRoutes from "./routes/exportRoutes";
 import { getMailerHealth } from "./utils/mailer";
 import { getRagHealth } from "./utils/rag";
 import { ragHealthRateLimiter } from "./middleware/rateLimit";
+import {
+  ApiError,
+  errorHandler,
+  notFoundHandler,
+} from "./middleware/errorHandler";
 
 const app = express();
 const trustProxy = process.env.TRUST_PROXY?.trim();
@@ -34,7 +39,7 @@ app.use(
         return;
       }
 
-      callback(new Error("Not allowed by CORS"));
+      callback(new ApiError(403, "Nguồn yêu cầu không được phép"));
     },
   }),
 );
@@ -58,5 +63,7 @@ app.use("/api/candidates", authMiddleware, candidateRoutes);
 app.use("/api/notes", authMiddleware, noteRoutes);
 app.use("/api/interviews", authMiddleware, interviewRoutes);
 app.use("/api/export", authMiddleware, requireAdmin, exportRoutes);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;

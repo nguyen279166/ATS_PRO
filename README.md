@@ -28,6 +28,8 @@ idle period can take about 50 seconds while the service wakes up.
   coverage with Playwright.
 - Endpoint-specific rate limiting for authentication, public applications, and
   AI-powered CV operations.
+- Shared Zod validation for request bodies, query strings, and route parameters,
+  with a global JSON error boundary for the API.
 - Production-style environment configuration through `.env` files.
 
 ## Screenshots (Dark Mode)

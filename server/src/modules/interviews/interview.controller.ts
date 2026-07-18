@@ -1,4 +1,4 @@
-import type { Response } from "express";
+import type { NextFunction, Response } from "express";
 import type { AuthRequest } from "../../routes/authMiddleware";
 import {
   createInterview,
@@ -14,15 +14,23 @@ const sendNotFound = (error: unknown, res: Response) => {
   return true;
 };
 
-export const getInterviews = async (req: AuthRequest, res: Response) => {
+export const getInterviews = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     res.json(await listCandidateInterviews(String(req.params.candidateId)));
-  } catch {
-    res.status(500).json({ error: "Lỗi server khi lấy lịch phỏng vấn" });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const postInterview = async (req: AuthRequest, res: Response) => {
+export const postInterview = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { candidateId, scheduledAt, location, notes } = req.body;
     const createdBy = req.user?.userId;
@@ -41,12 +49,16 @@ export const postInterview = async (req: AuthRequest, res: Response) => {
         createdBy,
       ),
     );
-  } catch {
-    res.status(500).json({ error: "Lỗi server khi tạo lịch phỏng vấn" });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const putInterview = async (req: AuthRequest, res: Response) => {
+export const putInterview = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { scheduledAt, location, notes, status } = req.body;
     res.json(
@@ -59,18 +71,22 @@ export const putInterview = async (req: AuthRequest, res: Response) => {
     );
   } catch (error) {
     if (!sendNotFound(error, res)) {
-      res.status(500).json({ error: "Lỗi server khi cập nhật lịch phỏng vấn" });
+      next(error);
     }
   }
 };
 
-export const removeInterview = async (req: AuthRequest, res: Response) => {
+export const removeInterview = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     await deleteInterview(String(req.params.id));
     res.json({ message: "Xóa lịch phỏng vấn thành công" });
   } catch (error) {
     if (!sendNotFound(error, res)) {
-      res.status(500).json({ error: "Lỗi server khi xóa lịch phỏng vấn" });
+      next(error);
     }
   }
 };

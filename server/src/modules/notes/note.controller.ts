@@ -1,4 +1,4 @@
-import type { Response } from "express";
+import type { NextFunction, Response } from "express";
 import type { AuthRequest } from "../../routes/authMiddleware";
 import {
   createNote,
@@ -25,15 +25,23 @@ const sendOwnershipError = (
   return false;
 };
 
-export const getNotes = async (req: AuthRequest, res: Response) => {
+export const getNotes = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     res.json(await listCandidateNotes(String(req.params.candidateId)));
-  } catch {
-    res.status(500).json({ error: "Lỗi server khi lấy ghi chú" });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const postNote = async (req: AuthRequest, res: Response) => {
+export const postNote = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { candidateId, content } = req.body ?? {};
     const userId = req.user?.userId;
@@ -48,12 +56,16 @@ export const postNote = async (req: AuthRequest, res: Response) => {
     }
 
     res.status(201).json(await createNote(candidateId, content, userId));
-  } catch {
-    res.status(500).json({ error: "Lỗi server khi tạo ghi chú" });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const putNote = async (req: AuthRequest, res: Response) => {
+export const putNote = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   const content = req.body?.content;
   if (typeof content !== "string" || !content.trim()) {
     return res.status(400).json({ error: "Nội dung ghi chú không được trống" });
@@ -69,18 +81,22 @@ export const putNote = async (req: AuthRequest, res: Response) => {
     );
   } catch (error) {
     if (!sendOwnershipError(error, res, "sửa")) {
-      res.status(500).json({ error: "Lỗi server khi sửa ghi chú" });
+      next(error);
     }
   }
 };
 
-export const removeNote = async (req: AuthRequest, res: Response) => {
+export const removeNote = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     await deleteNote(String(req.params.id), req.user?.userId as string);
     res.json({ message: "Xóa ghi chú thành công" });
   } catch (error) {
     if (!sendOwnershipError(error, res, "xóa")) {
-      res.status(500).json({ error: "Lỗi server khi xóa ghi chú" });
+      next(error);
     }
   }
 };

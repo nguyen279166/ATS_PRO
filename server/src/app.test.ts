@@ -32,4 +32,29 @@ describe("app contracts", () => {
       error: "Không có token - Vui lòng đăng nhập",
     });
   });
+
+  it("returns JSON for missing endpoints and malformed JSON", async () => {
+    const missing = await request(app).get("/api/does-not-exist");
+    const malformed = await request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send('{"email":');
+
+    expect(missing.status).toBe(404);
+    expect(missing.body).toEqual({
+      error: "Không tìm thấy endpoint",
+      path: "/api/does-not-exist",
+    });
+    expect(malformed.status).toBe(400);
+    expect(malformed.body).toEqual({ error: "JSON không hợp lệ" });
+  });
+
+  it("normalizes rejected CORS origins as a JSON 403", async () => {
+    const response = await request(app)
+      .get("/api/health")
+      .set("Origin", "https://untrusted.example");
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({ error: "Nguồn yêu cầu không được phép" });
+  });
 });

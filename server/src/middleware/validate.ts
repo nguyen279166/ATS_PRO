@@ -1,26 +1,57 @@
-import type { RequestHandler } from "express";
+import type { RequestHandler, Response } from "express";
 import type { ZodType } from "zod";
 import { ZodError } from "zod";
 
-const formatZodError = (error: ZodError) =>
+type ValidationSource = "body" | "query" | "params";
+type RequestSchemas = Partial<Record<ValidationSource, ZodType>>;
+
+export type ValidatedRequest = Partial<Record<ValidationSource, unknown>>;
+
+const formatZodError = (error: ZodError, source: ValidationSource) =>
   error.issues.map((issue) => ({
-    field: issue.path.join(".") || "body",
+    field: [source, ...issue.path].join("."),
     message: issue.message,
   }));
 
-export const validateBody =
-  <T>(schema: ZodType<T>): RequestHandler =>
+export const validateRequest = (schemas: RequestSchemas): RequestHandler =>
   (req, res, next) => {
-    const result = schema.safeParse(req.body);
+    const validatedRequest: ValidatedRequest = {
+      ...(res.locals.validatedRequest as ValidatedRequest | undefined),
+    };
 
-    if (!result.success) {
-      res.status(400).json({
-        error: "Du lieu gui len khong hop le",
-        details: formatZodError(result.error),
-      });
-      return;
+    for (const source of ["params", "query", "body"] as const) {
+      const schema = schemas[source];
+      if (!schema) continue;
+
+      const result = schema.safeParse(req[source]);
+      if (!result.success) {
+        res.status(400).json({
+          error: "Dữ liệu yêu cầu không hợp lệ",
+          details: formatZodError(result.error, source),
+        });
+        return;
+      }
+
+      validatedRequest[source] = result.data;
+      if (source === "body") req.body = result.data;
     }
 
-    req.body = result.data;
+    res.locals.validatedRequest = validatedRequest;
     next();
   };
+
+export const getValidatedRequest = <T>(
+  res: Response,
+  source: ValidationSource,
+) => (res.locals.validatedRequest as ValidatedRequest | undefined)?.[
+  source
+] as T | undefined;
+
+export const validateBody = (schema: ZodType): RequestHandler =>
+  validateRequest({ body: schema });
+
+export const validateQuery = (schema: ZodType): RequestHandler =>
+  validateRequest({ query: schema });
+
+export const validateParams = (schema: ZodType): RequestHandler =>
+  validateRequest({ params: schema });
