@@ -25,6 +25,7 @@ export type CandidateStatus =
 export type CandidateListQuery = {
   page?: unknown;
   limit?: unknown;
+  search?: unknown;
   status?: unknown;
   jobId?: unknown;
   dateFrom?: unknown;
@@ -80,8 +81,13 @@ export const createCandidateService = (
     const jobId = query.jobId as string | undefined;
     const dateFrom = query.dateFrom as string | undefined;
     const dateTo = query.dateTo as string | undefined;
+    const search =
+      typeof query.search === "string" ? query.search.trim() : undefined;
 
     const where: Record<string, unknown> = {};
+    if (search) {
+      where.name = { contains: search, mode: "insensitive" };
+    }
     if (status) where.status = status;
     if (jobId) where.jobId = jobId;
     if (dateFrom || dateTo) {

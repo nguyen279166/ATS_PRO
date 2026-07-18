@@ -41,6 +41,7 @@ export function useCandidateDirectory() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CandidateFilters>(INITIAL_FILTERS);
@@ -70,6 +71,7 @@ export function useCandidateDirectory() {
         const params = new URLSearchParams({
           page: String(page),
           limit: String(CANDIDATE_PAGE_LIMIT),
+          ...(debouncedSearchTerm && { search: debouncedSearchTerm }),
           ...(filters.status && { status: filters.status }),
           ...(filters.jobId && { jobId: filters.jobId }),
           ...(filters.dateFrom && { dateFrom: filters.dateFrom }),
@@ -94,9 +96,18 @@ export function useCandidateDirectory() {
       filters.jobId,
       filters.dateFrom,
       filters.dateTo,
+      debouncedSearchTerm,
       headers,
     ],
   );
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -105,22 +116,16 @@ export function useCandidateDirectory() {
     filters.jobId,
     filters.dateFrom,
     filters.dateTo,
+    debouncedSearchTerm,
   ]);
 
   useEffect(() => {
     void fetchCandidates(currentPage);
   }, [currentPage, fetchCandidates]);
 
-  const filteredCandidates = useMemo(() => {
-    const normalizedSearch = searchTerm.toLowerCase();
-    return candidates.filter((candidate) =>
-      candidate.name.toLowerCase().includes(normalizedSearch),
-    );
-  }, [candidates, searchTerm]);
-
   const allVisibleIds = useMemo(
-    () => filteredCandidates.map((candidate) => candidate.id),
-    [filteredCandidates],
+    () => candidates.map((candidate) => candidate.id),
+    [candidates],
   );
   const isAllSelected =
     allVisibleIds.length > 0 &&
@@ -315,7 +320,7 @@ export function useCandidateDirectory() {
   return {
     jobs,
     isAdmin,
-    candidates: filteredCandidates,
+    candidates,
     pagination,
     loading,
     error,

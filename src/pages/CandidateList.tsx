@@ -68,7 +68,6 @@ export default function CandidateList() {
 
         {!directory.loading &&
           directory.pagination &&
-          !directory.searchTerm &&
           directory.candidates.length > 0 && (
             <CandidatePagination
               currentPage={directory.pagination.page}

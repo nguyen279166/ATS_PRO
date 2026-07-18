@@ -91,7 +91,7 @@ export function CandidateEmptyState({
 }) {
   const hasQuery = Boolean(searchTerm || activeFilterCount);
   const description = searchTerm
-    ? "Không có ứng viên phù hợp với tên bạn đang tìm trên trang này."
+    ? "Không có ứng viên phù hợp với tên bạn đang tìm trong hệ thống."
     : activeFilterCount > 0
       ? "Không có ứng viên phù hợp với các bộ lọc hiện tại."
       : "Danh sách chưa có ứng viên nào để hiển thị.";
