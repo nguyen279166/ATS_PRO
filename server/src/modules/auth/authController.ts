@@ -1,4 +1,4 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import type { AuthRequest } from "../../routes/authMiddleware";
 import {
   changePassword as changePasswordService,
@@ -10,7 +10,11 @@ import {
   updateAvatar,
 } from "./authService";
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const result = await registerUser(req.body);
     if (result.kind === "email_in_use") {
@@ -21,12 +25,12 @@ export const register = async (req: Request, res: Response) => {
       message: "Đăng ký thành công",
       user: result.user,
     });
-  } catch {
-    res.status(500).json({ error: "Lỗi server khi đăng ký" });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await loginUser(req.body.email, req.body.password);
     if (result.kind === "invalid_credentials") {
@@ -39,12 +43,15 @@ export const login = async (req: Request, res: Response) => {
       user: result.user,
     });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Lỗi server khi đăng nhập" });
+    next(error);
   }
 };
 
-export const forgotPassword = async (req: Request, res: Response) => {
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const result = await requestPasswordReset(req.body.email);
     if (result.kind === "invalid_email") {
@@ -53,12 +60,15 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     res.json(result.response);
   } catch (error) {
-    console.error("Forgot password error:", error);
-    res.status(500).json({ error: "Lỗi server khi gửi email khôi phục" });
+    next(error);
   }
 };
 
-export const resetPassword = async (req: Request, res: Response) => {
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const result = await resetPasswordService(
       req.body.token,
@@ -80,24 +90,31 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     res.json({ message: "Đặt lại mật khẩu thành công" });
   } catch (error) {
-    console.error("Reset password error:", error);
-    res.status(500).json({ error: "Lỗi server khi đặt lại mật khẩu" });
+    next(error);
   }
 };
 
-export const me = async (req: AuthRequest, res: Response) => {
+export const me = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const user = await getCurrentUser(req.user?.userId);
     if (!user) {
       return res.status(404).json({ error: "Không tìm thấy người dùng" });
     }
     res.json(user);
-  } catch {
-    res.status(500).json({ error: "Lỗi server khi lấy thông tin cá nhân" });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const changePassword = async (req: AuthRequest, res: Response) => {
+export const changePassword = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const result = await changePasswordService(
       req.user?.userId,
@@ -113,12 +130,15 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: "Đổi mật khẩu thành công" });
   } catch (error) {
-    console.error("Lỗi khi đổi mật khẩu:", error);
-    res.status(500).json({ error: "Lỗi server khi đổi mật khẩu" });
+    next(error);
   }
 };
 
-export const uploadAvatar = async (req: AuthRequest, res: Response) => {
+export const uploadAvatar = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "Không có file nào được tải lên" });
@@ -127,7 +147,6 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
     const avatarUrl = await updateAvatar(req.user?.userId, req.file);
     res.json({ message: "Cập nhật ảnh đại diện thành công", avatarUrl });
   } catch (error) {
-    console.error("Lỗi khi upload ảnh:", error);
-    res.status(500).json({ error: "Lỗi server khi upload ảnh" });
+    next(error);
   }
 };

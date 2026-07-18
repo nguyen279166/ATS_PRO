@@ -1,20 +1,27 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
 import {
   createPublicApplication,
   indexPublicApplicationCv,
   listPublicJobs,
 } from "./public.service";
 
-export const getPublicJobs = async (_req: Request, res: Response) => {
+export const getPublicJobs = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     res.json(await listPublicJobs());
   } catch (error) {
-    console.error("Lỗi khi lấy danh sách job public:", error);
-    res.status(500).json({ error: "Lỗi server" });
+    next(error);
   }
 };
 
-export const applyForPublicJob = async (req: Request, res: Response) => {
+export const applyForPublicJob = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { jobId, name, email } = req.body;
 
@@ -42,9 +49,6 @@ export const applyForPublicJob = async (req: Request, res: Response) => {
       });
     }
   } catch (error: unknown) {
-    const msg =
-      error instanceof Error ? error.message : "Lỗi server khi nộp đơn";
-    console.error("Lỗi khi ứng tuyển:", error);
-    res.status(500).json({ error: msg });
+    next(error);
   }
 };

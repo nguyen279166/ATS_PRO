@@ -26,6 +26,10 @@ idle period can take about 50 seconds while the service wakes up.
   while Gemini can provide stronger generated answers.
 - Backend API coverage with Vitest and Supertest, plus end-to-end browser
   coverage with Playwright.
+- Endpoint-specific rate limiting for authentication, public applications, and
+  AI-powered CV operations.
+- Shared Zod validation for request bodies, query strings, and route parameters,
+  with a global JSON error boundary for the API.
 - Production-style environment configuration through `.env` files.
 
 ## Screenshots (Dark Mode)
@@ -136,6 +140,7 @@ DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
 JWT_SECRET=replace_with_a_long_random_secret
 BASE_URL=http://localhost:3001
 CLIENT_URL=http://localhost:5173
+TRUST_PROXY=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=ATS PRO <onboarding@resend.dev>
 # Optional local SMTP fallback:
@@ -164,6 +169,12 @@ Resend is the preferred production email provider because it uses HTTPS. Gmail
 SMTP is an optional local fallback when `RESEND_API_KEY` is not configured.
 `CLIENT_URL` is the frontend origin allowed by backend CORS and is also used in
 password-reset links.
+
+Leave `TRUST_PROXY` empty for direct local traffic. Render is detected through
+its built-in `RENDER=true` variable and automatically trusts one proxy hop. On
+another known reverse proxy, set `TRUST_PROXY` to its trusted hop count (for
+example `1`) so IP-based auth and public rate limits identify clients correctly.
+Do not use `TRUST_PROXY=true`, because that trusts arbitrary forwarded addresses.
 
 For free local CV AI, install Ollama and run:
 

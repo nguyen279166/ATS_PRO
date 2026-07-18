@@ -22,6 +22,8 @@ JWT_SECRET=replace_with_a_long_random_secret
 PORT=3001
 BASE_URL=https://your-backend.example.com
 CLIENT_URL=https://your-frontend.example.com
+# Trusted reverse-proxy hop count. Render is also auto-detected as one hop.
+TRUST_PROXY=
 
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=ATS PRO <onboarding@resend.dev>
@@ -42,6 +44,12 @@ commas:
 ```env
 CLIENT_URL=https://ats.example.com,https://ats-preview.example.com
 ```
+
+`TRUST_PROXY` makes IP-based rate limits use the real client address. Render's
+`RENDER=true` environment is detected automatically; set the trusted hop count
+explicitly on other reverse-proxy hosts and leave it empty for direct traffic.
+Never set `TRUST_PROXY=true`; use a numeric hop count or an explicit proxy
+allowlist so clients cannot spoof forwarding headers.
 
 ## 3. Backend Build Commands
 
@@ -125,6 +133,7 @@ Check:
 
 - `VITE_BASE_URL` points to the backend URL.
 - Backend `CLIENT_URL` contains the deployed frontend URL.
+- `TRUST_PROXY` matches the reverse-proxy hop count (Render defaults to `1`).
 - Backend is reachable at `/api/health`.
 
 ### Prisma client missing

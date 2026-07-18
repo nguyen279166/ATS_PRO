@@ -14,6 +14,8 @@ interface CandidateDirectoryToolbarProps {
   showFilters: boolean;
   onToggleFilters: () => void;
   activeFilterCount: number;
+  hasActiveCriteria: boolean;
+  hasTotalError: boolean;
   isAdmin: boolean;
   exportingFormat: CandidateExportFormat | null;
   onExport: (format: CandidateExportFormat) => void;
@@ -26,6 +28,8 @@ export function CandidateDirectoryToolbar({
   showFilters,
   onToggleFilters,
   activeFilterCount,
+  hasActiveCriteria,
+  hasTotalError,
   isAdmin,
   exportingFormat,
   onExport,
@@ -40,9 +44,15 @@ export function CandidateDirectoryToolbar({
           className='text-sm font-semibold text-[var(--color-text-muted)]'
           aria-live='polite'
         >
-          {total === null
-            ? "Đang cập nhật tổng số ứng viên"
-            : total + " ứng viên trong hệ thống"}
+          {hasTotalError
+            ? "Không thể cập nhật tổng số ứng viên"
+            : total === null
+              ? hasActiveCriteria
+                ? "Đang cập nhật kết quả"
+                : "Đang cập nhật tổng số ứng viên"
+            : hasActiveCriteria
+              ? total + " kết quả phù hợp"
+              : total + " ứng viên trong hệ thống"}
         </p>
 
         {isAdmin && (
@@ -108,6 +118,7 @@ export function CandidateDirectoryToolbar({
               placeholder='Nhập tên ứng viên...'
               value={searchTerm}
               onChange={(event) => onSearchChange(event.target.value)}
+              maxLength={120}
               className='sahara-input w-full py-2 pl-10 pr-4 text-base sm:max-w-md sm:text-sm'
             />
           </div>

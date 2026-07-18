@@ -1,4 +1,11 @@
 import { Router } from "express";
+import { validateBody, validateParams } from "../middleware/validate";
+import {
+  candidateIdParamsSchema,
+  createNoteSchema,
+  idParamsSchema,
+  updateNoteSchema,
+} from "../validation/schemas";
 import {
   getNotes,
   postNote,
@@ -8,9 +15,18 @@ import {
 
 const router = Router();
 
-router.get("/:candidateId", getNotes);
-router.post("/", postNote);
-router.put("/:id", putNote);
-router.delete("/:id", removeNote);
+router.get(
+  "/:candidateId",
+  validateParams(candidateIdParamsSchema),
+  getNotes,
+);
+router.post("/", validateBody(createNoteSchema), postNote);
+router.put(
+  "/:id",
+  validateParams(idParamsSchema),
+  validateBody(updateNoteSchema),
+  putNote,
+);
+router.delete("/:id", validateParams(idParamsSchema), removeNote);
 
 export default router;

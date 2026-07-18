@@ -109,6 +109,33 @@ describe("candidate service contracts", () => {
     });
   });
 
+  it("searches names across the filtered dataset before pagination", async () => {
+    const { service, candidate } = createTestContext();
+    candidate.findMany.mockResolvedValue([candidateRecord]);
+    candidate.count.mockResolvedValue(1);
+
+    await service.listCandidates({
+      page: "1",
+      limit: "10",
+      search: "  nguyen van  ",
+      status: "Applied",
+    });
+
+    expect(candidate.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          name: { contains: "nguyen van", mode: "insensitive" },
+          status: "Applied",
+        },
+        skip: 0,
+        take: 10,
+      }),
+    );
+    expect(candidate.count).toHaveBeenCalledWith({
+      where: candidate.findMany.mock.calls[0][0].where,
+    });
+  });
+
   it("returns the existing status notification shape after sending email", async () => {
     const { service, candidate, mocks } = createTestContext();
     const updatedCandidate = {

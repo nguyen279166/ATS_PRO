@@ -11,7 +11,11 @@ export default function CandidateList() {
   return (
     <div>
       <CandidateDirectoryToolbar
-        total={directory.pagination?.total ?? null}
+        total={
+          directory.loading || directory.error
+            ? null
+            : directory.pagination?.total ?? null
+        }
         searchTerm={directory.searchTerm}
         onSearchChange={directory.setSearchTerm}
         showFilters={directory.showFilters}
@@ -19,6 +23,8 @@ export default function CandidateList() {
           directory.setShowFilters((current) => !current)
         }
         activeFilterCount={directory.activeFilterCount}
+        hasActiveCriteria={directory.hasActiveCriteria}
+        hasTotalError={Boolean(directory.error)}
         isAdmin={directory.isAdmin}
         exportingFormat={directory.exportingFormat}
         onExport={directory.handleExport}
@@ -68,7 +74,6 @@ export default function CandidateList() {
 
         {!directory.loading &&
           directory.pagination &&
-          !directory.searchTerm &&
           directory.candidates.length > 0 && (
             <CandidatePagination
               currentPage={directory.pagination.page}

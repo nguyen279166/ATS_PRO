@@ -11,8 +11,39 @@ import interviewRoutes from "./routes/interviewRoutes";
 import exportRoutes from "./routes/exportRoutes";
 import { getMailerHealth } from "./utils/mailer";
 import { getRagHealth } from "./utils/rag";
+import { ragHealthRateLimiter } from "./middleware/rateLimit";
+import {
+  ApiError,
+  errorHandler,
+  notFoundHandler,
+} from "./middleware/errorHandler";
+
+type TrustProxyEnvironment = {
+  TRUST_PROXY?: string;
+  RENDER?: string;
+};
+
+export const resolveTrustProxySetting = (
+  environment: TrustProxyEnvironment = process.env,
+) => {
+  const configuredValue = environment.TRUST_PROXY?.trim();
+  const value = configuredValue || (environment.RENDER === "true" ? "1" : "");
+
+  if (!value) return undefined;
+  if (value === "true") {
+    throw new Error(
+      "TRUST_PROXY=true is unsafe; use a numeric hop count or proxy allowlist",
+    );
+  }
+  if (value === "false") return false;
+  return /^\d+$/.test(value) ? Number(value) : value;
+};
 
 const app = express();
+const trustProxy = resolveTrustProxySetting();
+if (trustProxy !== undefined) {
+  app.set("trust proxy", trustProxy);
+}
 const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
@@ -26,7 +57,7 @@ app.use(
         return;
       }
 
-      callback(new Error("Not allowed by CORS"));
+      callback(new ApiError(403, "Nguồn yêu cầu không được phép"));
     },
   }),
 );
@@ -39,9 +70,14 @@ app.get("/api/health", (req, res) => {
 });
 
 // Gắn Route Job vào đường dẫn /api/jobs
-app.get("/api/rag/health", async (req, res) => {
-  res.status(200).json(await getRagHealth());
-});
+app.get(
+  "/api/rag/health",
+  authMiddleware,
+  ragHealthRateLimiter,
+  async (_req, res) => {
+    res.status(200).json(await getRagHealth());
+  },
+);
 
 app.use("/api/public", publicRoutes);
 app.use("/api/auth", authRoutes);
@@ -50,5 +86,7 @@ app.use("/api/candidates", authMiddleware, candidateRoutes);
 app.use("/api/notes", authMiddleware, noteRoutes);
 app.use("/api/interviews", authMiddleware, interviewRoutes);
 app.use("/api/export", authMiddleware, requireAdmin, exportRoutes);
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;

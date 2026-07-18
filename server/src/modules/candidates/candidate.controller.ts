@@ -1,45 +1,49 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
+import { ApiError } from "../../middleware/errorHandler";
+import { getValidatedRequest } from "../../middleware/validate";
 import {
   candidateService,
   type BulkCandidateInput,
+  type CandidateListQuery,
   type CandidateService,
   type CreateCandidateInput,
 } from "./candidate.service";
 
 export const createCandidateController = (service: CandidateService) => ({
-  list: async (req: Request, res: Response) => {
+  list: async (req: Request, res: Response, next: NextFunction) => {
     try {
-      res.json(await service.listCandidates(req.query));
-    } catch {
-      res
-        .status(500)
-        .json({ error: "Lỗi server khi lấy danh sách ứng viên" });
+      res.json(
+        await service.listCandidates(
+          getValidatedRequest<CandidateListQuery>(res, "query") ?? req.query,
+        ),
+      );
+    } catch (error) {
+      next(error);
     }
   },
 
-  create: async (req: Request, res: Response) => {
+  create: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const candidate = await service.createCandidate(
         req.body as CreateCandidateInput,
       );
       res.status(201).json(candidate);
-    } catch {
-      res.status(500).json({ error: "Lỗi server khi tạo ứng viên" });
+    } catch (error) {
+      next(error);
     }
   },
 
-  updateStatus: async (req: Request, res: Response) => {
+  updateStatus: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = req.params.id as string;
       const { status } = req.body as { status: string };
       res.json(await service.updateCandidateStatus(id, status));
     } catch (error) {
-      console.error("Lỗi khi cập nhật trạng thái ứng viên:", error);
-      res.status(500).json({ error: "Lỗi server khi cập nhật ứng viên" });
+      next(error);
     }
   },
 
-  delete: async (req: Request, res: Response) => {
+  delete: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = req.params.id as string;
       const deleted = await service.deleteCandidate(id);
@@ -52,12 +56,11 @@ export const createCandidateController = (service: CandidateService) => ({
 
       res.json({ message: "Xóa ứng viên thành công" });
     } catch (error) {
-      console.error("Lỗi khi xóa ứng viên:", error);
-      res.status(500).json({ error: "Lỗi server khi xóa ứng viên" });
+      next(error);
     }
   },
 
-  bulk: async (req: Request, res: Response) => {
+  bulk: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await service.bulkCandidates(
         req.body as BulkCandidateInput,
@@ -69,12 +72,11 @@ export const createCandidateController = (service: CandidateService) => ({
 
       res.json(result.body);
     } catch (error) {
-      console.error("Lỗi bulk action:", error);
-      res.status(500).json({ error: "Lỗi server khi thực hiện bulk action" });
+      next(error);
     }
   },
 
-  uploadCv: async (req: Request, res: Response) => {
+  uploadCv: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = String(req.params.id);
       if (!req.file) {
@@ -90,12 +92,11 @@ export const createCandidateController = (service: CandidateService) => ({
 
       res.json(candidate);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Lỗi server";
-      res.status(500).json({ error: message });
+      next(error);
     }
   },
 
-  reindexCv: async (req: Request, res: Response) => {
+  reindexCv: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const candidate = await service.reindexCandidateCv(
         String(req.params.id),
@@ -107,12 +108,11 @@ export const createCandidateController = (service: CandidateService) => ({
 
       res.json(candidate);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Lỗi server";
-      res.status(500).json({ error: message });
+      next(error);
     }
   },
 
-  deleteCv: async (req: Request, res: Response) => {
+  deleteCv: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const candidate = await service.deleteCandidateCv(String(req.params.id));
       if (!candidate) {
@@ -121,12 +121,12 @@ export const createCandidateController = (service: CandidateService) => ({
       }
 
       res.json(candidate);
-    } catch {
-      res.status(500).json({ error: "Lỗi khi xóa CV" });
+    } catch (error) {
+      next(error);
     }
   },
 
-  askCv: async (req: Request, res: Response) => {
+  askCv: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const id = String(req.params.id);
       const result = await service.askCandidateCv(id, req.body.question);
@@ -137,7 +137,13 @@ export const createCandidateController = (service: CandidateService) => ({
 
       res.json(result.result);
     } catch (error: unknown) {
-      res.status(400).json({ error: service.formatRagError(error) });
+      const message = service.formatRagError(error);
+      if (message) {
+        next(new ApiError(503, message));
+        return;
+      }
+
+      next(error);
     }
   },
 });

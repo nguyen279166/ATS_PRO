@@ -202,6 +202,7 @@ export default function CandidateNotes({
             }}
             placeholder='Nhập nội dung ghi chú...'
             rows={2}
+            maxLength={5000}
             aria-describedby={noteHelpId}
             className='sahara-input min-h-24 flex-1 resize-y px-4 py-3 text-base sm:text-sm'
           />
@@ -352,6 +353,7 @@ export default function CandidateNotes({
                         }}
                         autoFocus
                         rows={3}
+                        maxLength={5000}
                         aria-invalid={Boolean(editError)}
                         className='sahara-input w-full resize-y px-3 py-2 text-base sm:text-sm'
                       />

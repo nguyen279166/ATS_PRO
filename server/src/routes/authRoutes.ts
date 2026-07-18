@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { avatarUpload } from "../utils/cvStorage";
 import { validateBody } from "../middleware/validate";
+import { authRateLimiter } from "../middleware/rateLimit";
 import {
   changePasswordSchema,
   forgotPasswordSchema,
@@ -21,15 +22,22 @@ import {
 
 const router = Router();
 
-router.post("/register", validateBody(registerSchema), register);
-router.post("/login", validateBody(loginSchema), login);
+router.post(
+  "/register",
+  authRateLimiter,
+  validateBody(registerSchema),
+  register,
+);
+router.post("/login", authRateLimiter, validateBody(loginSchema), login);
 router.post(
   "/forgot-password",
+  authRateLimiter,
   validateBody(forgotPasswordSchema),
   forgotPassword,
 );
 router.post(
   "/reset-password",
+  authRateLimiter,
   validateBody(resetPasswordSchema),
   resetPassword,
 );

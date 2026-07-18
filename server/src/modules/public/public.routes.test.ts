@@ -94,7 +94,7 @@ describe("public route contracts", () => {
     });
 
     expect(response.status).toBe(400);
-    expect(response.body.error).toBe("Du lieu gui len khong hop le");
+    expect(response.body.error).toBe("Dữ liệu yêu cầu không hợp lệ");
     expect(serviceMocks.createPublicApplication).not.toHaveBeenCalled();
   });
 });
