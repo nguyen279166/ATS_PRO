@@ -11,8 +11,16 @@ import interviewRoutes from "./routes/interviewRoutes";
 import exportRoutes from "./routes/exportRoutes";
 import { getMailerHealth } from "./utils/mailer";
 import { getRagHealth } from "./utils/rag";
+import { ragHealthRateLimiter } from "./middleware/rateLimit";
 
 const app = express();
+const trustProxy = process.env.TRUST_PROXY?.trim();
+if (trustProxy) {
+  app.set(
+    "trust proxy",
+    /^\d+$/.test(trustProxy) ? Number(trustProxy) : trustProxy,
+  );
+}
 const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
@@ -39,7 +47,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // Gắn Route Job vào đường dẫn /api/jobs
-app.get("/api/rag/health", async (req, res) => {
+app.get("/api/rag/health", ragHealthRateLimiter, async (req, res) => {
   res.status(200).json(await getRagHealth());
 });
 
