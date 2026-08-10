@@ -22,6 +22,9 @@ Bachelor of Information Technology at PTIT, expected graduation in 2026.
 
 CERTIFICATIONS
 AWS Certified Cloud Practitioner. TOEIC 835.
+
+ADDITIONAL INFORMATION
+Availability: Full-time; available immediately.
 `;
 
 export const RAG_EVAL_CASES: RetrievalEvaluationCase[] = [
@@ -74,5 +77,10 @@ export const RAG_EVAL_CASES: RetrievalEvaluationCase[] = [
     id: "frontend",
     question: "Which frontend library is listed in the CV?",
     expectedEvidence: ["React"],
+  },
+  {
+    id: "availability-vietnamese",
+    question: "Ung vien co the lam full-time khong?",
+    expectedEvidence: ["Availability: Full-time; available immediately"],
   },
 ];

@@ -9,7 +9,7 @@
     "start": "node dist/src/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "eval:rag": "ts-node scripts/evaluate-rag.ts",
+    "eval:rag": "ts-node --files scripts/evaluate-rag.ts",
     "check": "npm run build && npm run test"
   },
   "keywords": [],

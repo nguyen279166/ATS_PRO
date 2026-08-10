@@ -8,6 +8,7 @@ import {
   MAX_CHUNK_CHARS,
   normalizeDocumentText,
   reciprocalRankFusionScore,
+  selectCvContextChunks,
 } from "./ragCore";
 
 describe("RAG core", () => {
@@ -107,5 +108,34 @@ Bachelor of Information Technology at PTIT.
 
     expect(both).toBeGreaterThan(vectorOnly);
     expect(both).toBeGreaterThan(textOnly);
+  });
+
+  it("uses the complete CV context for a small resume", () => {
+    const availability = {
+      chunkIndex: 3,
+      content: "ADDITIONAL INFORMATION\nAvailability: Full-time; available immediately",
+    };
+    const rankedChunks = [
+      availability,
+      { chunkIndex: 0, content: "SUMMARY\nFull-stack developer intern" },
+      { chunkIndex: 2, content: "SKILLS\nReact and TypeScript" },
+    ];
+
+    const selected = selectCvContextChunks(rankedChunks, [rankedChunks[1]!]);
+
+    expect(selected.map((chunk) => chunk.chunkIndex)).toEqual([0, 2, 3]);
+    expect(selected).toContainEqual(availability);
+  });
+
+  it("keeps focused retrieval for documents larger than the context budget", () => {
+    const rankedChunks = Array.from({ length: 21 }, (_, chunkIndex) => ({
+      chunkIndex,
+      content: `Chunk ${chunkIndex}`,
+    }));
+    const focusedChunks = rankedChunks.slice(0, 3);
+
+    expect(selectCvContextChunks(rankedChunks, focusedChunks)).toBe(
+      focusedChunks,
+    );
   });
 });

@@ -3,6 +3,8 @@ export const CHUNK_OVERLAP_CHARS = 180;
 export const CHUNKING_VERSION = "section-v2";
 export const EMBEDDING_VERSION = "retrieval-task-v1";
 export const RRF_K = 60;
+export const MAX_COMPLETE_CV_CONTEXT_CHARS = 16_000;
+export const MAX_COMPLETE_CV_CONTEXT_CHUNKS = 20;
 
 export type EmbeddingTask = "document" | "query";
 
@@ -23,6 +25,11 @@ export type CvChunk = {
   chunkIndex: number;
   section: CvSection;
   heading: string | null;
+};
+
+type ContextChunk = {
+  chunkIndex: number;
+  content: string;
 };
 
 const INLINE_SECTION_HEADINGS = [
@@ -268,4 +275,26 @@ export function reciprocalRankFusionScore(
   const vectorScore = vectorRank ? 1 / (k + vectorRank) : 0;
   const textScore = textRank ? 1 / (k + textRank) : 0;
   return vectorScore + textScore;
+}
+
+export function selectCvContextChunks<T extends ContextChunk>(
+  rankedChunks: T[],
+  focusedChunks: T[],
+) {
+  const completeDocument = [...rankedChunks].sort(
+    (left, right) => left.chunkIndex - right.chunkIndex,
+  );
+  const completeDocumentChars = completeDocument.reduce(
+    (total, chunk) => total + chunk.content.length,
+    0,
+  );
+
+  if (
+    completeDocument.length <= MAX_COMPLETE_CV_CONTEXT_CHUNKS &&
+    completeDocumentChars <= MAX_COMPLETE_CV_CONTEXT_CHARS
+  ) {
+    return completeDocument;
+  }
+
+  return focusedChunks;
 }
