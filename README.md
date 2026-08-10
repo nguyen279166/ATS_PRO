@@ -21,7 +21,8 @@ idle period can take about 50 seconds while the service wakes up.
   updates.
 - Admin-only Excel/PDF export endpoints.
 - AI-assisted CV review for PDF, DOCX, PNG, and JPG files with OCR fallback,
-  PostgreSQL `pgvector` retrieval, cited evidence, and an overall job-fit score.
+  section-aware chunking, task-aware embeddings, PostgreSQL full-text search +
+  `pgvector` retrieval fused with RRF, cited evidence, and a job-fit score.
 - Separate embedding and chat providers: local Ollama can keep indexing free,
   while Gemini can provide stronger generated answers.
 - Backend API coverage with Vitest and Supertest, plus end-to-end browser
@@ -195,6 +196,14 @@ only the chat provider never requires re-indexing the CV.
 try another free Gemini chat model if the first one is out of quota or
 overloaded.
 
+The CV retrieval pipeline preserves common sections such as Skills, Experience,
+Projects, and Education. Nomic uses `search_document`/`search_query` prefixes,
+while Gemini receives matching retrieval task types. PostgreSQL ranks full-text
+and vector candidates independently, then combines their ranks with Reciprocal
+Rank Fusion (RRF). Index metadata prevents queries from silently mixing old
+chunking or embedding behavior; after this metadata changes, use **Index lai AI**
+once for each demo CV.
+
 Do not commit real `.env` files. If real secrets were ever shared publicly,
 rotate the database password, JWT secret, and mail app password before demoing.
 
@@ -289,6 +298,15 @@ Run only the backend tests:
 ```bash
 cd server
 npm test
+```
+
+Run the retrieval evaluation against the configured PostgreSQL database and
+embedding provider. It creates and removes its own fixture records, then reports
+`Recall@3`, MRR, and citation precision without calling the chat model:
+
+```bash
+cd server
+npm run eval:rag
 ```
 
 E2E tests require the backend and frontend to be running:

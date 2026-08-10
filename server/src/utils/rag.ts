@@ -4,6 +4,17 @@ import { GoogleGenAI } from "@google/genai";
 import { randomUUID } from "crypto";
 import prisma from "../prisma";
 import { Prisma } from "../../generated/prisma/client";
+import {
+  buildOllamaEmbeddingInput,
+  CHUNKING_VERSION,
+  chunkCvText,
+  EMBEDDING_VERSION,
+  getGeminiEmbeddingTaskType,
+  normalizeDocumentText,
+  RRF_K,
+  type CvChunk,
+  type EmbeddingTask,
+} from "./ragCore";
 
 const GEMINI_EMBEDDING_MODEL =
   process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2";
@@ -30,16 +41,11 @@ const OLLAMA_CHAT_MODEL = process.env.OLLAMA_CHAT_MODEL || "llama3.2:3b";
 const GEMINI_OCR_MODEL =
   process.env.GEMINI_OCR_MODEL || "gemini-2.5-flash-lite";
 const EMBEDDING_DIMENSIONS = 1536;
-const MAX_CHUNK_CHARS = 1200;
-const CHUNK_OVERLAP_CHARS = 180;
 const MIN_EXTRACTED_TEXT_CHARS = 40;
-const TOP_K_CHUNKS = 8;
-const MAX_CANDIDATE_CHUNKS = 100;
+const TOP_K_CHUNKS = 6;
+const MAX_RETRIEVAL_CANDIDATES = 50;
 const MIN_CHUNK_SCORE = 0.42;
-const MIN_KEYWORD_VECTOR_SCORE = 0.25;
-const WEAK_HYBRID_SCORE = 0.45;
-const VECTOR_SCORE_WEIGHT = 0.8;
-const KEYWORD_SCORE_WEIGHT = 0.2;
+const WEAK_VECTOR_SCORE = 0.45;
 const EMBEDDING_BATCH_SIZE = 3;
 const IMAGE_EXTENSIONS = new Set(["jpg", "jpeg", "png"]);
 const OCR_PROMPT =
@@ -48,10 +54,15 @@ const OCR_PROMPT =
   "Giu section headers, bullet points, email, so dien thoai, ky nang, du an. " +
   "Chi tra plain text.";
 
-type RagSource = {
+export type RagSource = {
   chunkIndex: number;
   content: string;
   score: number;
+  section: string;
+  heading?: string | null;
+  textScore?: number;
+  vectorRank?: number | null;
+  textRank?: number | null;
   keywordScore?: number;
   hybridScore?: number;
   matchedKeywords?: string[];
@@ -64,9 +75,7 @@ type RagAnswer = {
   retrievalMode?: "job" | "question";
 };
 
-type EmbeddedChunk = {
-  content: string;
-  chunkIndex: number;
+type EmbeddedChunk = CvChunk & {
   embedding: number[];
   embeddingProvider: RagProvider;
   embeddingModel: string;
@@ -266,6 +275,8 @@ export async function getRagHealth() {
     chatProvider: RAG_CHAT_PROVIDER,
     chatProviderOrder: getChatProviderOrder(),
     embeddingDimensions: EMBEDDING_DIMENSIONS,
+    chunkingVersion: CHUNKING_VERSION,
+    embeddingVersion: EMBEDDING_VERSION,
     ollama: {
       baseUrl: OLLAMA_BASE_URL,
       embeddingModel: OLLAMA_EMBEDDING_MODEL,
@@ -279,10 +290,6 @@ export async function getRagHealth() {
       ocrModel: GEMINI_OCR_MODEL,
     },
   };
-}
-
-function normalizeText(text: string) {
-  return text.replace(/\s+/g, " ").trim();
 }
 
 const SEARCH_STOP_WORDS = new Set([
@@ -430,7 +437,7 @@ async function extractTextWithGemini(buffer: Buffer, mimeType: string) {
     },
   });
 
-  return normalizeText(response.text || "");
+  return normalizeDocumentText(response.text || "");
 }
 
 async function extractCvTextWithMetadata(
@@ -442,7 +449,7 @@ async function extractCvTextWithMetadata(
     const parser = new PDFParse({ data: file.buffer });
     try {
       const parsed = await parser.getText();
-      const text = normalizeText(parsed.text || "");
+      const text = normalizeDocumentText(parsed.text || "");
       if (text.length >= MIN_EXTRACTED_TEXT_CHARS) {
         return { text, provider: "pdf-parse" };
       }
@@ -458,7 +465,10 @@ async function extractCvTextWithMetadata(
 
   if (ext === "docx") {
     const parsed = await mammoth.extractRawText({ buffer: file.buffer });
-    return { text: normalizeText(parsed.value || ""), provider: "mammoth" };
+    return {
+      text: normalizeDocumentText(parsed.value || ""),
+      provider: "mammoth",
+    };
   }
 
   if (IMAGE_EXTENSIONS.has(ext)) {
@@ -540,43 +550,20 @@ export async function reindexCandidateCvFromUrl(candidateId: string) {
   return indexCandidateCv(candidateId, file);
 }
 
-export function chunkText(text: string) {
-  const normalized = normalizeText(text);
-  if (!normalized) return [];
+export const chunkText = chunkCvText;
 
-  const chunks: string[] = [];
-  let start = 0;
-
-  while (start < normalized.length) {
-    const hardEnd = Math.min(start + MAX_CHUNK_CHARS, normalized.length);
-    let end = hardEnd;
-
-    const sentenceBoundary = normalized.lastIndexOf(". ", hardEnd);
-    if (sentenceBoundary > start + MAX_CHUNK_CHARS * 0.6) {
-      end = sentenceBoundary + 1;
-    }
-
-    chunks.push(normalized.slice(start, end).trim());
-    if (end >= normalized.length) break;
-    start = Math.max(0, end - CHUNK_OVERLAP_CHARS);
-  }
-
-  return chunks.filter(Boolean);
-}
-
-async function embedChunksInBatches(chunks: string[]) {
+async function embedChunksInBatches(chunks: CvChunk[]) {
   const embeddedChunks: EmbeddedChunk[] = [];
 
   for (let start = 0; start < chunks.length; start += EMBEDDING_BATCH_SIZE) {
     const batch = chunks.slice(start, start + EMBEDDING_BATCH_SIZE);
     const batchResults = await Promise.all(
-      batch.map(async (content, offset) => {
-        const embedding = await createEmbedding(content);
+      batch.map(async (chunk) => {
+        const embedding = await createEmbedding(chunk.content, "document");
         if (!embedding) return null;
 
         return {
-          content,
-          chunkIndex: start + offset,
+          ...chunk,
           embedding: embedding.vector,
           embeddingProvider: embedding.provider,
           embeddingModel: embedding.model,
@@ -605,10 +592,13 @@ function fitEmbeddingDimensions(vector: number[]) {
   return [...vector, ...Array(EMBEDDING_DIMENSIONS - vector.length).fill(0)];
 }
 
-async function createOllamaEmbedding(input: string): Promise<EmbeddingResult | null> {
+async function createOllamaEmbedding(
+  input: string,
+  task: EmbeddingTask,
+): Promise<EmbeddingResult | null> {
   const response = await postOllama<OllamaEmbeddingResponse>("/api/embeddings", {
     model: OLLAMA_EMBEDDING_MODEL,
-    prompt: input,
+    prompt: buildOllamaEmbeddingInput(OLLAMA_EMBEDDING_MODEL, input, task),
   });
   const embedding = response.embedding || response.embeddings?.[0] || null;
   return embedding
@@ -620,7 +610,10 @@ async function createOllamaEmbedding(input: string): Promise<EmbeddingResult | n
     : null;
 }
 
-async function createGeminiEmbedding(input: string): Promise<EmbeddingResult | null> {
+async function createGeminiEmbedding(
+  input: string,
+  task: EmbeddingTask,
+): Promise<EmbeddingResult | null> {
   const client = getGeminiClient();
   if (!client) throw new Error("GEMINI_API_KEY is not configured");
   const response = await client.models.embedContent({
@@ -628,6 +621,7 @@ async function createGeminiEmbedding(input: string): Promise<EmbeddingResult | n
     contents: input,
     config: {
       outputDimensionality: EMBEDDING_DIMENSIONS,
+      taskType: getGeminiEmbeddingTaskType(task),
     },
   });
 
@@ -641,17 +635,17 @@ async function createGeminiEmbedding(input: string): Promise<EmbeddingResult | n
     : null;
 }
 
-async function createEmbedding(input: string) {
+async function createEmbedding(input: string, task: EmbeddingTask) {
   let lastError: unknown;
 
   for (const provider of getEmbeddingProviderOrder()) {
     try {
       if (provider === "gemini") {
         if (!hasGeminiProvider()) continue;
-        return await createGeminiEmbedding(input);
+        return await createGeminiEmbedding(input, task);
       }
 
-      return await createOllamaEmbedding(input);
+      return await createOllamaEmbedding(input, task);
     } catch (error) {
       lastError = error;
     }
@@ -852,7 +846,7 @@ export async function indexCandidateCv(
   return indexCandidateCvText(candidateId, text, extraction.provider);
 }
 
-async function indexCandidateCvText(
+export async function indexCandidateCvText(
   candidateId: string,
   text: string,
   _extractionProvider: string,
@@ -875,12 +869,12 @@ async function indexCandidateCvText(
     if (embeddedChunks.length === 0) return;
 
     const rows = embeddedChunks.map((chunk) =>
-      Prisma.sql`(${randomUUID()}, ${candidateId}, ${chunk.content}, ${chunk.chunkIndex}, ${vectorToSql(chunk.embedding)}::vector, ${chunk.embeddingProvider}, ${chunk.embeddingModel})`,
+      Prisma.sql`(${randomUUID()}, ${candidateId}, ${chunk.content}, ${chunk.chunkIndex}, ${chunk.section}, ${chunk.heading}, ${CHUNKING_VERSION}, ${EMBEDDING_VERSION}, ${vectorToSql(chunk.embedding)}::vector, ${chunk.embeddingProvider}, ${chunk.embeddingModel})`,
     );
 
     await tx.$executeRaw(
       Prisma.sql`
-        INSERT INTO "CandidateCvChunk" ("id", "candidateId", "content", "chunkIndex", "embedding", "embeddingProvider", "embeddingModel")
+        INSERT INTO "CandidateCvChunk" ("id", "candidateId", "content", "chunkIndex", "section", "heading", "chunkingVersion", "embeddingVersion", "embedding", "embeddingProvider", "embeddingModel")
         VALUES ${Prisma.join(rows)}
       `,
     );
@@ -900,6 +894,8 @@ async function indexCandidateCvText(
     extractionProvider: _extractionProvider,
     embeddingProvider: embeddedChunks[0]?.embeddingProvider,
     embeddingModel: embeddedChunks[0]?.embeddingModel,
+    chunkingVersion: CHUNKING_VERSION,
+    embeddingVersion: EMBEDDING_VERSION,
   };
 }
 
@@ -907,6 +903,108 @@ export async function deleteCandidateCvIndex(candidateId: string) {
   await prisma.$executeRaw`
     DELETE FROM "CandidateCvChunk" WHERE "candidateId" = ${candidateId}
   `;
+}
+
+export async function retrieveCandidateCvSources(
+  candidateId: string,
+  retrievalInput: string,
+) {
+  if (!hasAnyConfiguredProvider()) {
+    throw new Error("No AI provider is configured");
+  }
+
+  const questionEmbedding = await createEmbedding(retrievalInput, "query");
+  if (!questionEmbedding) {
+    throw new Error("Could not create question embedding");
+  }
+
+  const questionVector = vectorToSql(questionEmbedding.vector);
+  const searchKeywords = extractSearchKeywords(retrievalInput);
+  const ftsQuery = searchKeywords
+    .map((keyword) => `"${keyword.replace(/"/g, "")}"`)
+    .join(" OR ");
+
+  const rankedSources = await prisma.$queryRaw<RagSource[]>(
+    Prisma.sql`
+      WITH fts_query AS (
+        SELECT websearch_to_tsquery('simple', ${ftsQuery}) AS query
+      ),
+      vector_ranked AS (
+        SELECT
+          "id",
+          "chunkIndex",
+          "content",
+          "section",
+          "heading",
+          (1 - ("embedding" <=> ${questionVector}::vector))::double precision AS "score",
+          (ROW_NUMBER() OVER (ORDER BY "embedding" <=> ${questionVector}::vector))::integer AS "vectorRank"
+        FROM "CandidateCvChunk"
+        WHERE "candidateId" = ${candidateId}
+          AND "embeddingProvider" = ${questionEmbedding.provider}
+          AND "embeddingModel" = ${questionEmbedding.model}
+          AND "chunkingVersion" = ${CHUNKING_VERSION}
+          AND "embeddingVersion" = ${EMBEDDING_VERSION}
+        ORDER BY "embedding" <=> ${questionVector}::vector
+        LIMIT ${MAX_RETRIEVAL_CANDIDATES}
+      ),
+      text_candidates AS (
+        SELECT
+          chunk."id",
+          chunk."chunkIndex",
+          chunk."content",
+          chunk."section",
+          chunk."heading",
+          ts_rank_cd(chunk."searchVector", fts_query.query)::double precision AS "textScore"
+        FROM "CandidateCvChunk" AS chunk
+        CROSS JOIN fts_query
+        WHERE chunk."candidateId" = ${candidateId}
+          AND chunk."embeddingProvider" = ${questionEmbedding.provider}
+          AND chunk."embeddingModel" = ${questionEmbedding.model}
+          AND chunk."chunkingVersion" = ${CHUNKING_VERSION}
+          AND chunk."embeddingVersion" = ${EMBEDDING_VERSION}
+          AND chunk."searchVector" @@ fts_query.query
+      ),
+      text_ranked AS (
+        SELECT
+          *,
+          (ROW_NUMBER() OVER (ORDER BY "textScore" DESC, "chunkIndex" ASC))::integer AS "textRank"
+        FROM text_candidates
+        ORDER BY "textScore" DESC, "chunkIndex" ASC
+        LIMIT ${MAX_RETRIEVAL_CANDIDATES}
+      )
+      SELECT
+        COALESCE(vector."chunkIndex", text."chunkIndex") AS "chunkIndex",
+        COALESCE(vector."content", text."content") AS "content",
+        COALESCE(vector."section", text."section") AS "section",
+        COALESCE(vector."heading", text."heading") AS "heading",
+        COALESCE(vector."score", 0)::double precision AS "score",
+        COALESCE(text."textScore", 0)::double precision AS "textScore",
+        vector."vectorRank" AS "vectorRank",
+        text."textRank" AS "textRank",
+        (
+          CASE
+            WHEN vector."vectorRank" IS NULL THEN 0
+            ELSE 1.0 / (${RRF_K} + vector."vectorRank")
+          END +
+          CASE
+            WHEN text."textRank" IS NULL THEN 0
+            ELSE 1.0 / (${RRF_K} + text."textRank")
+          END
+        )::double precision AS "hybridScore"
+      FROM vector_ranked AS vector
+      FULL OUTER JOIN text_ranked AS text ON text."id" = vector."id"
+      ORDER BY "hybridScore" DESC, "score" DESC
+      LIMIT ${MAX_RETRIEVAL_CANDIDATES}
+    `,
+  );
+
+  return rankedSources.map((source) => {
+    const { keywordScore, matchedKeywords } = scoreKeywordMatches(
+      source.content,
+      searchKeywords,
+    );
+    return { ...source, keywordScore, matchedKeywords };
+  });
 }
 
 export async function askCandidateCv(
@@ -956,89 +1054,61 @@ export async function askCandidateCv(
     };
   }
 
-  if (!hasAnyConfiguredProvider()) {
-    throw new Error("No AI provider is configured");
-  }
-
-  const questionEmbedding = await createEmbedding(retrievalInput);
-  if (!questionEmbedding) {
-    throw new Error("Could not create question embedding");
-  }
-
-  const questionVector = vectorToSql(questionEmbedding.vector);
-
-  const vectorSources = await prisma.$queryRaw<RagSource[]>(
-    Prisma.sql`
-      SELECT
-        "chunkIndex",
-        "content",
-        1 - ("embedding" <=> ${questionVector}::vector) AS "score"
-      FROM "CandidateCvChunk"
-      WHERE "candidateId" = ${candidateId}
-        AND "embeddingProvider" = ${questionEmbedding.provider}
-        AND "embeddingModel" = ${questionEmbedding.model}
-      ORDER BY "embedding" <=> ${questionVector}::vector
-      LIMIT ${MAX_CANDIDATE_CHUNKS}
-    `,
+  const rankedSources = await retrieveCandidateCvSources(
+    candidateId,
+    retrievalInput,
   );
 
-  if (vectorSources.length === 0) {
+  if (rankedSources.length === 0) {
     const indexedProviders = await prisma.$queryRaw<
-      { embeddingProvider: string; embeddingModel: string; count: bigint }[]
+      {
+        embeddingProvider: string;
+        embeddingModel: string;
+        chunkingVersion: string;
+        embeddingVersion: string;
+        count: bigint;
+      }[]
     >`
-      SELECT "embeddingProvider", "embeddingModel", COUNT(*)::bigint AS count
+      SELECT
+        "embeddingProvider",
+        "embeddingModel",
+        "chunkingVersion",
+        "embeddingVersion",
+        COUNT(*)::bigint AS count
       FROM "CandidateCvChunk"
       WHERE "candidateId" = ${candidateId}
-      GROUP BY "embeddingProvider", "embeddingModel"
+      GROUP BY
+        "embeddingProvider",
+        "embeddingModel",
+        "chunkingVersion",
+        "embeddingVersion"
     `;
 
     const providerSummary = indexedProviders
       .map(
         (item) =>
-          `${item.embeddingProvider}/${item.embeddingModel} (${Number(item.count)} chunk)`,
+          `${item.embeddingProvider}/${item.embeddingModel}, ${item.chunkingVersion}/${item.embeddingVersion} (${Number(item.count)} chunk)`,
       )
       .join(", ");
 
     return {
       answer:
-        `CV da duoc index bang provider khac (${providerSummary || "khong ro"}). ` +
-        `Provider hien tai la ${questionEmbedding.provider}/${questionEmbedding.model}. ` +
-        "Hay bam Index lai AI de dong bo embedding truoc khi hoi.",
+        `CV dang dung index cu hoac provider khac (${providerSummary || "khong ro"}). ` +
+        "Hay bam Index lai AI de tao section va embedding dung cho retrieval.",
       sources: [],
     };
   }
-
-  const searchKeywords = extractSearchKeywords(retrievalInput);
-  const rankedSources = vectorSources
-    .map((source) => {
-      const { keywordScore, matchedKeywords } = scoreKeywordMatches(
-        source.content,
-        searchKeywords,
-      );
-      const hybridScore =
-        searchKeywords.length === 0
-          ? source.score
-          : source.score * VECTOR_SCORE_WEIGHT +
-            keywordScore * KEYWORD_SCORE_WEIGHT;
-
-      return {
-        ...source,
-        keywordScore,
-        hybridScore,
-        matchedKeywords,
-      };
-    })
-    .sort((a, b) => b.hybridScore - a.hybridScore);
 
   const sources = rankedSources
     .filter(
       (source) =>
         source.score >= MIN_CHUNK_SCORE ||
-        ((source.matchedKeywords?.length || 0) > 0 &&
-          source.score >= MIN_KEYWORD_VECTOR_SCORE),
+        source.textRank != null,
     )
     .slice(0, TOP_K_CHUNKS);
-  const bestScore = rankedSources[0]?.hybridScore ?? 0;
+  const bestVectorScore = Math.max(
+    ...rankedSources.map((source) => source.score),
+  );
   if (sources.length === 0) {
     return {
       answer:
@@ -1049,11 +1119,14 @@ export async function askCandidateCv(
   }
 
   const cvContext = sources
-    .map((source, index) => `[Source ${index + 1} | chunk ${source.chunkIndex + 1}]\n${source.content}`)
+    .map(
+      (source, index) =>
+        `[Source ${index + 1} | ${source.section} | chunk ${source.chunkIndex + 1}]\n${source.content}`,
+    )
     .join("\n\n");
 
   const retrievalWarning =
-    bestScore < WEAK_HYBRID_SCORE
+    bestVectorScore < WEAK_VECTOR_SCORE
       ? "Độ khớp nguồn CV thấp; hãy mở phần nguồn trích để đối chiếu."
       : undefined;
 
