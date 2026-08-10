@@ -67,7 +67,12 @@ model CandidateCvChunk {
   candidateId String
   content     String   @db.Text
   chunkIndex  Int
+  section     String   @default("other")
+  heading     String?
+  chunkingVersion String @default("legacy-v1")
+  embeddingVersion String @default("legacy-v1")
   embedding   Unsupported("vector(1536)")
+  searchVector Unsupported("tsvector")?
   embeddingProvider String @default("unknown")
   embeddingModel    String @default("unknown")
   createdAt   DateTime @default(now())
