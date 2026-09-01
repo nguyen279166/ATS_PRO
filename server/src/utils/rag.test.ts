@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
     queryRaw: vi.fn(),
     transaction: vi.fn(),
     txExecuteRaw: vi.fn(),
+    candidateFindUnique: vi.fn(),
   };
 });
 
@@ -17,10 +18,14 @@ vi.mock("../prisma", () => ({
   default: {
     $queryRaw: mocks.queryRaw,
     $transaction: mocks.transaction,
+    candidate: {
+      findUnique: mocks.candidateFindUnique,
+    },
   },
 }));
 
 import {
+  askCandidateCv,
   indexCandidateCvText,
   retrieveCandidateCvSources,
 } from "./rag";
@@ -106,5 +111,81 @@ describe("RAG indexing and retrieval integration boundaries", () => {
       section: "skills",
       matchedKeywords: ["node.js"],
     });
+  });
+
+  it("keeps all sections of a small CV available to factual answers", async () => {
+    let chatPrompt = "";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+        if (String(url).endsWith("/api/chat")) {
+          const body = JSON.parse(String(init?.body || "{}")) as {
+            messages?: Array<{ role: string; content: string }>;
+          };
+          chatPrompt =
+            body.messages?.find((message) => message.role === "user")?.content ||
+            "";
+          return {
+            ok: true,
+            json: async () => ({
+              message: {
+                content:
+                  "Có. CV ghi rõ: Availability: Full-time; available immediately.",
+              },
+            }),
+            text: async () => "",
+          } as Response;
+        }
+
+        return {
+          ok: true,
+          json: async () => ({ embedding: [0.1, 0.2, 0.3] }),
+          text: async () => "",
+        } as Response;
+      }),
+    );
+    mocks.candidateFindUnique.mockResolvedValue({
+      name: "Nguyen Chung Nguyen",
+      job: null,
+    });
+    mocks.queryRaw
+      .mockResolvedValueOnce([{ count: 2n }])
+      .mockResolvedValueOnce([
+        {
+          chunkIndex: 0,
+          content: "SUMMARY\nFull-stack developer intern",
+          section: "summary",
+          heading: "SUMMARY",
+          score: 0.72,
+          textScore: 0,
+          vectorRank: 1,
+          textRank: null,
+          hybridScore: 0.016,
+        },
+        {
+          chunkIndex: 4,
+          content:
+            "ADDITIONAL INFORMATION\nAvailability: Full-time; available immediately",
+          section: "skills",
+          heading: "ADDITIONAL INFORMATION",
+          score: 0.2,
+          textScore: 0,
+          vectorRank: 2,
+          textRank: null,
+          hybridScore: 0.015,
+        },
+      ]);
+
+    const result = await askCandidateCv(
+      "candidate-1",
+      "Ứng viên có thể làm full-time không?",
+    );
+
+    expect(chatPrompt).toContain("<candidate_cv>");
+    expect(chatPrompt).toContain(
+      "Availability: Full-time; available immediately",
+    );
+    expect(result.answer).toContain("Full-time");
+    expect(result.sources).toHaveLength(1);
   });
 });
